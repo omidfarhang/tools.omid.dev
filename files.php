@@ -26,6 +26,10 @@
                 <td>Iran</td>
                 <td>Date</td></tr>
     <?php
+        $files = glob('temp/*');
+        usort($files, function($a, $b) {
+            return filemtime($b) - filemtime($a);
+        });
     foreach($files as $file){
         printf('<tr>
                 <td><a href="%1$s" target="_blank">%1$s</a></td>
