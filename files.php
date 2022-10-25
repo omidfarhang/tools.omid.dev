@@ -46,12 +46,13 @@
     foreach($files as $file){
         printf('<tr>
                 <th scope="row">'.$index.'</th>
-                <td>%1$s</td>
+                <td>%2$s</td>
                 <td><a href="https://tools.omidfarhang.com/%1$s" target="_blank">Download</a></td>
                 <td><a href="https://tools.omidfarhang.ir/%1$s" target="_blank">Download</a></td>
-                <td>%2$s</td> 
-                <td>%3$s</td></tr>', 
-                basename($file), // or basename($file) for just the filename w\out path
+                <td>%3$s</td> 
+                <td>%4$s</td></tr>', 
+                $file,
+                basename($file),
                 human_filesize(filesize($file)),
                 date('F d Y, H:i:s', filemtime($file)));
                 $index++;
