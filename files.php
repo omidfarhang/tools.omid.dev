@@ -27,6 +27,7 @@
                 <td scope="col">File</td>
                 <td scope="col">CloudFlare</td>
                 <td scope="col">Iran</td>
+                <td scope="col">Size</td>
                 <td scope="col">Date</td></tr>
 </thead>
 <tbody>
@@ -35,6 +36,12 @@
         usort($files, function($a, $b) {
             return filemtime($b) - filemtime($a);
         });
+        function human_filesize($bytes, $decimals = 2)
+        {
+            $size = array('B', 'kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB');
+            $factor = floor((strlen($bytes) - 1) / 3);
+            return sprintf("%.{$decimals}f", $bytes / pow(1024, $factor)) . @$size[$factor];
+        }
         $index = 1;
     foreach($files as $file){
         printf('<tr>
@@ -42,8 +49,10 @@
                 <td>%1$s</td>
                 <td><a href="https://tools.omidfarhang.com/%1$s" target="_blank">Download</a></td>
                 <td><a href="https://tools.omidfarhang.ir/%1$s" target="_blank">Download</a></td>
-                <td>%2$s</td></tr>', 
+                <td>%2$s</td> 
+                <td>%3$s</td></tr>', 
                 $file, // or basename($file) for just the filename w\out path
+                human_filesize(filesize($file)),
                 date('F d Y, H:i:s', filemtime($file)));
                 $index++;
     }
