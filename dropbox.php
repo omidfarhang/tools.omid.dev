@@ -12,7 +12,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         die;
     } else {
         $milliseconds = round(microtime(true) * 1000);
-        $filename = '/'.$milliseconds.'-'.$_POST["filename"];
+        $filename = '/'.$_POST["filename"];
     }
     $cheaders = array('Authorization: Bearer 0T-Nu7hCogsAAAAAAADkmuOiW4WmlBV_woQWqSE4cm1IwVjBHzAxQKXjqWrK9u9P', 'Content-Type: application/json');
     $params = array(
