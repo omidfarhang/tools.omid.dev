@@ -68,7 +68,7 @@
   <input name="DLFILENAME" type="text" class="form-control" id="DLFILENAME"  placeholder="Auto generated, can be changed">
 </div>
         <h5 id="status"></h5>
-        <input class="btn btn-primary" name="Submit1" type="submit" value="submit" />
+        <input class="btn btn-primary" name="Submit1" type="submit" value="Submit" />
         <input class="btn btn-primary" name="Submit2" id="dropbox" type="button" value="Save To Dropbox" onclick="saveToDropbox()" />
     </form>
     </main>
