@@ -40,11 +40,15 @@
         if (!copy($file, $newfile)) {
             echo "failed to copy $file...\n";
         } else {
-            echo 'Successfully downloaded: ' . $file . ' (' . human_filesize(filesize($newfile)) . ')';
+            echo 'Successfully downloaded!';
+            echo 'Source: '. $file;
+            echo '<br>';
+            echo 'Size: '. human_filesize(filesize($newfile));
             echo '<br><br>';
             echo 'Your file is ready for download from here:';
             echo '<br>';
             echo 'CloudFlare: <a href="https://tools.omidfarhang.com/' . $newfile . '" target="_blank">' . $_POST['DLFILENAME'] . '</a>';
+            echo '<br>';
             echo 'Iran: <a href="https://tools.omidfarhang.ir/' . $newfile . '" target="_blank">' . $_POST['DLFILENAME'] . '</a>';
             echo '<br><br>';
         }
