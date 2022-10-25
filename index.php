@@ -41,6 +41,7 @@
             echo "failed to copy $file...\n";
         } else {
             echo 'Successfully downloaded!';
+            echo '<br><br>';
             echo 'Source: '. $file;
             echo '<br>';
             echo 'Size: '. human_filesize(filesize($newfile));
