@@ -42,7 +42,10 @@
         } else {
             echo 'Successfully downloaded: ' . $file . ' (' . human_filesize(filesize($newfile)) . ')';
             echo '<br><br>';
-            echo 'Your file is ready for download from here: <a href="' . $newfile . '">' . $_POST['DLFILENAME'] . '</a>';
+            echo 'Your file is ready for download from here:';
+            echo '<br>';
+            echo 'CloudFlare: <a href="https://tools.omidfarhang.com/' . $newfile . '" target="_blank">' . $_POST['DLFILENAME'] . '</a>';
+            echo 'Iran: <a href="https://tools.omidfarhang.ir/' . $newfile . '" target="_blank">' . $_POST['DLFILENAME'] . '</a>';
             echo '<br><br>';
         }
         }
