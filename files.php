@@ -51,7 +51,7 @@
                 <td><a href="https://tools.omidfarhang.ir/%1$s" target="_blank">Download</a></td>
                 <td>%2$s</td> 
                 <td>%3$s</td></tr>', 
-                $file, // or basename($file) for just the filename w\out path
+                basename($file), // or basename($file) for just the filename w\out path
                 human_filesize(filesize($file)),
                 date('F d Y, H:i:s', filemtime($file)));
                 $index++;
