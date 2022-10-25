@@ -20,25 +20,35 @@
 
   <main>
     <h1>Available Files</h1>
-    <table>
+    <table class="table">
+    <thead>
     <tr>
-                <td>CloudFlare</td>
-                <td>Iran</td>
-                <td>Date</td></tr>
+                <th scope="col">#</th>
+                <td scope="col">File</td>
+                <td scope="col">CloudFlare</td>
+                <td scope="col">Iran</td>
+                <td scope="col">Date</td></tr>
+</thead>
+<tbody>
     <?php
         $files = glob('temp/*');
         usort($files, function($a, $b) {
             return filemtime($b) - filemtime($a);
         });
+        $index = 1;
     foreach($files as $file){
         printf('<tr>
-                <td><a href="%1$s" target="_blank">%1$s</a></td>
+                <th scope="row">$index</th>
+                <td>%1$s</td>
+                <td><a href="https://tools.omidfarhang.com/%1$s" target="_blank">%1$s</a></td>
                 <td><a href="https://tools.omidfarhang.ir/%1$s" target="_blank">%1$s</a></td>
                 <td>%2$s</td></tr>', 
                 $file, // or basename($file) for just the filename w\out path
                 date('F d Y, H:i:s', filemtime($file)));
+                $index++;
     }
     ?>
+    </tbody>
     </table>
     </main>
   <footer class="pt-5 my-5 text-muted border-top">
