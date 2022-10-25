@@ -40,8 +40,8 @@
         printf('<tr>
                 <th scope="row">'.$index.'</th>
                 <td>%1$s</td>
-                <td><a href="https://tools.omidfarhang.com/%1$s" target="_blank">%1$s</a></td>
-                <td><a href="https://tools.omidfarhang.ir/%1$s" target="_blank">%1$s</a></td>
+                <td><a href="https://tools.omidfarhang.com/%1$s" target="_blank">Download</a></td>
+                <td><a href="https://tools.omidfarhang.ir/%1$s" target="_blank">Download</a></td>
                 <td>%2$s</td></tr>', 
                 $file, // or basename($file) for just the filename w\out path
                 date('F d Y, H:i:s', filemtime($file)));
