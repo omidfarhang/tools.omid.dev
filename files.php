@@ -38,7 +38,7 @@
         $index = 1;
     foreach($files as $file){
         printf('<tr>
-                <th scope="row">$index</th>
+                <th scope="row">'.$index.'</th>
                 <td>%1$s</td>
                 <td><a href="https://tools.omidfarhang.com/%1$s" target="_blank">%1$s</a></td>
                 <td><a href="https://tools.omidfarhang.ir/%1$s" target="_blank">%1$s</a></td>
