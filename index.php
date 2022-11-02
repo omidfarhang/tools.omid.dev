@@ -22,6 +22,7 @@ include_once 'classes/downloads.php';
             <?php
             if ($_POST) {
                 $url = $_POST['DLURL'];
+                $filename = $_POST['DLFILENAME'];
                 $status = null;
                 switch ($url) {
                     case is_youtube($url):
@@ -29,7 +30,7 @@ include_once 'classes/downloads.php';
                         echo $status;
                         break;
                     default:
-                        $status = common_download($url);
+                        $status = common_download($url, $filename);
                         echo $status;
                 }
 
