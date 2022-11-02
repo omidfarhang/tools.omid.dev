@@ -30,7 +30,9 @@ include_once 'classes/downloads.php';
                     $status = youtube_download($url);
                     if ($bahavior === 'save_to_dropbox') {
                         $db_filename = basename($status);
+                        echo $db_filename;
                         $db_url = 'https://tools.omid.dev/temp/'.$db_filename;
+                        echo $db_url;
                         $sentToDb = dropbox_saveurl($db_url, $db_filename);
                     }
                 } else {
