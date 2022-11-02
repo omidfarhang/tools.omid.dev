@@ -1,3 +1,7 @@
+<?php
+include_once 'classes/functions.php';
+include_once 'classes/downloads.php';
+?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" dir="ltr">
 
@@ -11,61 +15,63 @@
 </head>
 
 <body>
-<div class="col-lg-8 mx-auto p-4 py-md-5">
-<?php include_once 'includes/header.php' ?>
-  <main>
-    <h1>Download to Host</h1>
-    <?php
-    if ($_POST) {
-        $file = $_POST['DLURL'];
-        $newfile = 'temp/' . $_POST['DLFILENAME'];
-        function human_filesize($bytes, $decimals = 2)
-        {
-            $size = array('B', 'kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB');
-            $factor = floor((strlen($bytes) - 1) / 3);
-            return sprintf("%.{$decimals}f", $bytes / pow(1024, $factor)) . @$size[$factor];
-        }
+    <div class="col-lg-8 mx-auto p-4 py-md-5">
+        <?php include_once 'includes/header.php' ?>
+        <main>
+            <h1>Download to Host</h1>
+            <?php
+            if ($_POST) {
+                $url = $_POST['DLURL'];
+                $status = '';
+                switch ($url) {
+                    case is_youtube($url):
+                        $status = youtube_download($url);
+                        echo $status;
+                        break;
+                    default:
+                        $status = common_download($url);
+                        echo $status;
+                }
 
-        preg_match("/^(?:http(?:s)?:\/\/)?(?:www\.)?(?:m\.)?(?:youtu\.be\/|youtube\.com\/(?:(?:watch)?\?(?:.*&)?v(?:i)?=|(?:embed|v|vi|user|shorts)\/))([^\?&\"'>]+)/", $file, $matches);
-        if(!empty($matches[1])) {
-            $output = shell_exec("./ytdl.sh $matches[1]");
-            echo $output;
-        } else {
-        if (!copy($file, $newfile)) {
-            echo "failed to copy $file...\n";
-        } else {
-            echo 'Successfully downloaded!';
-            echo '<br><br>';
-            echo 'Source: '. $file;
-            echo '<br>';
-            echo 'Name: '. basename($newfile);
-            echo '<br>';
-            echo 'Size: '. human_filesize(filesize($newfile));
-            echo '<br><br>';
-            echo 'Your file is ready for download from here:';
-            echo '<br>';
-            echo 'CloudFlare: <a href="' . $newfile . '" target="_blank">Download</a>';
-            echo '<br><br>';
-        }
-        }
-    }
-    ?>
-    <form action="" method="post">
-<div class="mb-3">
-  <label for="DLURL" class="form-label">URL:</label>
-  <input name="DLURL" type="url" class="form-control" id="DLURL" onchange="getFileNameFromUrl(this.value)" placeholder="https://......">
-</div>
-<div class="mb-3">
-  <label for="DLFILENAME" class="form-label">Filename:</label>
-  <input name="DLFILENAME" type="text" class="form-control" id="DLFILENAME"  placeholder="Auto generated, can be changed">
-</div>
-        <h5 id="status"></h5>
-        <input class="btn btn-primary" name="Submit1" type="submit" value="Submit" />
-        <input class="btn btn-primary" name="Submit2" id="dropbox" type="button" value="Save To Dropbox" onclick="saveToDropbox()" />
-    </form>
-    </main>
-    <?php include_once 'includes/footer.php' ?>
-</div>
+                if (!empty($matches[1])) {
+                    $output = shell_exec("./ytdl.sh $matches[1]");
+                    echo $output;
+                } else {
+                    if (!$status) {
+                        echo "failed to copy $url...\n";
+                    } else {
+                        echo 'Successfully downloaded!';
+                        echo '<br><br>';
+                        echo 'Source: ' . $url;
+                        echo '<br>';
+                        echo 'Name: ' . basename($status);
+                        echo '<br>';
+                        echo 'Size: ' . human_filesize(filesize($status));
+                        echo '<br><br>';
+                        echo 'Your file is ready for download from here:';
+                        echo '<br>';
+                        echo 'CloudFlare: <a href="' . $status . '" target="_blank">Download</a>';
+                        echo '<br><br>';
+                    }
+                }
+            }
+            ?>
+            <form action="" method="post">
+                <div class="mb-3">
+                    <label for="DLURL" class="form-label">URL:</label>
+                    <input name="DLURL" type="url" class="form-control" id="DLURL" onchange="getFileNameFromUrl(this.value)" placeholder="https://......">
+                </div>
+                <div class="mb-3">
+                    <label for="DLFILENAME" class="form-label">Filename:</label>
+                    <input name="DLFILENAME" type="text" class="form-control" id="DLFILENAME" placeholder="Auto generated, can be changed">
+                </div>
+                <h5 id="status"></h5>
+                <input class="btn btn-primary" name="Submit1" type="submit" value="Submit" />
+                <input class="btn btn-primary" name="Submit2" id="dropbox" type="button" value="Save To Dropbox" onclick="saveToDropbox()" />
+            </form>
+        </main>
+        <?php include_once 'includes/footer.php' ?>
+    </div>
     <script type="text/javascript" src="https://www.dropbox.com/static/api/2/dropins.js" id="dropboxjs" data-app-key="gnls7njehojr4u4"></script>
     <script src="assets/js/jquery-3.4.1.min.js"></script>
     <script>

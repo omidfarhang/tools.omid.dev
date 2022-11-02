@@ -1,4 +1,5 @@
 <?php
+include_once 'functions.php';
 function common_download($url, $filename = null)
 {
     if (!copy($url, $filename)) {
@@ -7,8 +8,9 @@ function common_download($url, $filename = null)
         return true;
     }
 }
-function youtube_download($youtube_id)
+function youtube_download($url)
 {
+    $youtube_id = is_youtube($url);
     $output = shell_exec("yt-dlp $youtube_id -q --exec echo");
     return $output;
 }
