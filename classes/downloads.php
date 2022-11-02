@@ -5,10 +5,11 @@ function common_download($url, $filename = null)
     if(!isset($filename) || ($filename === '')){
         $filename = basename($url);
     }
-    if (!copy($url, $filename)) {
+    $save_location = 'temp/'.$filename;
+    if (!copy($url, $save_location)) {
         return false;
     } else {
-        return true;
+        return $filename;
     }
 }
 function youtube_download($url)
