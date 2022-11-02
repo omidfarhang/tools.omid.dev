@@ -21,6 +21,8 @@ include_once 'classes/downloads.php';
             <h1>Download to Host</h1>
             <?php
             if ($_POST) {
+                echo $_POST['behavior'];
+                return;
                 $url = $_POST['DLURL'];
                 $filename = $_POST['DLFILENAME'];
                 $status = null;
@@ -59,13 +61,12 @@ include_once 'classes/downloads.php';
                     <input name="DLFILENAME" type="text" class="form-control" id="DLFILENAME" placeholder="Auto generated, can be changed">
                 </div>
                 <h5 id="status"></h5>
-                <input class="btn btn-primary" name="Submit1" type="submit" value="Submit" />
-                <input class="btn btn-primary" name="Submit2" id="dropbox" type="button" value="Save To Dropbox" onclick="saveToDropbox()" />
+                <button class="btn btn-primary" name="behavior" type="submit" value="save_to_disk">Save To Disk</button>
+                <button class="btn btn-primary" name="behavior" type="submit" value="save_to_dropbox">Save To Dropbox</button>
             </form>
         </main>
         <?php include_once 'includes/footer.php' ?>
     </div>
-    <script type="text/javascript" src="https://www.dropbox.com/static/api/2/dropins.js" id="dropboxjs" data-app-key="gnls7njehojr4u4"></script>
     <script src="assets/js/jquery-3.4.1.min.js"></script>
     <script>
         function getFileNameFromUrl(url) {
@@ -76,33 +77,6 @@ include_once 'classes/downloads.php';
             url = hashIndex !== -1 ? url.substring(0, hashIndex) : url
             document.getElementById("DLFILENAME").value = (url.split('/').pop() || '').replace(/[\?].*$/g, '');
             return (url.split('/').pop() || '').replace(/[\?].*$/g, '')
-        }
-
-        function saveToDropbox() {
-            document.getElementById("dropbox").disabled = true;
-            if (!document.getElementById("DLURL").value) {
-                document.getElementById("status").innerHTML = "No URL!";
-                document.getElementById("dropbox").disabled = false;
-                return;
-            }
-            if (!document.getElementById("DLFILENAME").value) {
-                document.getElementById("status").innerHTML = "No Filename!";
-                document.getElementById("dropbox").disabled = false;
-                return;
-            }
-
-            $.ajax({
-                url: "dropbox.php", // The other php filename here
-                type: "POST",
-                data: {
-                    "url": document.getElementById("DLURL").value,
-                    "filename": document.getElementById("DLFILENAME").value
-                },
-                success: function(html) {
-                    document.getElementById("status").innerHTML = html;
-                    document.getElementById("dropbox").disabled = false;
-                }
-            });
         }
     </script>
     <script src="assets/js/bootstrap.bundle.min.js" integrity="sha384-u1OknCvxWvY5kfmNBILK2hRnQC3Pr17a+RTT6rIHI7NnikvbZlHgTPOOmMi466C8" crossorigin="anonymous"></script>
