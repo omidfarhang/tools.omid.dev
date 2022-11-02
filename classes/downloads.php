@@ -2,6 +2,9 @@
 include_once 'functions.php';
 function common_download($url, $filename = null)
 {
+    if(!isset($filename)){
+        $filename = basename($url);
+    }
     if (!copy($url, $filename)) {
         return false;
     } else {
