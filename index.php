@@ -21,7 +21,8 @@ include_once 'classes/downloads.php';
             <h1>Download to Host</h1>
             <?php
             if ($_POST) {
-                echo $_POST['behavior'];
+                $bahavior = $_POST['behavior'];
+                echo $bahavior;
                 return;
                 $url = $_POST['DLURL'];
                 $filename = $_POST['DLFILENAME'];
