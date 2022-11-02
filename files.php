@@ -1,3 +1,7 @@
+<?php
+include_once 'classes/functions.php';
+include_once 'classes/downloads.php';
+?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" dir="ltr">
 
@@ -31,12 +35,6 @@
         usort($files, function($a, $b) {
             return filemtime($b) - filemtime($a);
         });
-        function human_filesize($bytes, $decimals = 2)
-        {
-            $size = array('B', 'kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB');
-            $factor = floor((strlen($bytes) - 1) / 3);
-            return sprintf("%.{$decimals}f", $bytes / pow(1024, $factor)) . @$size[$factor];
-        }
         $index = 1;
     foreach($files as $file){
         printf('<tr>
