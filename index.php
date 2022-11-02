@@ -66,9 +66,6 @@
     </form>
     </main>
     <?php include_once 'includes/footer.php' ?>
-  <footer class="pt-5 my-5 text-muted border-top">
-    All Rights Reserved 2022 | Omid Farhang
-  </footer>
 </div>
     <script type="text/javascript" src="https://www.dropbox.com/static/api/2/dropins.js" id="dropboxjs" data-app-key="gnls7njehojr4u4"></script>
     <script src="assets/js/jquery-3.4.1.min.js"></script>

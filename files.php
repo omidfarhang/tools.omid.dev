@@ -12,11 +12,7 @@
 
 <body>
 <div class="col-lg-8 mx-auto p-4 py-md-5">
-  <header class="d-flex align-items-center pb-3 mb-5 border-bottom">
-    <a href="/" class="d-flex align-items-center text-dark text-decoration-none">
-      <span class="fs-4">Tools Center</span>
-    </a>
-  </header>
+<?php include_once 'includes/header.php' ?>
 
   <main>
     <h1>Available Files</h1>
@@ -59,9 +55,7 @@
     </tbody>
     </table>
     </main>
-  <footer class="pt-5 my-5 text-muted border-top">
-    All Rights Reserved 2022 | Omid Farhang
-  </footer>
+    <?php include_once 'includes/footer.php' ?>
 </div>
     <script src="assets/js/jquery-3.4.1.min.js"></script>
     <script src="assets/js/bootstrap.bundle.min.js" integrity="sha384-u1OknCvxWvY5kfmNBILK2hRnQC3Pr17a+RTT6rIHI7NnikvbZlHgTPOOmMi466C8" crossorigin="anonymous"></script>
