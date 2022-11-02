@@ -22,15 +22,24 @@ include_once 'classes/downloads.php';
             <?php
             if ($_POST) {
                 $bahavior = $_POST['behavior'];
-                echo $bahavior;
-                return;
                 $url = $_POST['DLURL'];
                 $filename = $_POST['DLFILENAME'];
                 $status = null;
+                $sentToDb = null;
                 if (is_youtube($url)) {
                     $status = youtube_download($url);
+                    if ($bahavior === 'save_to_dropbox') {
+                        $db_filename = basename($status);
+                        $db_url = 'https://tools.omid.dev/temp/'.$db_filename;
+                        $sentToDb = dropbox_saveurl($db_url, $db_filename);
+                    }
                 } else {
-                    $status = common_download($url, $filename);
+                    if ($bahavior === 'save_to_disk') {
+                        $status = common_download($url, $filename);
+                    }
+                    if ($bahavior === 'save_to_dropbox') {
+                        $sentToDb = dropbox_saveurl($url, $filename);
+                    }
                 }
 
                 if (!$status) {
@@ -49,6 +58,9 @@ include_once 'classes/downloads.php';
                     echo '<br>';
                     echo 'CloudFlare: <a href="' . $file . '" target="_blank">Download</a>';
                     echo '<br><br>';
+                }
+                if ($sentToDb) {
+                    echo $sentToDb;
                 }
             }
             ?>

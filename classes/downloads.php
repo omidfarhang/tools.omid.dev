@@ -20,6 +20,9 @@ function youtube_download($url)
 }
 function dropbox_saveurl($url, $filename = null)
 {
+    if(!isset($filename) || ($filename === '')){
+        $filename = basename($url);
+    }
     $cheaders = array('Authorization: Bearer 0T-Nu7hCogsAAAAAAADkmuOiW4WmlBV_woQWqSE4cm1IwVjBHzAxQKXjqWrK9u9P', 'Content-Type: application/json');
     $params = array(
         'path' => $filename,
