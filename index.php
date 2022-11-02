@@ -12,12 +12,7 @@
 
 <body>
 <div class="col-lg-8 mx-auto p-4 py-md-5">
-  <header class="d-flex align-items-center pb-3 mb-5 border-bottom">
-    <a href="/" class="d-flex align-items-center text-dark text-decoration-none">
-      <span class="fs-4">Tools Center</span>
-    </a>
-  </header>
-
+<?php include_once 'includes/header.php' ?>
   <main>
     <h1>Download to Host</h1>
     <?php
@@ -70,6 +65,7 @@
         <input class="btn btn-primary" name="Submit2" id="dropbox" type="button" value="Save To Dropbox" onclick="saveToDropbox()" />
     </form>
     </main>
+    <?php include_once 'includes/footer.php' ?>
   <footer class="pt-5 my-5 text-muted border-top">
     All Rights Reserved 2022 | Omid Farhang
   </footer>
