@@ -1,19 +1,19 @@
 <?php
-$url = $filename = "";
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    if (empty($_POST["url"])) {
-        echo 'where is url?';
-        die;
+function common_download($url, $filename = null)
+{
+    if (!copy($url, $filename)) {
+        return false;
     } else {
-        $url = $_POST["url"];
+        return true;
     }
-    if (empty($_POST["filename"])) {
-        echo 'where is filename?';
-        die;
-    } else {
-        $milliseconds = round(microtime(true) * 1000);
-        $filename = '/'.$_POST["filename"];
-    }
+}
+function youtube_download($youtube_id)
+{
+    $output = shell_exec("yt-dlp $youtube_id -q --exec echo");
+    return $output;
+}
+function dropbox_saveurl($url, $filename = null)
+{
     $cheaders = array('Authorization: Bearer 0T-Nu7hCogsAAAAAAADkmuOiW4WmlBV_woQWqSE4cm1IwVjBHzAxQKXjqWrK9u9P', 'Content-Type: application/json');
     $params = array(
         'path' => $filename,
@@ -26,6 +26,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     $response = curl_exec($ch);
-    echo $response;
     curl_close($ch);
+    return $response;
 }

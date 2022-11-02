@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
     <meta content="en-us" http-equiv="Content-Language" />
-    <link rel="shortcut icon" href="https://omidfarhang.com/favicon.ico" />
+    <?php include_once 'includes/favicon.php' ?>
     <title>Download to Host</title>
     <link href="assets/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-iYQeCzEYFbKjA/T2uDLTpkwGzCiq6soy8tYaI1GyVh/UjpbCx/TYkiZhlZB6+fzT" crossorigin="anonymous">
 </head>
