@@ -61,8 +61,8 @@ include_once 'classes/downloads.php';
                     <input name="DLFILENAME" type="text" class="form-control" id="DLFILENAME" placeholder="Auto generated, can be changed">
                 </div>
                 <h5 id="status"></h5>
-                <button class="btn btn-primary" name="behavior" type="submit" value="save_to_disk">Save To Disk</button>
-                <button class="btn btn-primary" name="behavior" type="submit" value="save_to_dropbox">Save To Dropbox</button>
+                <button class="btn btn-primary" name="behavior" type="button" value="save_to_disk">Save To Disk</button>
+                <button class="btn btn-primary" name="behavior" type="button" value="save_to_dropbox">Save To Dropbox</button>
             </form>
         </main>
         <?php include_once 'includes/footer.php' ?>
