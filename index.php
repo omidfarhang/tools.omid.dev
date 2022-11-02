@@ -24,14 +24,12 @@ include_once 'classes/downloads.php';
                 $url = $_POST['DLURL'];
                 $filename = $_POST['DLFILENAME'];
                 $status = null;
-                switch ($url) {
-                    case is_youtube($url):
-                        $status = youtube_download($url);
-                        echo $status;
-                        break;
-                    default:
-                        $status = common_download($url, $filename);
-                        echo $status;
+                if (is_youtube($url)) {
+                    $status = youtube_download($url);
+                    echo $status;
+                } else {
+                    $status = common_download($url, $filename);
+                    echo $status;
                 }
 
                 if (!$status) {
