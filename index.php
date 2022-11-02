@@ -22,40 +22,32 @@ include_once 'classes/downloads.php';
             <?php
             if ($_POST) {
                 $url = $_POST['DLURL'];
-                $status = '';
-                echo 'lets go';
+                $status = null;
                 switch ($url) {
                     case is_youtube($url):
-                        echo 'yt 1';
                         $status = youtube_download($url);
                         echo $status;
                         break;
                     default:
-                    echo 'cm 1';
                         $status = common_download($url);
                         echo $status;
                 }
 
-                if (!empty($matches[1])) {
-                    $output = shell_exec("./ytdl.sh $matches[1]");
-                    echo $output;
+                if (!$status) {
+                    echo "failed to copy $url...\n";
                 } else {
-                    if (!$status) {
-                        echo "failed to copy $url...\n";
-                    } else {
-                        echo 'Successfully downloaded!';
-                        echo '<br><br>';
-                        echo 'Source: ' . $url;
-                        echo '<br>';
-                        echo 'Name: ' . basename($status);
-                        echo '<br>';
-                        echo 'Size: ' . human_filesize(filesize($status));
-                        echo '<br><br>';
-                        echo 'Your file is ready for download from here:';
-                        echo '<br>';
-                        echo 'CloudFlare: <a href="' . $status . '" target="_blank">Download</a>';
-                        echo '<br><br>';
-                    }
+                    echo 'Successfully downloaded!';
+                    echo '<br><br>';
+                    echo 'Source: ' . $url;
+                    echo '<br>';
+                    echo 'Name: ' . basename($status);
+                    echo '<br>';
+                    echo 'Size: ' . human_filesize(filesize($status));
+                    echo '<br><br>';
+                    echo 'Your file is ready for download from here:';
+                    echo '<br>';
+                    echo 'CloudFlare: <a href="' . $status . '" target="_blank">Download</a>';
+                    echo '<br><br>';
                 }
             }
             ?>
