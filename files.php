@@ -26,7 +26,6 @@
                 <th scope="col">#</th>
                 <td scope="col">File</td>
                 <td scope="col">CloudFlare</td>
-                <td scope="col">Iran</td>
                 <td scope="col">Size</td>
                 <td scope="col">Date</td></tr>
 </thead>
@@ -47,8 +46,7 @@
         printf('<tr>
                 <th scope="row">'.$index.'</th>
                 <td>%2$s</td>
-                <td><a href="https://tools.omidfarhang.com/%1$s" target="_blank">Download</a></td>
-                <td><a href="https://tools.omidfarhang.ir/%1$s" target="_blank">Download</a></td>
+                <td><a href="%1$s" target="_blank">Download</a></td>
                 <td>%3$s</td> 
                 <td>%4$s</td></tr>', 
                 $file,

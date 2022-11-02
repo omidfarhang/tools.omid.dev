@@ -50,9 +50,7 @@
             echo '<br><br>';
             echo 'Your file is ready for download from here:';
             echo '<br>';
-            echo 'CloudFlare: <a href="https://tools.omidfarhang.com/' . $newfile . '" target="_blank">Download</a>';
-            echo '<br>';
-            echo 'Iran: <a href="https://tools.omidfarhang.ir/' . $newfile . '" target="_blank">Download</a>';
+            echo 'CloudFlare: <a href="' . $newfile . '" target="_blank">Download</a>';
             echo '<br><br>';
         }
         }
