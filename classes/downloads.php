@@ -15,7 +15,7 @@ function common_download($url, $filename = null)
 function youtube_download($url)
 {
     $youtube_id = is_youtube($url);
-    $output = shell_exec("yt-dlp $youtube_id -q --exec echo");
+    $output = exec("nohup yt-dlp $youtube_id -q --exec echo 2>&1 &");
     return $output;
 }
 function dropbox_saveurl($url, $filename = null)
