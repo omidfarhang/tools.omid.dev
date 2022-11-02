@@ -42,9 +42,11 @@ include_once 'classes/downloads.php';
                     }
                 }
 
-                if (!$status) {
+                if (!$status && ($bahavior === 'save_to_disk')) {
                     echo "failed to copy $url...\n";
-                } else {
+                } 
+                
+                if ($status) {
                     $file = 'temp/'.basename($status);
                     echo 'Successfully downloaded!';
                     echo '<br><br>';
