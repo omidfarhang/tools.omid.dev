@@ -41,7 +41,7 @@ include_once 'classes/downloads.php';
                     echo '<br>';
                     echo 'Name: ' . basename($status);
                     echo '<br>';
-                    echo 'Size: ' . human_filesize(filesize($status));
+                    echo 'Size: ' . human_filesize(filesize('temp/'.basename($status)));
                     echo '<br><br>';
                     echo 'Your file is ready for download from here:';
                     echo '<br>';
