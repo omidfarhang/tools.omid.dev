@@ -34,7 +34,6 @@ include_once 'classes/downloads.php';
                     echo "failed to copy $url...\n";
                 } else {
                     $file = 'temp/'.basename($status);
-                    echo $file;
                     echo 'Successfully downloaded!';
                     echo '<br><br>';
                     echo 'Source: ' . $url;
