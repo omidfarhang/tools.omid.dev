@@ -26,26 +26,25 @@ include_once 'classes/downloads.php';
                 $status = null;
                 if (is_youtube($url)) {
                     $status = youtube_download($url);
-                    echo $status;
                 } else {
                     $status = common_download($url, $filename);
-                    echo $status;
                 }
 
                 if (!$status) {
                     echo "failed to copy $url...\n";
                 } else {
+                    $file = 'temp/'.basename($status);
                     echo 'Successfully downloaded!';
                     echo '<br><br>';
                     echo 'Source: ' . $url;
                     echo '<br>';
                     echo 'Name: ' . basename($status);
                     echo '<br>';
-                    echo 'Size: ' . human_filesize(filesize('temp/'.basename($status)));
+                    echo 'Size: ' . human_filesize(filesize($file));
                     echo '<br><br>';
                     echo 'Your file is ready for download from here:';
                     echo '<br>';
-                    echo 'CloudFlare: <a href="' . $status . '" target="_blank">Download</a>';
+                    echo 'CloudFlare: <a href="' . $file . '" target="_blank">Download</a>';
                     echo '<br><br>';
                 }
             }
