@@ -28,6 +28,7 @@ function dropbox_saveurl($url, $filename = null)
         'path' => $filename,
         'url' => $url
     );
+    echo $params;
     $payload = json_encode($params);
     $ch = curl_init('https://api.dropboxapi.com/2/files/save_url');
     curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
