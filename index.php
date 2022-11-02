@@ -23,12 +23,15 @@ include_once 'classes/downloads.php';
             if ($_POST) {
                 $url = $_POST['DLURL'];
                 $status = '';
+                echo 'lets go';
                 switch ($url) {
                     case is_youtube($url):
+                        echo 'yt 1';
                         $status = youtube_download($url);
                         echo $status;
                         break;
                     default:
+                    echo 'cm 1';
                         $status = common_download($url);
                         echo $status;
                 }
