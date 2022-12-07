@@ -21,8 +21,8 @@ function youtube_download($url, $yt_format)
     } else {
         $format = '-f "best[height='.$yt_format.']"';
     }
-    echo ("yt-dlp $youtube_id $format -q --exec echo");
-    $output = exec("yt-dlp $youtube_id $format -q --exec echo");
+    echo ("yt-dlp $format $youtube_id -q --exec echo");
+    $output = exec("yt-dlp $format $youtube_id -q --exec echo");
     return $output;
 }
 function dropbox_saveurl($url, $filename = null)
