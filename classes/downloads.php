@@ -19,7 +19,7 @@ function youtube_download($url, $yt_format)
     if ($yt_format == 'best') {
         $format = "-f bestvideo*+bestaudio/best";
     } else {
-        $format = '-f "best[height='.$yt_format.']"';
+        $format = "-f bestvideo*[height<='.$yt_format).']+bestaudio/best";
     }
     echo ("yt-dlp $format $youtube_id -q --exec echo");
     $output = exec("yt-dlp $format $youtube_id -q --exec echo");
