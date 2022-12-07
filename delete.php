@@ -2,7 +2,7 @@
 
     if(isset($_GET['file']))
       {
-        $filename='temp/'.$_GET['id'];
+        $filename='temp/'.$_GET['file'];
         if($unlink($filename))
           {
           header('location:files.php');
