@@ -25,7 +25,7 @@ include_once 'classes/downloads.php';
     <tr>
                 <th scope="col">#</th>
                 <td scope="col">File</td>
-                <td scope="col">CloudFlare</td>
+                <td scope="col">Download</td>
                 <td scope="col">Size</td>
                 <td scope="col">Date</td></tr>
 </thead>
@@ -41,6 +41,7 @@ include_once 'classes/downloads.php';
                 <th scope="row">'.$index.'</th>
                 <td>%2$s</td>
                 <td><a href="%1$s" target="_blank">Download</a></td>
+                <td><a onClick=\"javascript: return confirm(\'Please confirm deletion\');\" href=\'delete.php?id="%1$s"\'>x</a></td>
                 <td>%3$s</td> 
                 <td>%4$s</td></tr>', 
                 $file,
