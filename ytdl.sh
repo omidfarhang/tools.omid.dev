@@ -1,5 +1,5 @@
 #!/bin/bash
-dlfile=`yt-dlp "$1" -q --exec echo`
+dlfile=`yt-dlp "$1" "$2" -q --exec echo`
 base_name=$(basename "$dlfile")
 baseurl="https://tools.omid.dev/temp/""$base_name"
 wget -O- --no-check-certificate --quiet \

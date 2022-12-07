@@ -12,10 +12,16 @@ function common_download($url, $filename = null)
         return $filename;
     }
 }
-function youtube_download($url)
+function youtube_download($url, $yt_format)
 {
+    $format = "-f bestvideo*+bestaudio/best";
     $youtube_id = is_youtube($url);
-    $output = exec("yt-dlp $youtube_id -q --exec echo");
+    if ($yt_format == 'best') {
+        $format = "-f bestvideo*+bestaudio/best";
+    } else {
+        $format = '-f "best[height='.$yt_format.']"';
+    }
+    $output = exec("yt-dlp $youtube_id $format -q --exec echo");
     return $output;
 }
 function dropbox_saveurl($url, $filename = null)

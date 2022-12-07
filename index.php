@@ -24,10 +24,11 @@ include_once 'classes/downloads.php';
                 $bahavior = $_POST['behavior'];
                 $url = $_POST['DLURL'];
                 $filename = $_POST['DLFILENAME'];
+                $yt_format = $_POST['yt_format'];
                 $status = null;
                 $sentToDb = null;
                 if (is_youtube($url)) {
-                    $status = youtube_download($url);
+                    $status = youtube_download($url, $yt_format);
                     if ($bahavior === 'save_to_dropbox') {
                         $db_filename = basename($status);
                         $db_url = 'https://tools.omid.dev/temp/'.$db_filename;
@@ -70,6 +71,16 @@ include_once 'classes/downloads.php';
                 <div class="mb-3">
                     <label for="DLURL" class="form-label">URL:</label>
                     <input name="DLURL" type="url" class="form-control" id="DLURL" onchange="getFileNameFromUrl(this.value)" placeholder="https://......">
+                </div>
+                <div class="mb-3">
+                    <label for="yt_format" class="form-label">YouTube Format:</label>
+                    <select class="form-control" name="yt_format" id="yt_format">
+                        <option value="best" selected>Best</option>
+                        <option value="2160">4K</option>
+                        <option value="1080">1080</option>
+                        <option value="720">720</option>
+                        <option value="480">480</option>
+                    </select>
                 </div>
                 <div class="mb-3">
                     <label for="DLFILENAME" class="form-label">Filename:</label>
