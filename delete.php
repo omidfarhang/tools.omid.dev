@@ -1,9 +1,8 @@
 <?php
-
     if(isset($_GET['file']))
       {
         $filename='temp/'.$_GET['file'];
-        $del = $unlink($filename);
+        $del = unlink($filename);
         if($del)
           {
           header('location:files.php');
