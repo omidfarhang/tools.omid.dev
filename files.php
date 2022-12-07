@@ -42,7 +42,7 @@ include_once 'classes/downloads.php';
                 <th scope="row">'.$index.'</th>
                 <td>%2$s</td>
                 <td><a href="%1$s" target="_blank">Download</a></td>
-                <td><a onClick="javascript: return confirm(\'Please confirm deletion\');" href=delete.php?file="%5$s">x</a></td>
+                <td><a onClick="javascript: return confirm(\'Please confirm deletion\');" href=delete.php?file=%5$s>x</a></td>
                 <td>%3$s</td> 
                 <td>%4$s</td></tr>', 
                 $file,
