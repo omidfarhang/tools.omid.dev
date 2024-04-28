@@ -76,10 +76,14 @@ include_once 'classes/downloads.php';
                     <label for="yt_format" class="form-label">YouTube Format:</label>
                     <select class="form-control" name="yt_format" id="yt_format">
                         <option value="best" selected>Best</option>
-                        <option value="2160">4K</option>
-                        <option value="1080">1080</option>
-                        <option value="720">720</option>
-                        <option value="480">480</option>
+                        <option value="4320">4320p (8k)</option>
+                        <option value="2160">2160p (4K)</option>
+                        <option value="1440">1440p (2k)</option>
+                        <option value="1080">1080p (HD)</option>
+                        <option value="720">720p (HD)</option>
+                        <option value="480">480p (SD)</option>
+                        <option value="360">360p (SD)</option>
+                        <option value="240">240p (SD)</option>
                     </select>
                 </div>
                 <div class="mb-3">
@@ -99,6 +103,9 @@ include_once 'classes/downloads.php';
             if (!url) {
                 return
             };
+            var matches = url.match(/^(?:http(?:s)?:\/\/)?(?:www\.)?(?:m\.)?(?:youtu\.be\/|youtube\.com\/(?:(?:watch)?\?(?:.*&)?v(?:i)?=|(?:embed|v|vi|user|shorts)\/))([^\?&\"'>]+)/);
+                console.log('matches[1]', matches[1]);
+                console.log('matches[2]', matches[2]);
             const hashIndex = url.indexOf('#')
             url = hashIndex !== -1 ? url.substring(0, hashIndex) : url
             document.getElementById("DLFILENAME").value = (url.split('/').pop() || '').replace(/[\?].*$/g, '');
