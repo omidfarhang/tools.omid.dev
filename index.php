@@ -72,7 +72,7 @@ include_once 'classes/downloads.php';
                     <label for="DLURL" class="form-label">URL:</label>
                     <input name="DLURL" type="url" class="form-control" id="DLURL" onchange="getFileNameFromUrl(this.value)" placeholder="https://......">
                 </div>
-                <div class="mb-3">
+                <div class="mb-3 d-none" id="youtube-options">
                     <label for="yt_format" class="form-label">YouTube Format:</label>
                     <select class="form-control" name="yt_format" id="yt_format">
                         <option value="best" selected>Best</option>
@@ -103,9 +103,12 @@ include_once 'classes/downloads.php';
             if (!url) {
                 return
             };
-            var matches = url.match(/^(?:http(?:s)?:\/\/)?(?:www\.)?(?:m\.)?(?:youtu\.be\/|youtube\.com\/(?:(?:watch)?\?(?:.*&)?v(?:i)?=|(?:embed|v|vi|user|shorts)\/))([^\?&\"'>]+)/);
-                console.log('matches[1]', matches[1]);
-                console.log('matches[2]', matches[2]);
+            const isYoutube = url.match(/^(?:http(?:s)?:\/\/)?(?:www\.)?(?:m\.)?(?:youtu\.be\/|youtube\.com\/(?:(?:watch)?\?(?:.*&)?v(?:i)?=|(?:embed|v|vi|user|shorts)\/))([^\?&\"'>]+)/);
+            if(isYoutube[1]) {
+                document.getElementById("youtube-options").classList.remove('d-none');
+            } else {
+                document.getElementById("youtube-options").classList.add('d-none');
+            }
             const hashIndex = url.indexOf('#')
             url = hashIndex !== -1 ? url.substring(0, hashIndex) : url
             document.getElementById("DLFILENAME").value = (url.split('/').pop() || '').replace(/[\?].*$/g, '');
