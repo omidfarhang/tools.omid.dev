@@ -104,7 +104,7 @@ include_once 'classes/downloads.php';
                 return
             };
             const isYoutube = url.match(/^(?:http(?:s)?:\/\/)?(?:www\.)?(?:m\.)?(?:youtu\.be\/|youtube\.com\/(?:(?:watch)?\?(?:.*&)?v(?:i)?=|(?:embed|v|vi|user|shorts)\/))([^\?&\"'>]+)/);
-            if(isYoutube[1]) {
+            if(isYoutube && isYoutube[1]) {
                 document.getElementById("youtube-options").classList.remove('d-none');
             } else {
                 document.getElementById("youtube-options").classList.add('d-none');
