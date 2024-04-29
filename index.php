@@ -70,7 +70,7 @@ include_once 'classes/downloads.php';
             <form action="" method="post">
                 <div class="mb-3">
                     <label for="DLURL" class="form-label">URL:</label>
-                    <input name="DLURL" type="url" class="form-control" id="DLURL" onfocus="getFileNameFromUrl(this.value)" onblur="getFileNameFromUrl(this.value)" onchange="getFileNameFromUrl(this.value)" placeholder="https://......">
+                    <input name="DLURL" type="url" class="form-control" id="DLURL" oninput="getFileNameFromUrl(this.value)" placeholder="https://......">
                 </div>
                 <div class="mb-3 d-none" id="youtube-options">
                     <label for="yt_format" class="form-label">YouTube Format:</label>
