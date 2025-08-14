@@ -15,13 +15,14 @@ function common_download($url, $filename = null)
 function youtube_download($url, $yt_format)
 {
     $format = "-f bestvideo*+bestaudio/best";
+    $cookie = "--cookies .secure/cookies.txt";
     $youtube_id = is_youtube($url);
     if ($yt_format == 'best') {
         $format = "-f bestvideo*+bestaudio/best";
     } else {
         $format = '-f "bestvideo*[height<='.$yt_format.']+bestaudio/best"';
     }
-    $output = exec("yt-dlp $format $youtube_id -q --exec echo");
+    $output = exec("yt-dlp $format $cookie $youtube_id -q --exec echo");
     return $output;
 }
 function dropbox_saveurl($url, $filename = null)
