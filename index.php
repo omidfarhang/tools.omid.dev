@@ -12,6 +12,17 @@ include_once 'classes/downloads.php';
     <?php include_once 'includes/favicon.php' ?>
     <title>Download to Host</title>
     <link href="assets/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-iYQeCzEYFbKjA/T2uDLTpkwGzCiq6soy8tYaI1GyVh/UjpbCx/TYkiZhlZB6+fzT" crossorigin="anonymous">
+    <style>
+        #dropbox-status {
+            margin-top: 20px;
+        }
+        .progress {
+            height: 20px;
+        }
+        .progress-bar {
+            background: linear-gradient(45deg, #007bff, #0056b3);
+        }
+    </style>
 </head>
 
 <body>
@@ -19,6 +30,13 @@ include_once 'classes/downloads.php';
         <?php include_once 'includes/header.php' ?>
         <main>
             <h1>Download to Host</h1>
+            <div id="dropbox-status" class="alert d-none" role="alert">
+                <div id="dropbox-message"></div>
+                <div id="dropbox-progress" class="progress mt-2 d-none">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+                </div>
+            </div>
+            
             <?php
             if ($_POST) {
                 $bahavior = $_POST['behavior'];
@@ -63,7 +81,14 @@ include_once 'classes/downloads.php';
                     echo '<br><br>';
                 }
                 if ($sentToDb) {
-                    echo $sentToDb;
+                    if ($sentToDb['success']) {
+                        echo '<script>startDropboxMonitoring("' . $sentToDb['async_job_id'] . '", "' . htmlspecialchars($sentToDb['filename']) . '");</script>';
+                    } else {
+                        echo '<div class="alert alert-danger">' . htmlspecialchars($sentToDb['message']) . '</div>';
+                        if (isset($sentToDb['error'])) {
+                            echo '<div class="alert alert-warning">Error: ' . htmlspecialchars($sentToDb['error']) . '</div>';
+                        }
+                    }
                 }
             }
             ?>
@@ -113,6 +138,72 @@ include_once 'classes/downloads.php';
             url = hashIndex !== -1 ? url.substring(0, hashIndex) : url
             document.getElementById("DLFILENAME").value = (url.split('/').pop() || '').replace(/[\?].*$/g, '');
             return (url.split('/').pop() || '').replace(/[\?].*$/g, '')
+        }
+
+        function startDropboxMonitoring(asyncJobId, filename) {
+            const statusDiv = document.getElementById('dropbox-status');
+            const messageDiv = document.getElementById('dropbox-message');
+            const progressDiv = document.getElementById('dropbox-progress');
+            
+            statusDiv.className = 'alert alert-info';
+            statusDiv.classList.remove('d-none');
+            messageDiv.innerHTML = 'Uploading "' + filename + '" to Dropbox...';
+            progressDiv.classList.remove('d-none');
+            
+            checkDropboxStatus(asyncJobId, filename);
+        }
+
+        function checkDropboxStatus(asyncJobId, filename) {
+            $.ajax({
+                url: 'check_dropbox_status.php',
+                method: 'POST',
+                data: {
+                    async_job_id: asyncJobId
+                },
+                dataType: 'json',
+                success: function(response) {
+                    const statusDiv = document.getElementById('dropbox-status');
+                    const messageDiv = document.getElementById('dropbox-message');
+                    const progressDiv = document.getElementById('dropbox-progress');
+                    
+                    if (response.success) {
+                        if (response.status === 'in_progress') {
+                            messageDiv.innerHTML = 'Upload in progress for "' + filename + '"...';
+                            // Check again after 2 seconds
+                            setTimeout(function() {
+                                checkDropboxStatus(asyncJobId, filename);
+                            }, 2000);
+                        } else if (response.status === 'complete') {
+                            statusDiv.className = 'alert alert-success';
+                            progressDiv.classList.add('d-none');
+                            messageDiv.innerHTML = '✅ Successfully uploaded "' + filename + '" to Dropbox!<br><strong>File ID:</strong> ' + (response.data.id || 'N/A') + '<br><strong>Path:</strong> ' + (response.data.path_display || response.data.path_lower || 'N/A');
+                        } else if (response.status === 'failed') {
+                            statusDiv.className = 'alert alert-danger';
+                            progressDiv.classList.add('d-none');
+                            messageDiv.innerHTML = '❌ Failed to upload "' + filename + '" to Dropbox.<br><strong>Error:</strong> ' + (response.data.error_summary || 'Unknown error');
+                        } else {
+                            // Handle other statuses
+                            messageDiv.innerHTML = 'Status: ' + response.status + ' for "' + filename + '"';
+                            setTimeout(function() {
+                                checkDropboxStatus(asyncJobId, filename);
+                            }, 2000);
+                        }
+                    } else {
+                        statusDiv.className = 'alert alert-danger';
+                        progressDiv.classList.add('d-none');
+                        messageDiv.innerHTML = '❌ Error checking upload status: ' + (response.error || 'Unknown error');
+                    }
+                },
+                error: function() {
+                    const statusDiv = document.getElementById('dropbox-status');
+                    const messageDiv = document.getElementById('dropbox-message');
+                    const progressDiv = document.getElementById('dropbox-progress');
+                    
+                    statusDiv.className = 'alert alert-danger';
+                    progressDiv.classList.add('d-none');
+                    messageDiv.innerHTML = '❌ Error checking upload status. Please try again.';
+                }
+            });
         }
     </script>
     <script src="assets/js/bootstrap.bundle.min.js" integrity="sha384-u1OknCvxWvY5kfmNBILK2hRnQC3Pr17a+RTT6rIHI7NnikvbZlHgTPOOmMi466C8" crossorigin="anonymous"></script>

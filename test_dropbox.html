@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dropbox Status Test</title>
+    <script src="assets/js/jquery-3.4.1.min.js"></script>
+</head>
+<body>
+    <h1>Test Dropbox Status Checker</h1>
+    <input type="text" id="job-id" placeholder="Enter async job ID">
+    <button onclick="testStatus()">Check Status</button>
+    <div id="result"></div>
+
+    <script>
+        function testStatus() {
+            const jobId = document.getElementById('job-id').value;
+            if (!jobId) return;
+            
+            $.ajax({
+                url: 'check_dropbox_status.php',
+                method: 'POST',
+                data: { async_job_id: jobId },
+                dataType: 'json',
+                success: function(response) {
+                    document.getElementById('result').innerHTML = '<pre>' + JSON.stringify(response, null, 2) + '</pre>';
+                },
+                error: function() {
+                    document.getElementById('result').innerHTML = 'Error occurred';
+                }
+            });
+        }
+    </script>
+</body>
+</html>
