@@ -82,7 +82,12 @@ include_once 'classes/downloads.php';
                 }
                 if ($sentToDb) {
                     if ($sentToDb['success']) {
-                        echo '<script>$(document).ready(function() { startDropboxMonitoring("' . $sentToDb['async_job_id'] . '", "' . htmlspecialchars($sentToDb['filename']) . '"); });</script>';
+                        echo '<script>
+                        window.dropboxJobData = {
+                            asyncJobId: "' . $sentToDb['async_job_id'] . '",
+                            filename: "' . htmlspecialchars($sentToDb['filename']) . '"
+                        };
+                        </script>';
                     } else {
                         echo '<div class="alert alert-danger">' . htmlspecialchars($sentToDb['message']) . '</div>';
                         if (isset($sentToDb['error'])) {
@@ -124,6 +129,13 @@ include_once 'classes/downloads.php';
     </div>
     <script src="assets/js/jquery-3.4.1.min.js"></script>
     <script>
+        $(document).ready(function() {
+            // Check if there's pending Dropbox job data to monitor
+            if (window.dropboxJobData) {
+                startDropboxMonitoring(window.dropboxJobData.asyncJobId, window.dropboxJobData.filename);
+            }
+        });
+
         function getFileNameFromUrl(url) {
             if (!url) {
                 return
