@@ -82,7 +82,7 @@ include_once 'classes/downloads.php';
                 }
                 if ($sentToDb) {
                     if ($sentToDb['success']) {
-                        echo '<script>startDropboxMonitoring("' . $sentToDb['async_job_id'] . '", "' . htmlspecialchars($sentToDb['filename']) . '");</script>';
+                        echo '<script>$(document).ready(function() { startDropboxMonitoring("' . $sentToDb['async_job_id'] . '", "' . htmlspecialchars($sentToDb['filename']) . '"); });</script>';
                     } else {
                         echo '<div class="alert alert-danger">' . htmlspecialchars($sentToDb['message']) . '</div>';
                         if (isset($sentToDb['error'])) {
