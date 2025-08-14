@@ -30,7 +30,8 @@ function dropbox_saveurl($url, $filename = null)
     if(!isset($filename) || ($filename === '')){
         $filename = basename($url);
     }
-    $cheaders = array('Authorization: Bearer 0T-Nu7hCogsAAAAAAADkmuOiW4WmlBV_woQWqSE4cm1IwVjBHzAxQKXjqWrK9u9P', 'Content-Type: application/json');
+    $token = trim(file_get_contents(__DIR__ . '.secure/dropbox_token.txt'));
+    $cheaders = array('Authorization: Bearer ' . $token, 'Content-Type: application/json');
     $params = array(
         'path' => '/'.$filename,
         'url' => $url
