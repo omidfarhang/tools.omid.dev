@@ -36,21 +36,35 @@ final class UserRepository
     /** @return list<array<string, mixed>> */
     public function all(): array
     {
-        return $this->db->query('SELECT * FROM users ORDER BY created_at DESC')->fetchAll();
+        return $this->db->query(
+            'SELECT * FROM users ORDER BY is_active ASC, created_at DESC'
+        )->fetchAll();
     }
 
-    public function create(string $username, string $password, string $role = 'user'): int
+    public function create(string $username, string $password, string $role = 'user', bool $active = true): int
     {
         $stmt = $this->db->prepare(
-            'INSERT INTO users (username, password_hash, role, is_active) VALUES (:u, :p, :r, 1)'
+            'INSERT INTO users (username, password_hash, role, is_active) VALUES (:u, :p, :r, :a)'
         );
         $stmt->execute([
             ':u' => $username,
             ':p' => password_hash($password, PASSWORD_DEFAULT),
             ':r' => $role === 'admin' ? 'admin' : 'user',
+            ':a' => $active ? 1 : 0,
         ]);
 
         return (int) $this->db->lastInsertId();
+    }
+
+    /** Self-registration: always role=user and inactive until admin approves. */
+    public function register(string $username, string $password): int
+    {
+        return $this->create($username, $password, 'user', false);
+    }
+
+    public function countPending(): int
+    {
+        return (int) $this->db->query('SELECT COUNT(*) FROM users WHERE is_active = 0')->fetchColumn();
     }
 
     public function setActive(int $id, bool $active): void

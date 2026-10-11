@@ -17,10 +17,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     Csrf::requireValid();
     $username = trim((string) ($_POST['username'] ?? ''));
     $password = (string) ($_POST['password'] ?? '');
-    if (Auth::login($username, $password)) {
+    $result = Auth::attemptLogin($username, $password);
+    if ($result === 'ok') {
         redirect('/');
     }
-    $error = 'Invalid username or password.';
+    $error = $result === 'inactive'
+        ? 'Your account is pending admin approval.'
+        : 'Invalid username or password.';
 }
 
 ob_start();
@@ -40,6 +43,7 @@ ob_start();
         <input class="form-control" type="password" id="password" name="password" required autocomplete="current-password">
     </div>
     <button class="btn btn-primary" type="submit">Sign in</button>
+    <a class="btn btn-link" href="/register.php">Create an account</a>
 </form>
 <?php
 View::render('Login', ob_get_clean(), null);

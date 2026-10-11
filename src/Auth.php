@@ -22,19 +22,28 @@ final class Auth
         return $user !== null && (int) $user['is_active'] === 1;
     }
 
-    public static function login(string $username, string $password): bool
+    /**
+     * @return 'ok'|'inactive'|'invalid'
+     */
+    public static function attemptLogin(string $username, string $password): string
     {
         $user = (new UserRepository())->findByUsername($username);
-        if ($user === null || (int) $user['is_active'] !== 1) {
-            return false;
+        if ($user === null || !password_verify($password, $user['password_hash'])) {
+            return 'invalid';
         }
-        if (!password_verify($password, $user['password_hash'])) {
-            return false;
+        if ((int) $user['is_active'] !== 1) {
+            return 'inactive';
         }
+
         session_regenerate_id(true);
         $_SESSION['user_id'] = (int) $user['id'];
 
-        return true;
+        return 'ok';
+    }
+
+    public static function login(string $username, string $password): bool
+    {
+        return self::attemptLogin($username, $password) === 'ok';
     }
 
     public static function logout(): void

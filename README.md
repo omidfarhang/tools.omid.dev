@@ -4,7 +4,7 @@ Personal **Download to Host** toolkit: pull HTTP(S)/YouTube files to the server,
 
 ## Features
 
-- Multi-user auth (`admin` / `user`); admins create accounts
+- Multi-user auth (`admin` / `user`); self-register (inactive until admin approves) or admin-created accounts
 - Download URL or YouTube (`yt-dlp`) to disk
 - Public share links (`/s/{token}`) without login
 - Per-user Dropbox connect (no shared Dropbox token)

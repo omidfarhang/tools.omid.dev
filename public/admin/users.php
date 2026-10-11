@@ -35,8 +35,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $target = $repo->findById($id);
             if ($target) {
-                $repo->setActive($id, !(int) $target['is_active']);
-                flash('success', 'User updated.');
+                $activating = (int) $target['is_active'] !== 1;
+                $repo->setActive($id, $activating);
+                flash('success', $activating ? 'User activated.' : 'User deactivated.');
             }
         }
     } elseif ($action === 'reset_password') {
@@ -104,7 +105,8 @@ ob_start();
     </thead>
     <tbody>
     <?php foreach ($all as $u): ?>
-        <tr>
+        <?php $active = (int) $u['is_active'] === 1; ?>
+        <tr class="<?= $active ? '' : 'table-warning' ?>">
             <td><?= (int) $u['id'] ?></td>
             <td><?= e($u['username']) ?></td>
             <td>
@@ -119,15 +121,15 @@ ob_start();
                     <button class="btn btn-sm btn-outline-secondary" type="submit">Set</button>
                 </form>
             </td>
-            <td><?= (int) $u['is_active'] === 1 ? 'yes' : 'no' ?></td>
+            <td><?= $active ? 'yes' : 'pending' ?></td>
             <td><?= !empty($u['dropbox_access_token']) || !empty($u['dropbox_refresh_token']) ? 'yes' : 'no' ?></td>
             <td class="d-flex flex-wrap gap-1">
                 <form method="post">
                     <?= Csrf::field() ?>
                     <input type="hidden" name="action" value="toggle">
                     <input type="hidden" name="user_id" value="<?= (int) $u['id'] ?>">
-                    <button class="btn btn-sm btn-outline-warning" type="submit">
-                        <?= (int) $u['is_active'] === 1 ? 'Disable' : 'Enable' ?>
+                    <button class="btn btn-sm <?= $active ? 'btn-outline-warning' : 'btn-success' ?>" type="submit">
+                        <?= $active ? 'Disable' : 'Approve' ?>
                     </button>
                 </form>
                 <form method="post" class="d-flex gap-1">
