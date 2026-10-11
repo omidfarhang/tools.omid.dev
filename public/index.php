@@ -179,12 +179,19 @@ function startDropboxMonitoring(asyncJobId, filename) {
 }
 
 function checkDropboxStatus(asyncJobId, filename) {
-    $.ajax({
-        url: '/api/check_dropbox_status.php',
+    const body = new URLSearchParams({
+        async_job_id: asyncJobId,
+        _csrf: <?= json_encode(Csrf::token()) ?>,
+    });
+
+    fetch('/api/check_dropbox_status.php', {
         method: 'POST',
-        data: { async_job_id: asyncJobId, _csrf: <?= json_encode(Csrf::token()) ?> },
-        dataType: 'json',
-        success: function (response) {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString(),
+        credentials: 'same-origin',
+    })
+        .then(function (res) { return res.json(); })
+        .then(function (response) {
             const statusDiv = document.getElementById('dropbox-status');
             const messageDiv = document.getElementById('dropbox-message');
             const progressDiv = document.getElementById('dropbox-progress');
@@ -209,18 +216,17 @@ function checkDropboxStatus(asyncJobId, filename) {
                 progressDiv.classList.add('d-none');
                 messageDiv.textContent = 'Error: ' + (response.error || 'Unknown error');
             }
-        },
-        error: function () {
+        })
+        .catch(function () {
             const statusDiv = document.getElementById('dropbox-status');
             statusDiv.className = 'alert alert-danger';
             statusDiv.classList.remove('d-none');
             document.getElementById('dropbox-progress').classList.add('d-none');
             document.getElementById('dropbox-message').textContent = 'Error checking upload status.';
-        }
-    });
+        });
 }
 
-$(function () {
+document.addEventListener('DOMContentLoaded', function () {
     if (window.dropboxJobData) {
         startDropboxMonitoring(window.dropboxJobData.asyncJobId, window.dropboxJobData.filename);
     }
