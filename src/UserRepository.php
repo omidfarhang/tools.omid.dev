@@ -96,14 +96,18 @@ final class UserRepository
         string $accountId,
         string $accessToken,
         ?string $refreshToken,
-        ?string $expiresAt
+        ?string $expiresAt,
+        ?string $email = null,
+        ?string $displayName = null,
     ): void {
         $stmt = $this->db->prepare(
             'UPDATE users SET
                 dropbox_account_id = :aid,
                 dropbox_access_token = :at,
                 dropbox_refresh_token = COALESCE(:rt, dropbox_refresh_token),
-                dropbox_token_expires_at = :exp
+                dropbox_token_expires_at = :exp,
+                dropbox_email = COALESCE(:email, dropbox_email),
+                dropbox_display_name = COALESCE(:dn, dropbox_display_name)
              WHERE id = :id'
         );
         $stmt->execute([
@@ -111,6 +115,8 @@ final class UserRepository
             ':at' => $accessToken,
             ':rt' => $refreshToken,
             ':exp' => $expiresAt,
+            ':email' => $email !== null && $email !== '' ? $email : null,
+            ':dn' => $displayName !== null && $displayName !== '' ? $displayName : null,
             ':id' => $userId,
         ]);
     }
@@ -122,7 +128,9 @@ final class UserRepository
                 dropbox_account_id = NULL,
                 dropbox_access_token = NULL,
                 dropbox_refresh_token = NULL,
-                dropbox_token_expires_at = NULL
+                dropbox_token_expires_at = NULL,
+                dropbox_email = NULL,
+                dropbox_display_name = NULL
              WHERE id = :id'
         );
         $stmt->execute([':id' => $userId]);

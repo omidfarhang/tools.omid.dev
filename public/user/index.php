@@ -5,6 +5,7 @@ declare(strict_types=1);
 require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
 use App\Auth;
+use App\Cloud\Dropbox\DropboxProvider;
 use App\Csrf;
 use App\DropboxOAuth;
 use App\UserRepository;
@@ -14,6 +15,7 @@ $user = Auth::requireLogin();
 $users = new UserRepository();
 $user = $users->findById((int) $user['id']) ?? $user;
 $oauth = new DropboxOAuth();
+$dropbox = new DropboxProvider($users, $oauth);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     Csrf::requireValid();
@@ -37,6 +39,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $user = $users->findById((int) $user['id']) ?? $user;
 $connected = $users->hasDropbox($user);
+if ($connected && empty($user['dropbox_email'])) {
+    $dropbox->syncAccountInfo($user);
+}
 $prefs = UserRepository::cloudPrefs($user);
 
 ob_start();
@@ -64,9 +69,21 @@ ob_start();
             <?php if (!$oauth->isConfigured()): ?>
                 <div class="alert alert-warning mb-0">Dropbox app credentials are not configured on this server.</div>
             <?php elseif ($connected): ?>
-                <div class="alert alert-success">
-                    Dropbox connected<?= $user['dropbox_account_id'] ? ' (account <span class="mono">' . e((string) $user['dropbox_account_id']) . '</span>)' : '' ?>.
-                </div>
+                <div class="alert alert-success mb-3">Dropbox connected.</div>
+                <dl class="mb-4">
+                    <?php if (!empty($user['dropbox_display_name'])): ?>
+                        <dt class="text-muted small">Name</dt>
+                        <dd class="mb-3 fw-semibold"><?= e((string) $user['dropbox_display_name']) ?></dd>
+                    <?php endif; ?>
+                    <?php if (!empty($user['dropbox_email'])): ?>
+                        <dt class="text-muted small">Email</dt>
+                        <dd class="mb-3"><span class="mono"><?= e((string) $user['dropbox_email']) ?></span></dd>
+                    <?php endif; ?>
+                    <?php if (!empty($user['dropbox_account_id'])): ?>
+                        <dt class="text-muted small">Account ID</dt>
+                        <dd class="mb-0"><span class="mono"><?= e((string) $user['dropbox_account_id']) ?></span></dd>
+                    <?php endif; ?>
+                </dl>
 
                 <form method="post" class="mb-4">
                     <?= Csrf::field() ?>
@@ -97,11 +114,15 @@ ob_start();
                     <button class="btn btn-primary" type="submit">Save defaults</button>
                 </form>
 
-                <form method="post">
-                    <?= Csrf::field() ?>
-                    <input type="hidden" name="action" value="disconnect_dropbox">
-                    <button class="btn btn-outline-danger" type="submit">Disconnect Dropbox</button>
-                </form>
+                <div class="d-flex flex-wrap gap-2">
+                    <a class="btn btn-outline-primary" href="/oauth/dropbox/start.php?reconnect=1">Reconnect Dropbox</a>
+                    <form method="post" class="d-inline">
+                        <?= Csrf::field() ?>
+                        <input type="hidden" name="action" value="disconnect_dropbox">
+                        <button class="btn btn-outline-danger" type="submit">Disconnect Dropbox</button>
+                    </form>
+                </div>
+                <p class="form-text mt-2 mb-0">Use Reconnect after the app’s Dropbox permissions change, or to refresh the linked account.</p>
             <?php else: ?>
                 <p class="page-lede mb-3">Connect your own Dropbox to use “Save To Cloud”.</p>
                 <a class="btn btn-primary" href="/oauth/dropbox/start.php">Connect Dropbox</a>

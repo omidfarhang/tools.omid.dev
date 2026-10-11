@@ -132,7 +132,17 @@ ob_start();
                         </form>
                     </td>
                     <td><?= $active ? 'yes' : 'pending' ?></td>
-                    <td><?= !empty($u['dropbox_access_token']) || !empty($u['dropbox_refresh_token']) ? 'yes' : 'no' ?></td>
+                    <td>
+                        <?php if (!empty($u['dropbox_access_token']) || !empty($u['dropbox_refresh_token'])): ?>
+                            <?php if (!empty($u['dropbox_email'])): ?>
+                                <span class="mono"><?= e((string) $u['dropbox_email']) ?></span>
+                            <?php else: ?>
+                                yes
+                            <?php endif; ?>
+                        <?php else: ?>
+                            —
+                        <?php endif; ?>
+                    </td>
                     <td>
                         <div class="d-flex flex-wrap gap-1">
                             <form method="post">

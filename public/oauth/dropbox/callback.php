@@ -13,7 +13,8 @@ $oauth = new DropboxOAuth();
 
 $state = (string) ($_GET['state'] ?? '');
 $expected = (string) ($_SESSION['dropbox_oauth_state'] ?? '');
-unset($_SESSION['dropbox_oauth_state']);
+$reconnect = !empty($_SESSION['dropbox_oauth_reconnect']);
+unset($_SESSION['dropbox_oauth_state'], $_SESSION['dropbox_oauth_reconnect']);
 
 if ($state === '' || $expected === '' || !hash_equals($expected, $state)) {
     flash('error', 'Invalid OAuth state.');
@@ -21,7 +22,7 @@ if ($state === '' || $expected === '' || !hash_equals($expected, $state)) {
 }
 
 if (!empty($_GET['error'])) {
-    flash('error', 'Dropbox authorization denied.');
+    flash('error', $reconnect ? 'Dropbox reconnection denied.' : 'Dropbox authorization denied.');
     redirect('/user/');
 }
 
@@ -33,7 +34,7 @@ if ($code === '') {
 
 $result = $oauth->exchangeCode($code);
 if (!$result['ok']) {
-    flash('error', 'Dropbox connect failed: ' . ($result['error'] ?? 'unknown'));
+    flash('error', ($reconnect ? 'Dropbox reconnect failed: ' : 'Dropbox connect failed: ') . ($result['error'] ?? 'unknown'));
     redirect('/user/');
 }
 
@@ -42,13 +43,27 @@ if (!empty($result['expires_in'])) {
     $expiresAt = gmdate('Y-m-d H:i:s', time() + (int) $result['expires_in']);
 }
 
+$account = $oauth->getCurrentAccount((string) $result['access_token']);
+$accountId = (string) ($result['account_id'] ?? '');
+$email = null;
+$displayName = null;
+if ($account['ok']) {
+    if (($account['account_id'] ?? '') !== '') {
+        $accountId = (string) $account['account_id'];
+    }
+    $email = ($account['email'] ?? '') !== '' ? (string) $account['email'] : null;
+    $displayName = ($account['display_name'] ?? '') !== '' ? (string) $account['display_name'] : null;
+}
+
 (new UserRepository())->saveDropboxTokens(
     (int) $user['id'],
-    (string) ($result['account_id'] ?? ''),
+    $accountId,
     (string) $result['access_token'],
     $result['refresh_token'] ?? null,
-    $expiresAt
+    $expiresAt,
+    $email,
+    $displayName
 );
 
-flash('success', 'Dropbox connected.');
+flash('success', $reconnect ? 'Dropbox reconnected.' : 'Dropbox connected.');
 redirect('/user/');

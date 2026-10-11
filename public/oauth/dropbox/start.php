@@ -14,6 +14,8 @@ if (!$oauth->isConfigured()) {
     redirect('/user/');
 }
 
+$reconnect = isset($_GET['reconnect']) && (string) $_GET['reconnect'] !== '0';
 $state = bin2hex(random_bytes(16));
 $_SESSION['dropbox_oauth_state'] = $state;
-redirect($oauth->authorizeUrl($state));
+$_SESSION['dropbox_oauth_reconnect'] = $reconnect;
+redirect($oauth->authorizeUrl($state, $reconnect));

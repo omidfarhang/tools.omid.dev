@@ -9,8 +9,10 @@ Upload jobs are stored in the generic `cloud_jobs` table with `provider = 'dropb
 1. Go to [Dropbox App Console](https://www.dropbox.com/developers/apps).
 2. Create an app with **Scoped access** and **Full Dropbox** (or App folder if you prefer).
 3. Under **Permissions**, enable at least:
+   - `account_info.read` (shows Dropbox name/email on Account after connect)
    - `files.content.write`
    - `files.content.read` (required for conflict checks: rename / overwrite / skip)
+   - `files.metadata.read` (path existence checks)
 4. Under **OAuth 2**, add the redirect URI:
 
    `{APP_BASE_URL}/oauth/dropbox/callback.php`
@@ -49,7 +51,7 @@ APP_BASE_URL=https://tools.omid.dev
 
 ## Re-authorize after permission changes
 
-If you enable `files.content.read` on an existing Dropbox app, users should **Disconnect** and **Connect** again so the new scope is granted.
+If you enable new scopes (e.g. `files.content.read` or `account_info.read`) on an existing Dropbox app, users should use Account → **Reconnect Dropbox** so Dropbox shows consent again and grants the new scopes. Disconnect is only needed to fully unlink.
 
 ## Disconnect
 

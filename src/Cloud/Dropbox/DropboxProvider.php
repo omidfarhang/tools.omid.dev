@@ -39,6 +39,46 @@ final class DropboxProvider implements CloudProvider
         return $this->users->hasDropbox($user);
     }
 
+    /**
+     * Refresh stored Dropbox email / display name via account_info.read.
+     *
+     * @param array<string, mixed> $user
+     * @return array{ok:bool, email?:string, display_name?:string, error?:string}
+     */
+    public function syncAccountInfo(array &$user): array
+    {
+        $token = $this->accessToken($user);
+        if ($token === null) {
+            return ['ok' => false, 'error' => 'not_connected'];
+        }
+
+        $account = $this->oauth->getCurrentAccount($token);
+        if (!$account['ok']) {
+            return ['ok' => false, 'error' => $account['error'] ?? 'Account info failed'];
+        }
+
+        $email = ($account['email'] ?? '') !== '' ? (string) $account['email'] : null;
+        $displayName = ($account['display_name'] ?? '') !== '' ? (string) $account['display_name'] : null;
+
+        $this->users->saveDropboxTokens(
+            (int) $user['id'],
+            (string) ($account['account_id'] ?? $user['dropbox_account_id'] ?? ''),
+            $token,
+            null,
+            $user['dropbox_token_expires_at'] ?? null,
+            $email,
+            $displayName
+        );
+
+        $user = $this->users->findById((int) $user['id']) ?? $user;
+
+        return [
+            'ok' => true,
+            'email' => $email ?? '',
+            'display_name' => $displayName ?? '',
+        ];
+    }
+
     public function startJob(
         array $user,
         string $url,
