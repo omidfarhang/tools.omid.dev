@@ -40,12 +40,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 ob_start();
 ?>
-<h1>Register</h1>
-<p class="text-muted">Accounts stay inactive until an admin approves them.</p>
+<h1>Create account</h1>
+<p class="page-lede">Accounts stay inactive until an admin approves them.</p>
 <?php if ($error): ?>
     <div class="alert alert-danger"><?= e($error) ?></div>
 <?php endif; ?>
-<form method="post" class="mt-3">
+<form method="post">
     <?= Csrf::field() ?>
     <div class="mb-3">
         <label class="form-label" for="username">Username</label>
@@ -62,8 +62,10 @@ ob_start();
         <input class="form-control" type="password" id="password_confirm" name="password_confirm" required
                autocomplete="new-password" minlength="8">
     </div>
-    <button class="btn btn-primary" type="submit">Create account</button>
-    <a class="btn btn-link" href="/login.php">Already have an account?</a>
+    <div class="d-grid gap-2">
+        <button class="btn btn-primary" type="submit">Create account</button>
+        <a class="btn btn-outline-secondary" href="/login.php">Already have an account?</a>
+    </div>
 </form>
 <?php
 View::render('Register', ob_get_clean(), null);

@@ -65,84 +65,98 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $all = $repo->all();
 ob_start();
 ?>
-<h1>Users</h1>
-<p><a href="/admin/">&larr; Admin</a></p>
+<a class="breadcrumb-dash" href="/admin/">&larr; Admin</a>
+<div class="page-header">
+    <p class="page-lede">Create accounts and manage roles, approvals, and passwords.</p>
+</div>
 
-<h2 class="h5 mt-4">Create user</h2>
-<form method="post" class="row g-2 align-items-end mb-4">
-    <?= Csrf::field() ?>
-    <input type="hidden" name="action" value="create">
-    <div class="col-md-3">
-        <label class="form-label">Username</label>
-        <input class="form-control" name="username" required>
-    </div>
-    <div class="col-md-3">
-        <label class="form-label">Password</label>
-        <input class="form-control" type="password" name="password" required>
-    </div>
-    <div class="col-md-2">
-        <label class="form-label">Role</label>
-        <select class="form-select" name="role">
-            <option value="user">user</option>
-            <option value="admin">admin</option>
-        </select>
-    </div>
-    <div class="col-md-2">
-        <button class="btn btn-primary" type="submit">Create</button>
-    </div>
-</form>
+<div class="panel">
+    <h2 class="panel-title">Create user</h2>
+    <form method="post" class="row g-3 align-items-end">
+        <?= Csrf::field() ?>
+        <input type="hidden" name="action" value="create">
+        <div class="col-md-3">
+            <label class="form-label">Username</label>
+            <input class="form-control" name="username" required>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Password</label>
+            <input class="form-control" type="password" name="password" required>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Role</label>
+            <select class="form-select" name="role">
+                <option value="user">user</option>
+                <option value="admin">admin</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-primary" type="submit">Create</button>
+        </div>
+    </form>
+</div>
 
-<table class="table table-sm align-middle">
-    <thead>
-    <tr>
-        <th>ID</th>
-        <th>Username</th>
-        <th>Role</th>
-        <th>Active</th>
-        <th>Dropbox</th>
-        <th>Actions</th>
-    </tr>
-    </thead>
-    <tbody>
-    <?php foreach ($all as $u): ?>
-        <?php $active = (int) $u['is_active'] === 1; ?>
-        <tr class="<?= $active ? '' : 'table-warning' ?>">
-            <td><?= (int) $u['id'] ?></td>
-            <td><?= e($u['username']) ?></td>
-            <td>
-                <form method="post" class="d-flex gap-1">
-                    <?= Csrf::field() ?>
-                    <input type="hidden" name="action" value="set_role">
-                    <input type="hidden" name="user_id" value="<?= (int) $u['id'] ?>">
-                    <select class="form-select form-select-sm" name="role">
-                        <option value="user" <?= $u['role'] === 'user' ? 'selected' : '' ?>>user</option>
-                        <option value="admin" <?= $u['role'] === 'admin' ? 'selected' : '' ?>>admin</option>
-                    </select>
-                    <button class="btn btn-sm btn-outline-secondary" type="submit">Set</button>
-                </form>
-            </td>
-            <td><?= $active ? 'yes' : 'pending' ?></td>
-            <td><?= !empty($u['dropbox_access_token']) || !empty($u['dropbox_refresh_token']) ? 'yes' : 'no' ?></td>
-            <td class="d-flex flex-wrap gap-1">
-                <form method="post">
-                    <?= Csrf::field() ?>
-                    <input type="hidden" name="action" value="toggle">
-                    <input type="hidden" name="user_id" value="<?= (int) $u['id'] ?>">
-                    <button class="btn btn-sm <?= $active ? 'btn-outline-warning' : 'btn-success' ?>" type="submit">
-                        <?= $active ? 'Disable' : 'Approve' ?>
-                    </button>
-                </form>
-                <form method="post" class="d-flex gap-1">
-                    <?= Csrf::field() ?>
-                    <input type="hidden" name="action" value="reset_password">
-                    <input type="hidden" name="user_id" value="<?= (int) $u['id'] ?>">
-                    <input class="form-control form-control-sm" type="password" name="password" placeholder="New password" required>
-                    <button class="btn btn-sm btn-outline-primary" type="submit">Reset</button>
-                </form>
-            </td>
-        </tr>
-    <?php endforeach; ?>
-    </tbody>
-</table>
+<div class="panel panel-flush">
+    <div class="panel-head d-flex justify-content-between align-items-center">
+        <h2 class="panel-title mb-0">All users</h2>
+        <span class="text-muted small"><?= count($all) ?> total</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Role</th>
+                <th>Active</th>
+                <th>Dropbox</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            <?php foreach ($all as $u): ?>
+                <?php $active = (int) $u['is_active'] === 1; ?>
+                <tr class="<?= $active ? '' : 'table-warning' ?>">
+                    <td><?= (int) $u['id'] ?></td>
+                    <td class="fw-semibold"><?= e($u['username']) ?></td>
+                    <td>
+                        <form method="post" class="d-flex gap-1">
+                            <?= Csrf::field() ?>
+                            <input type="hidden" name="action" value="set_role">
+                            <input type="hidden" name="user_id" value="<?= (int) $u['id'] ?>">
+                            <select class="form-select form-select-sm" name="role">
+                                <option value="user" <?= $u['role'] === 'user' ? 'selected' : '' ?>>user</option>
+                                <option value="admin" <?= $u['role'] === 'admin' ? 'selected' : '' ?>>admin</option>
+                            </select>
+                            <button class="btn btn-sm btn-outline-secondary" type="submit">Set</button>
+                        </form>
+                    </td>
+                    <td><?= $active ? 'yes' : 'pending' ?></td>
+                    <td><?= !empty($u['dropbox_access_token']) || !empty($u['dropbox_refresh_token']) ? 'yes' : 'no' ?></td>
+                    <td>
+                        <div class="d-flex flex-wrap gap-1">
+                            <form method="post">
+                                <?= Csrf::field() ?>
+                                <input type="hidden" name="action" value="toggle">
+                                <input type="hidden" name="user_id" value="<?= (int) $u['id'] ?>">
+                                <button class="btn btn-sm <?= $active ? 'btn-outline-warning' : 'btn-success' ?>" type="submit">
+                                    <?= $active ? 'Disable' : 'Approve' ?>
+                                </button>
+                            </form>
+                            <form method="post" class="d-flex gap-1">
+                                <?= Csrf::field() ?>
+                                <input type="hidden" name="action" value="reset_password">
+                                <input type="hidden" name="user_id" value="<?= (int) $u['id'] ?>">
+                                <input class="form-control form-control-sm" type="password" name="password" placeholder="New password" required>
+                                <button class="btn btn-sm btn-outline-primary" type="submit">Reset</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
 <?php
 View::render('Admin Users', ob_get_clean(), $admin);

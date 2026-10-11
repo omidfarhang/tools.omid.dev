@@ -102,7 +102,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 ob_start();
 ?>
-<h1>Download to Host</h1>
+<div class="page-header">
+    <p class="page-lede">Pull an HTTP(S) or YouTube URL to this host, or send it straight to your Dropbox.</p>
+</div>
 
 <div id="dropbox-status" class="alert d-none" role="alert">
     <div id="dropbox-message"></div>
@@ -114,38 +116,44 @@ ob_start();
 <?= $resultHtml ?>
 
 <?php if (!$dropboxConnected): ?>
-    <div class="alert alert-warning">Dropbox is not connected. You can still save to disk.
+    <div class="status-callout">
+        Dropbox is not connected. You can still save to disk.
         <a href="/user/">Connect Dropbox</a>
     </div>
 <?php endif; ?>
 
-<form action="" method="post" class="mt-3">
-    <?= Csrf::field() ?>
-    <div class="mb-3">
-        <label for="DLURL" class="form-label">URL</label>
-        <input name="DLURL" type="url" class="form-control" id="DLURL" oninput="getFileNameFromUrl(this.value)" placeholder="https://..." required>
-    </div>
-    <div class="mb-3 d-none" id="youtube-options">
-        <label for="yt_format" class="form-label">YouTube Format</label>
-        <select class="form-select" name="yt_format" id="yt_format">
-            <option value="best" selected>Best</option>
-            <option value="4320">4320p (8k)</option>
-            <option value="2160">2160p (4K)</option>
-            <option value="1440">1440p (2k)</option>
-            <option value="1080">1080p (HD)</option>
-            <option value="720">720p (HD)</option>
-            <option value="480">480p (SD)</option>
-            <option value="360">360p (SD)</option>
-            <option value="240">240p (SD)</option>
-        </select>
-    </div>
-    <div class="mb-3">
-        <label for="DLFILENAME" class="form-label">Filename</label>
-        <input name="DLFILENAME" type="text" class="form-control" id="DLFILENAME" placeholder="Auto generated, can be changed">
-    </div>
-    <button class="btn btn-primary" name="behavior" type="submit" value="save_to_disk">Save To Disk</button>
-    <button class="btn btn-outline-primary" name="behavior" type="submit" value="save_to_dropbox" <?= $dropboxConnected ? '' : 'disabled' ?>>Save To Dropbox</button>
-</form>
+<div class="panel">
+    <h2 class="panel-title">New download</h2>
+    <form action="" method="post">
+        <?= Csrf::field() ?>
+        <div class="mb-3">
+            <label for="DLURL" class="form-label">URL</label>
+            <input name="DLURL" type="url" class="form-control" id="DLURL" oninput="getFileNameFromUrl(this.value)" placeholder="https://..." required>
+        </div>
+        <div class="mb-3 d-none" id="youtube-options">
+            <label for="yt_format" class="form-label">YouTube Format</label>
+            <select class="form-select" name="yt_format" id="yt_format">
+                <option value="best" selected>Best</option>
+                <option value="4320">4320p (8k)</option>
+                <option value="2160">2160p (4K)</option>
+                <option value="1440">1440p (2k)</option>
+                <option value="1080">1080p (HD)</option>
+                <option value="720">720p (HD)</option>
+                <option value="480">480p (SD)</option>
+                <option value="360">360p (SD)</option>
+                <option value="240">240p (SD)</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="DLFILENAME" class="form-label">Filename</label>
+            <input name="DLFILENAME" type="text" class="form-control mono" id="DLFILENAME" placeholder="Auto generated, can be changed">
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-primary" name="behavior" type="submit" value="save_to_disk">Save To Disk</button>
+            <button class="btn btn-outline-primary" name="behavior" type="submit" value="save_to_dropbox" <?= $dropboxConnected ? '' : 'disabled' ?>>Save To Dropbox</button>
+        </div>
+    </form>
+</div>
 
 <script>
 window.dropboxJobData = <?= json_encode($dropboxJob, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;

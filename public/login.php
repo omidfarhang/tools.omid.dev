@@ -28,11 +28,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 ob_start();
 ?>
-<h1>Login</h1>
+<h1>Sign in</h1>
+<p class="page-lede">Access your downloads and Dropbox tools.</p>
 <?php if ($error): ?>
     <div class="alert alert-danger"><?= e($error) ?></div>
 <?php endif; ?>
-<form method="post" class="mt-3">
+<form method="post">
     <?= Csrf::field() ?>
     <div class="mb-3">
         <label class="form-label" for="username">Username</label>
@@ -42,8 +43,10 @@ ob_start();
         <label class="form-label" for="password">Password</label>
         <input class="form-control" type="password" id="password" name="password" required autocomplete="current-password">
     </div>
-    <button class="btn btn-primary" type="submit">Sign in</button>
-    <a class="btn btn-link" href="/register.php">Create an account</a>
+    <div class="d-grid gap-2">
+        <button class="btn btn-primary" type="submit">Sign in</button>
+        <a class="btn btn-outline-secondary" href="/register.php">Create an account</a>
+    </div>
 </form>
 <?php
 View::render('Login', ob_get_clean(), null);
