@@ -1,6 +1,8 @@
-# Dropbox integration (per-user OAuth)
+# Dropbox (first cloud provider)
 
-Each user connects their own Dropbox account. There is no shared access token in `.env`.
+Dropbox is the first implemented cloud provider. Each user connects their own Dropbox account. There is no shared access token in `.env`.
+
+Upload jobs are stored in the generic `cloud_jobs` table with `provider = 'dropbox'`. Home/My Files actions say “Save To Cloud”; Account still uses **Connect Dropbox**.
 
 ## Create a Dropbox app
 
@@ -28,22 +30,22 @@ APP_BASE_URL=https://tools.omid.dev
 1. Sign in → **Account** → **Connect Dropbox**.
 2. Approve access in Dropbox.
 3. Optionally set **defaults** on Account: preferred action, destination folder, conflict policy.
-4. Use **Save To Dropbox** / **Save To Disk + Dropbox** on the home page, **Send to Dropbox** on My Files, or CLI (`scripts/ytdl.sh`) after the CLI user has connected Dropbox.
+4. Use **Save To Cloud** / **Save To Disk + Cloud** on the home page, **Send to cloud** on My Files, or CLI (`scripts/ytdl.sh`) after the CLI user has connected Dropbox.
 
 ## Features after connect
 
 - **Destination folder** — per job (prefilled from Account default).
-- **Conflict policy** — rename, overwrite, or skip when the Dropbox path already exists.
-- **Disk + Dropbox** — keep a host copy and push to Dropbox in one action.
+- **Conflict policy** — rename, overwrite, or skip when the remote path already exists.
+- **Disk + Cloud** — keep a host copy and push to Dropbox in one action.
 - **Delete after success** — optional checkbox per job (never forced by defaults).
-- **Send existing host files** — My Files → Send to Dropbox.
-- **Recent Dropbox jobs** — history with live status on Home and My Files.
+- **Send existing host files** — My Files → Send to cloud.
+- **Recent cloud uploads** — history with live status on Home and My Files.
 
 ## How uploads work
 
 - Direct HTTP(S) URLs are passed to Dropbox `files/save_url`.
-- YouTube, Disk + Dropbox, My Files sends, and CLI downloads land in `storage/temp`, get a public share URL (`/s/{token}`), then that URL is sent to Dropbox so Dropbox can fetch the file.
-- Job rows live in `dropbox_jobs`. Status polling updates them; if the job opted into delete-after, the host file is removed on success.
+- YouTube, Disk + Cloud, My Files sends, and CLI downloads land in `storage/temp`, get a public share URL (`/s/{token}`), then that URL is sent to Dropbox so Dropbox can fetch the file.
+- Job rows live in `cloud_jobs` (`provider = dropbox`). Status polling updates them; if the job opted into delete-after, the host file is removed on success.
 
 ## Re-authorize after permission changes
 

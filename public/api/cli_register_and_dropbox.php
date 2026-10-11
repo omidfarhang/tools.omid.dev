@@ -5,7 +5,7 @@ declare(strict_types=1);
 require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
 use App\Auth;
-use App\DropboxClient;
+use App\Cloud\CloudSendService;
 use App\FileRepository;
 use App\ShareService;
 use App\UserRepository;
@@ -44,8 +44,9 @@ $shares = new ShareService();
 $token = $shares->enable($fileId, (int) $user['id']);
 $publicUrl = ShareService::publicUrl($token);
 
-$client = new DropboxClient($user);
-if (!$client->isConnected()) {
+$cloud = CloudSendService::create();
+$provider = $cloud->provider('dropbox');
+if ($provider === null || !$provider->isConnected($user)) {
     json_response([
         'success' => false,
         'error' => 'CLI user has not connected Dropbox',
@@ -54,14 +55,16 @@ if (!$client->isConnected()) {
     ], 400);
 }
 
-$prefs = UserRepository::dropboxPrefs($user);
-$result = $client->startJob(
+$prefs = UserRepository::cloudPrefs($user);
+$result = $cloud->startForUser(
+    $user,
     $publicUrl,
     $filename,
     $prefs['folder'],
     $prefs['conflict'],
     false,
-    $fileId
+    $fileId,
+    'dropbox'
 );
 $result['file_id'] = $fileId;
 $result['share_url'] = $publicUrl;

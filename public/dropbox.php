@@ -5,7 +5,7 @@ declare(strict_types=1);
 require dirname(__DIR__) . '/src/bootstrap.php';
 
 use App\Auth;
-use App\DropboxClient;
+use App\Cloud\CloudSendService;
 use App\UserRepository;
 
 header('Content-Type: application/json');
@@ -25,18 +25,21 @@ if ($url === '' || !filter_var($url, FILTER_VALIDATE_URL)) {
     json_response(['success' => false, 'error' => 'Valid url required'], 400);
 }
 
-$client = new DropboxClient($user);
-if (!$client->isConnected()) {
+$cloud = CloudSendService::create();
+$provider = $cloud->provider('dropbox');
+if ($provider === null || !$provider->isConnected($user)) {
     json_response(['success' => false, 'error' => 'CLI user has not connected Dropbox'], 400);
 }
 
-$prefs = UserRepository::dropboxPrefs($user);
-$result = $client->startJob(
+$prefs = UserRepository::cloudPrefs($user);
+$result = $cloud->startForUser(
+    $user,
     $url,
     $filename !== '' ? $filename : null,
     $prefs['folder'],
     $prefs['conflict'],
     false,
-    null
+    null,
+    'dropbox'
 );
 json_response($result, $result['success'] ? 200 : 400);

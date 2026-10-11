@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ob_start();
 ?>
 <h1>Sign in</h1>
-<p class="page-lede">Access your downloads and Dropbox tools.</p>
+<p class="page-lede">Access your downloads and cloud tools.</p>
 <?php if ($error): ?>
     <div class="alert alert-danger"><?= e($error) ?></div>
 <?php endif; ?>

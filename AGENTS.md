@@ -6,20 +6,20 @@ Before UI or product-facing copy changes, read [PRODUCT.md](PRODUCT.md) and [DES
 
 ## Project overview
 
-PHP app: multi-user download-to-host toolkit. Users pull HTTP(S)/YouTube files to server disk, manage files, optional public share links (`/s/{token}`), and per-user Dropbox OAuth. Docker + Apache; SQLite; Bootstrap 5 + custom CSS.
+PHP app: multi-user download-to-host toolkit. Users pull remote URLs via pluggable download sources (HTTP + YouTube today), manage files, optional public share links (`/s/{token}`), and per-user cloud OAuth (Dropbox is the first provider). Docker + Apache; SQLite; Bootstrap 5 + custom CSS.
 
 ## Layout
 
 | Path | Role |
 |------|------|
 | `public/` | Webroot (PHP entrypoints, static assets) |
-| `src/` | `App\` PSR-4 classes + `helpers.php` |
+| `src/` | `App\` PSR-4 classes + `helpers.php` (`Download/`, `Cloud/` registries) |
 | `templates/layout.php` | Shared HTML shell (sidebar / auth) |
 | `storage/` | SQLite DB + temp downloads (volume) |
-| `.secure/` | Optional yt-dlp cookies (not Dropbox tokens) |
+| `.secure/` | Optional yt-dlp cookies (not cloud tokens) |
 | `assets/` + `scripts/copy-assets.js` | Vendor CSS/JS source → `public/assets` |
 | `config/` | Example PHP config |
-| `docs/` | Operator docs (Dropbox, nginx) |
+| `docs/` | Operator docs (cloud providers, nginx) |
 
 There is no front-end framework or SPA. Pages are server-rendered PHP that call `View::render()`.
 
@@ -49,14 +49,16 @@ Asset pipeline: edit Bootstrap/jQuery via npm, then `npm run build:assets`. App 
 - Auth: `Auth::requireLogin()`, `Auth::requireAdmin()`, or `Auth::requireLoginOrCli()` for CLI/token routes
 - Prefer extending existing repositories/services over new parallel abstractions
 - Do not add frameworks, ORMs, or build tools unless explicitly requested
-- Do not commit secrets (`.env`, cookies, tokens). Dropbox tokens are per-user in SQLite only
+- Do not commit secrets (`.env`, cookies, tokens). Cloud tokens are per-user in SQLite only
+- New download sites implement `App\Download\DownloadSource` and register in `DownloadRegistry`
+- New cloud backends implement `App\Cloud\CloudProvider` and register in `CloudRegistry`
 
 ## Product constraints agents must respect
 
-- Per-user Dropbox OAuth only — never introduce a shared Dropbox access token in env
+- Per-user cloud OAuth only — never introduce a shared cloud access token in env (Dropbox is the current provider)
 - Self-register creates inactive users until admin approval
 - Share links are opt-in via `ShareService`; do not expose arbitrary filesystem paths
-- CLI auth is `APP_CLI_TOKEN` → `APP_CLI_USERNAME`’s Dropbox; see `scripts/ytdl.sh` and `Auth::attemptCliToken()`
+- CLI auth is `APP_CLI_TOKEN` → `APP_CLI_USERNAME`’s cloud account; see `scripts/ytdl.sh` and `Auth::attemptCliToken()`
 
 ## UI work
 

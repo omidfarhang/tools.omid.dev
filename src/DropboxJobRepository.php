@@ -4,148 +4,83 @@ declare(strict_types=1);
 
 namespace App;
 
+use App\Cloud\CloudJobRepository;
 use PDO;
 
+/**
+ * Back-compat alias for CloudJobRepository (Dropbox-only callers).
+ */
 final class DropboxJobRepository
 {
-    private PDO $db;
+    private CloudJobRepository $jobs;
 
     public function __construct(?PDO $db = null)
     {
-        $this->db = $db ?? Database::pdo();
+        $this->jobs = new CloudJobRepository($db);
     }
 
-    /** @param array{user_id:int,file_id?:?int,filename:string,dropbox_path:string,conflict_mode:string,delete_after:bool,status?:string,async_job_id?:?string,error?:?string} $data */
+    /** @param array{user_id:int,file_id?:?int,filename:string,dropbox_path?:string,remote_path?:string,conflict_mode:string,delete_after:bool,status?:string,async_job_id?:?string,error?:?string} $data */
     public function create(array $data): int
     {
-        $stmt = $this->db->prepare(
-            'INSERT INTO dropbox_jobs
-                (user_id, file_id, async_job_id, filename, dropbox_path, conflict_mode, delete_after, status, error)
-             VALUES
-                (:uid, :fid, :aj, :fn, :path, :cm, :da, :st, :err)'
-        );
-        $stmt->execute([
-            ':uid' => $data['user_id'],
-            ':fid' => $data['file_id'] ?? null,
-            ':aj' => $data['async_job_id'] ?? null,
-            ':fn' => $data['filename'],
-            ':path' => $data['dropbox_path'],
-            ':cm' => $data['conflict_mode'],
-            ':da' => !empty($data['delete_after']) ? 1 : 0,
-            ':st' => $data['status'] ?? 'pending',
-            ':err' => $data['error'] ?? null,
-        ]);
+        if (!isset($data['remote_path']) && isset($data['dropbox_path'])) {
+            $data['remote_path'] = $data['dropbox_path'];
+            unset($data['dropbox_path']);
+        }
+        $data['provider'] = $data['provider'] ?? 'dropbox';
 
-        return (int) $this->db->lastInsertId();
+        return $this->jobs->create($data);
     }
 
     public function findById(int $id): ?array
     {
-        $stmt = $this->db->prepare('SELECT * FROM dropbox_jobs WHERE id = :id');
-        $stmt->execute([':id' => $id]);
-        $row = $stmt->fetch();
-
-        return $row ?: null;
+        return $this->aliasPath($this->jobs->findById($id));
     }
 
     public function findByAsyncJobId(string $asyncJobId): ?array
     {
-        $stmt = $this->db->prepare(
-            'SELECT * FROM dropbox_jobs WHERE async_job_id = :aj ORDER BY id DESC LIMIT 1'
-        );
-        $stmt->execute([':aj' => $asyncJobId]);
-        $row = $stmt->fetch();
-
-        return $row ?: null;
+        return $this->aliasPath($this->jobs->findByAsyncJobId($asyncJobId));
     }
 
     /** @return list<array<string, mixed>> */
     public function recentForUser(int $userId, int $limit = 15): array
     {
-        $limit = max(1, min(50, $limit));
-        $stmt = $this->db->prepare(
-            'SELECT * FROM dropbox_jobs WHERE user_id = :uid ORDER BY id DESC LIMIT ' . $limit
-        );
-        $stmt->execute([':uid' => $userId]);
-
-        return $stmt->fetchAll();
+        return array_map(fn (array $row) => $this->aliasPath($row) ?? $row, $this->jobs->recentForUser($userId, $limit));
     }
 
     public function markInProgress(int $id, string $asyncJobId, string $dropboxPath): void
     {
-        $stmt = $this->db->prepare(
-            'UPDATE dropbox_jobs SET
-                async_job_id = :aj,
-                dropbox_path = :path,
-                status = :st,
-                error = NULL,
-                updated_at = datetime(\'now\')
-             WHERE id = :id'
-        );
-        $stmt->execute([
-            ':aj' => $asyncJobId,
-            ':path' => $dropboxPath,
-            ':st' => 'in_progress',
-            ':id' => $id,
-        ]);
+        $this->jobs->markInProgress($id, $asyncJobId, $dropboxPath);
     }
 
     public function markSkipped(int $id, string $dropboxPath, string $reason): void
     {
-        $stmt = $this->db->prepare(
-            'UPDATE dropbox_jobs SET
-                dropbox_path = :path,
-                status = :st,
-                error = :err,
-                updated_at = datetime(\'now\')
-             WHERE id = :id'
-        );
-        $stmt->execute([
-            ':path' => $dropboxPath,
-            ':st' => 'skipped',
-            ':err' => $reason,
-            ':id' => $id,
-        ]);
+        $this->jobs->markSkipped($id, $dropboxPath, $reason);
     }
 
     public function markFailed(int $id, string $error): void
     {
-        $stmt = $this->db->prepare(
-            'UPDATE dropbox_jobs SET
-                status = :st,
-                error = :err,
-                updated_at = datetime(\'now\')
-             WHERE id = :id'
-        );
-        $stmt->execute([
-            ':st' => 'failed',
-            ':err' => $error,
-            ':id' => $id,
-        ]);
+        $this->jobs->markFailed($id, $error);
     }
 
     public function markComplete(int $id, ?string $resultPath): void
     {
-        $stmt = $this->db->prepare(
-            'UPDATE dropbox_jobs SET
-                status = :st,
-                result_path = :rp,
-                error = NULL,
-                updated_at = datetime(\'now\')
-             WHERE id = :id'
-        );
-        $stmt->execute([
-            ':st' => 'complete',
-            ':rp' => $resultPath,
-            ':id' => $id,
-        ]);
+        $this->jobs->markComplete($id, $resultPath);
     }
 
     public function clearFileId(int $id): void
     {
-        $stmt = $this->db->prepare(
-            'UPDATE dropbox_jobs SET file_id = NULL, updated_at = datetime(\'now\') WHERE id = :id'
-        );
-        $stmt->execute([':id' => $id]);
+        $this->jobs->clearFileId($id);
+    }
+
+    private function aliasPath(?array $row): ?array
+    {
+        if ($row === null) {
+            return null;
+        }
+        if (!isset($row['dropbox_path']) && isset($row['remote_path'])) {
+            $row['dropbox_path'] = $row['remote_path'];
+        }
+
+        return $row;
     }
 }

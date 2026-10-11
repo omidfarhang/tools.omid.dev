@@ -23,26 +23,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash('success', 'Dropbox disconnected.');
         redirect('/user/');
     }
-    if ($action === 'save_dropbox_prefs') {
-        $users->updateDropboxPrefs(
+    if ($action === 'save_dropbox_prefs' || $action === 'save_cloud_prefs') {
+        $users->updateCloudPrefs(
             (int) $user['id'],
-            (string) ($_POST['dropbox_default_behavior'] ?? 'save_to_disk'),
-            (string) ($_POST['dropbox_folder'] ?? 'Tools Center'),
-            (string) ($_POST['dropbox_conflict'] ?? 'rename')
+            (string) ($_POST['cloud_default_behavior'] ?? $_POST['dropbox_default_behavior'] ?? 'save_to_disk'),
+            (string) ($_POST['cloud_folder'] ?? $_POST['dropbox_folder'] ?? 'Tools Center'),
+            (string) ($_POST['cloud_conflict'] ?? $_POST['dropbox_conflict'] ?? 'rename')
         );
-        flash('success', 'Dropbox defaults saved.');
+        flash('success', 'Cloud defaults saved.');
         redirect('/user/');
     }
 }
 
 $user = $users->findById((int) $user['id']) ?? $user;
 $connected = $users->hasDropbox($user);
-$prefs = UserRepository::dropboxPrefs($user);
+$prefs = UserRepository::cloudPrefs($user);
 
 ob_start();
 ?>
 <div class="page-header">
-    <p class="page-lede">Profile and Dropbox connection for this account.</p>
+    <p class="page-lede">Profile and cloud connections for this account.</p>
 </div>
 
 <div class="row g-3">
@@ -70,25 +70,25 @@ ob_start();
 
                 <form method="post" class="mb-4">
                     <?= Csrf::field() ?>
-                    <input type="hidden" name="action" value="save_dropbox_prefs">
+                    <input type="hidden" name="action" value="save_cloud_prefs">
                     <h3 class="h6 mb-3">Defaults</h3>
                     <div class="mb-3">
-                        <label for="dropbox_default_behavior" class="form-label">Preferred download action</label>
-                        <select class="form-select" name="dropbox_default_behavior" id="dropbox_default_behavior">
+                        <label for="cloud_default_behavior" class="form-label">Preferred download action</label>
+                        <select class="form-select" name="cloud_default_behavior" id="cloud_default_behavior">
                             <option value="save_to_disk" <?= $prefs['behavior'] === 'save_to_disk' ? 'selected' : '' ?>>Save To Disk</option>
-                            <option value="save_to_dropbox" <?= $prefs['behavior'] === 'save_to_dropbox' ? 'selected' : '' ?>>Save To Dropbox</option>
-                            <option value="save_to_both" <?= $prefs['behavior'] === 'save_to_both' ? 'selected' : '' ?>>Save To Disk + Dropbox</option>
+                            <option value="save_to_cloud" <?= $prefs['behavior'] === 'save_to_cloud' ? 'selected' : '' ?>>Save To Cloud</option>
+                            <option value="save_to_both" <?= $prefs['behavior'] === 'save_to_both' ? 'selected' : '' ?>>Save To Disk + Cloud</option>
                         </select>
                         <div class="form-text">Highlights the primary button on the home page. Auto-delete is chosen per job, not here.</div>
                     </div>
                     <div class="mb-3">
-                        <label for="dropbox_folder" class="form-label">Default folder</label>
-                        <input class="form-control mono" type="text" name="dropbox_folder" id="dropbox_folder"
+                        <label for="cloud_folder" class="form-label">Default folder</label>
+                        <input class="form-control mono" type="text" name="cloud_folder" id="cloud_folder"
                                value="<?= e($prefs['folder']) ?>" placeholder="Tools Center">
                     </div>
                     <div class="mb-3">
-                        <label for="dropbox_conflict" class="form-label">Default conflict policy</label>
-                        <select class="form-select" name="dropbox_conflict" id="dropbox_conflict">
+                        <label for="cloud_conflict" class="form-label">Default conflict policy</label>
+                        <select class="form-select" name="cloud_conflict" id="cloud_conflict">
                             <option value="rename" <?= $prefs['conflict'] === 'rename' ? 'selected' : '' ?>>Rename (add number)</option>
                             <option value="overwrite" <?= $prefs['conflict'] === 'overwrite' ? 'selected' : '' ?>>Overwrite</option>
                             <option value="skip" <?= $prefs['conflict'] === 'skip' ? 'selected' : '' ?>>Skip</option>
@@ -103,7 +103,7 @@ ob_start();
                     <button class="btn btn-outline-danger" type="submit">Disconnect Dropbox</button>
                 </form>
             <?php else: ?>
-                <p class="page-lede mb-3">Connect your own Dropbox to use “Save To Dropbox”.</p>
+                <p class="page-lede mb-3">Connect your own Dropbox to use “Save To Cloud”.</p>
                 <a class="btn btn-primary" href="/oauth/dropbox/start.php">Connect Dropbox</a>
             <?php endif; ?>
         </div>

@@ -5,8 +5,9 @@ declare(strict_types=1);
 require dirname(__DIR__) . '/src/bootstrap.php';
 
 use App\Auth;
+use App\Cloud\CloudJobRepository;
+use App\Cloud\CloudSendService;
 use App\Csrf;
-use App\DropboxJobRepository;
 use App\FileRepository;
 use App\ShareService;
 use App\UserRepository;
@@ -16,13 +17,19 @@ $user = Auth::requireLogin();
 $users = new UserRepository();
 $user = $users->findById((int) $user['id']) ?? $user;
 $files = (new FileRepository())->forUser((int) $user['id']);
-$dropboxConnected = $users->hasDropbox($user);
-$prefs = UserRepository::dropboxPrefs($user);
-$dropboxJobs = (new DropboxJobRepository())->recentForUser((int) $user['id']);
+$cloud = CloudSendService::create();
+$cloudConnected = $cloud->registry()->anyConnected($user);
+$prefs = UserRepository::cloudPrefs($user);
+$cloudJobs = (new CloudJobRepository())->recentForUser((int) $user['id']);
 
-$dropboxJob = null;
-if (!empty($_SESSION['_dropbox_monitor'])) {
-    $dropboxJob = $_SESSION['_dropbox_monitor'];
+$cloudJob = null;
+if (!empty($_SESSION['_cloud_monitor'])) {
+    $cloudJob = $_SESSION['_cloud_monitor'];
+    unset($_SESSION['_cloud_monitor']);
+} elseif (!empty($_SESSION['_dropbox_monitor'])) {
+    // Legacy session key from older send flow.
+    $cloudJob = $_SESSION['_dropbox_monitor'];
+    $cloudJob['provider'] = $cloudJob['provider'] ?? 'dropbox';
     unset($_SESSION['_dropbox_monitor']);
 }
 
@@ -32,16 +39,16 @@ ob_start();
     <p class="page-lede">Download files from the host or toggle a public link to share without login.</p>
 </div>
 
-<div id="dropbox-status" class="alert d-none" role="alert">
-    <div id="dropbox-message"></div>
-    <div id="dropbox-progress" class="progress mt-2 d-none">
+<div id="cloud-status" class="alert d-none" role="alert">
+    <div id="cloud-message"></div>
+    <div id="cloud-progress" class="progress mt-2 d-none">
         <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width:100%"></div>
     </div>
 </div>
 
-<?php if (!$dropboxConnected): ?>
+<?php if (!$cloudConnected): ?>
     <div class="status-callout">
-        Tip: <a href="/user/">Connect Dropbox</a> to send files to your account.
+        Tip: <a href="/user/">Connect Dropbox</a> to send files to your cloud.
     </div>
 <?php endif; ?>
 
@@ -107,21 +114,21 @@ ob_start();
                         </td>
                         <td class="text-end" style="min-width:12rem">
                             <div class="d-flex flex-column align-items-end gap-2">
-                                <?php if ($dropboxConnected): ?>
+                                <?php if ($cloudConnected): ?>
                                     <details class="w-100 text-start">
-                                        <summary class="btn btn-sm btn-outline-primary">Send to Dropbox</summary>
+                                        <summary class="btn btn-sm btn-outline-primary">Send to cloud</summary>
                                         <form method="post" action="/dropbox_send.php" class="border rounded p-2 mt-2 bg-white">
                                             <?= Csrf::field() ?>
                                             <input type="hidden" name="file_id" value="<?= (int) $file['id'] ?>">
                                             <div class="mb-2">
                                                 <label class="form-label small mb-1" for="folder-<?= (int) $file['id'] ?>">Folder</label>
                                                 <input class="form-control form-control-sm mono" type="text"
-                                                       name="dropbox_folder" id="folder-<?= (int) $file['id'] ?>"
+                                                       name="cloud_folder" id="folder-<?= (int) $file['id'] ?>"
                                                        value="<?= e($prefs['folder']) ?>">
                                             </div>
                                             <div class="mb-2">
                                                 <label class="form-label small mb-1" for="conflict-<?= (int) $file['id'] ?>">If exists</label>
-                                                <select class="form-select form-select-sm" name="dropbox_conflict" id="conflict-<?= (int) $file['id'] ?>">
+                                                <select class="form-select form-select-sm" name="cloud_conflict" id="conflict-<?= (int) $file['id'] ?>">
                                                     <option value="rename" <?= $prefs['conflict'] === 'rename' ? 'selected' : '' ?>>Rename</option>
                                                     <option value="overwrite" <?= $prefs['conflict'] === 'overwrite' ? 'selected' : '' ?>>Overwrite</option>
                                                     <option value="skip" <?= $prefs['conflict'] === 'skip' ? 'selected' : '' ?>>Skip</option>
@@ -152,6 +159,6 @@ ob_start();
 </div>
 
 <?php
-include dirname(__DIR__) . '/templates/partials/dropbox_jobs.php';
-include dirname(__DIR__) . '/templates/partials/dropbox_monitor_js.php';
+include dirname(__DIR__) . '/templates/partials/cloud_jobs.php';
+include dirname(__DIR__) . '/templates/partials/cloud_monitor_js.php';
 View::render('My Files', ob_get_clean(), $user);

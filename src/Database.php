@@ -71,13 +71,14 @@ CREATE TABLE IF NOT EXISTS shares (
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS dropbox_jobs (
+CREATE TABLE IF NOT EXISTS cloud_jobs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
+    provider TEXT NOT NULL DEFAULT 'dropbox',
     file_id INTEGER NULL,
     async_job_id TEXT NULL,
     filename TEXT NOT NULL,
-    dropbox_path TEXT NOT NULL,
+    remote_path TEXT NOT NULL,
     conflict_mode TEXT NOT NULL DEFAULT 'rename',
     delete_after INTEGER NOT NULL DEFAULT 0,
     status TEXT NOT NULL DEFAULT 'pending',
@@ -93,6 +94,39 @@ SQL);
         self::ensureColumn($pdo, 'users', 'dropbox_default_behavior', "dropbox_default_behavior TEXT NOT NULL DEFAULT 'save_to_disk'");
         self::ensureColumn($pdo, 'users', 'dropbox_folder', "dropbox_folder TEXT NOT NULL DEFAULT 'Tools Center'");
         self::ensureColumn($pdo, 'users', 'dropbox_conflict', "dropbox_conflict TEXT NOT NULL DEFAULT 'rename'");
+        self::migrateDropboxJobs($pdo);
+        self::migrateBehaviorValues($pdo);
+    }
+
+    private static function migrateDropboxJobs(PDO $pdo): void
+    {
+        $tables = $pdo->query("SELECT name FROM sqlite_master WHERE type='table' AND name='dropbox_jobs'")->fetchAll();
+        if ($tables === []) {
+            return;
+        }
+
+        $count = (int) $pdo->query('SELECT COUNT(*) FROM cloud_jobs')->fetchColumn();
+        if ($count === 0) {
+            $pdo->exec(
+                "INSERT INTO cloud_jobs
+                    (id, user_id, provider, file_id, async_job_id, filename, remote_path, conflict_mode,
+                     delete_after, status, error, result_path, created_at, updated_at)
+                 SELECT
+                    id, user_id, 'dropbox', file_id, async_job_id, filename, dropbox_path, conflict_mode,
+                    delete_after, status, error, result_path, created_at, updated_at
+                 FROM dropbox_jobs"
+            );
+        }
+
+        $pdo->exec('DROP TABLE IF EXISTS dropbox_jobs');
+    }
+
+    private static function migrateBehaviorValues(PDO $pdo): void
+    {
+        $pdo->exec(
+            "UPDATE users SET dropbox_default_behavior = 'save_to_cloud'
+             WHERE dropbox_default_behavior = 'save_to_dropbox'"
+        );
     }
 
     private static function ensureColumn(PDO $pdo, string $table, string $column, string $ddl): void

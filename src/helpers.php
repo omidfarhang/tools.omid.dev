@@ -19,15 +19,7 @@ function human_filesize(int|float $bytes, int $decimals = 2): string
 
 function is_youtube(string $url): string|false
 {
-    if (!preg_match(
-        '#^(?:https?://)?(?:www\.)?(?:m\.)?(?:youtu\.be/|youtube\.com/(?:(?:watch)?\?(?:.*&)?v(?:i)?=|(?:embed|v|vi|user|shorts)/))([^?&"\'>]+)#i',
-        $url,
-        $matches
-    )) {
-        return false;
-    }
-
-    return $matches[1] !== '' ? $matches[1] : false;
+    return (new \App\Download\YoutubeSource())->extractVideoId($url);
 }
 
 function redirect(string $path): never

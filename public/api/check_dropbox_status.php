@@ -5,8 +5,8 @@ declare(strict_types=1);
 require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
 use App\Auth;
+use App\Cloud\CloudSendService;
 use App\Csrf;
-use App\DropboxClient;
 
 header('Content-Type: application/json');
 
@@ -27,5 +27,10 @@ if ($asyncJobId === '') {
     json_response(['success' => false, 'error' => 'No async_job_id provided'], 400);
 }
 
-$client = new DropboxClient($user);
-json_response($client->checkJobStatus($asyncJobId));
+$providerId = (string) ($_POST['provider'] ?? 'dropbox');
+if ($providerId === '') {
+    $providerId = 'dropbox';
+}
+
+$cloud = CloudSendService::create();
+json_response($cloud->checkStatus($user, $asyncJobId, $providerId));

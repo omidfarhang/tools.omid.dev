@@ -136,7 +136,8 @@ final class UserRepository
     public static function normalizeBehavior(string $behavior): string
     {
         return match ($behavior) {
-            'save_to_dropbox', 'save_to_both' => $behavior,
+            'save_to_dropbox', 'save_to_cloud' => 'save_to_cloud',
+            'save_to_both' => 'save_to_both',
             default => 'save_to_disk',
         };
     }
@@ -166,7 +167,7 @@ final class UserRepository
     }
 
     /** @return array{behavior:string,folder:string,conflict:string} */
-    public static function dropboxPrefs(array $user): array
+    public static function cloudPrefs(array $user): array
     {
         return [
             'behavior' => self::normalizeBehavior((string) ($user['dropbox_default_behavior'] ?? 'save_to_disk')),
@@ -175,7 +176,13 @@ final class UserRepository
         ];
     }
 
-    public function updateDropboxPrefs(int $userId, string $behavior, string $folder, string $conflict): void
+    /** @deprecated Use cloudPrefs() */
+    public static function dropboxPrefs(array $user): array
+    {
+        return self::cloudPrefs($user);
+    }
+
+    public function updateCloudPrefs(int $userId, string $behavior, string $folder, string $conflict): void
     {
         $stmt = $this->db->prepare(
             'UPDATE users SET
@@ -190,6 +197,12 @@ final class UserRepository
             ':c' => self::normalizeConflict($conflict),
             ':id' => $userId,
         ]);
+    }
+
+    /** @deprecated Use updateCloudPrefs() */
+    public function updateDropboxPrefs(int $userId, string $behavior, string $folder, string $conflict): void
+    {
+        $this->updateCloudPrefs($userId, $behavior, $folder, $conflict);
     }
 
     public function count(): int

@@ -1,14 +1,14 @@
 # tools.omid.dev
 
-Personal **Download to Host** toolkit: pull HTTP(S)/YouTube files to the server, manage them per user, optional public share links, and per-user Dropbox OAuth.
+Personal **Download to Host** toolkit: pull remote URLs to the server (HTTP + YouTube today), manage them per user, optional public share links, and per-user cloud OAuth (Dropbox is the first provider).
 
 ## Features
 
 - Multi-user auth (`admin` / `user`); self-register (inactive until admin approves) or admin-created accounts
-- Download URL or YouTube (`yt-dlp`) to disk
+- Pluggable download sources: HTTP(S) and YouTube (`yt-dlp`)
 - Public share links (`/s/{token}`) without login
-- Per-user Dropbox connect (no shared Dropbox token)
-- CLI helper `scripts/ytdl.sh` (uses `APP_CLI_TOKEN` + CLI user’s Dropbox)
+- Pluggable cloud providers: Dropbox connect (no shared cloud token)
+- CLI helper `scripts/ytdl.sh` (uses `APP_CLI_TOKEN` + CLI user’s cloud)
 - Docker image + GitHub Actions → GHCR; TLS via your nginx reverse proxy
 
 ## Requirements
@@ -46,8 +46,8 @@ cp .env.example .env
 | `APP_BASE_URL` | Public site URL (OAuth redirect + share links) |
 | `APP_PORT` | Host port for Docker publish (default `8080`) |
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` | Seed admin when DB is empty |
-| `APP_CLI_TOKEN` / `APP_CLI_USERNAME` | CLI auth → that user’s Dropbox |
-| `DROPBOX_APP_KEY` / `DROPBOX_APP_SECRET` | Dropbox OAuth app credentials |
+| `APP_CLI_TOKEN` / `APP_CLI_USERNAME` | CLI auth → that user’s cloud account |
+| `DROPBOX_APP_KEY` / `DROPBOX_APP_SECRET` | Dropbox OAuth app credentials (first cloud provider) |
 | `DB_PATH` / `TEMP_DIR` | SQLite + download storage |
 | `YTDLP_COOKIES_PATH` | Optional cookies for yt-dlp |
 
@@ -58,7 +58,9 @@ See also [docs/dropbox.md](docs/dropbox.md).
 - `public/` — webroot
 - `src/` — application code
 - `storage/` — SQLite DB + temp files (mounted volume)
-- `.secure/` — optional yt-dlp cookies (not Dropbox tokens)
+- `.secure/` — optional yt-dlp cookies (not cloud tokens)
+- `src/Download/` — download source registry (HTTP, YouTube)
+- `src/Cloud/` — cloud provider registry (Dropbox)
 
 ## GHCR
 
