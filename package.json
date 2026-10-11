@@ -1,0 +1,11 @@
+{
+  "name": "tools-omid-dev",
+  "private": true,
+  "scripts": {
+    "build:assets": "node scripts/copy-assets.js"
+  },
+  "dependencies": {
+    "bootstrap": "^5.3.3",
+    "jquery": "^3.7.1"
+  }
+}

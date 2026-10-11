@@ -1,3 +1,12 @@
-temp/
-cgi-bin/
-.secure/
+/vendor/
+/node_modules/
+.env
+.secure/*
+!.secure/.gitkeep
+/storage/temp/*
+!/storage/temp/.gitkeep
+/storage/app.db
+/storage/app.db-*
+/cgi-bin/
+*.log
+.DS_Store

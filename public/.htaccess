@@ -1,0 +1,7 @@
+RewriteEngine On
+
+# Public share links: /s/{token}
+RewriteRule ^s/([A-Fa-f0-9]+)$ share_download.php?token=$1 [L,QSA]
+
+# Deny direct access patterns if aliased (files are outside docroot)
+Options -Indexes

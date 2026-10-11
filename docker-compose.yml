@@ -1,0 +1,17 @@
+services:
+  app:
+    build: .
+    image: tools-omid-dev:local
+    ports:
+      # Host port → container 8080. Override with APP_PORT=9080 in .env if 8080 is taken.
+      - "${APP_PORT:-8080}:8080"
+    env_file:
+      - .env
+    environment:
+      DB_PATH: /var/www/html/storage/app.db
+      TEMP_DIR: /var/www/html/storage/temp
+      YTDLP_COOKIES_PATH: /var/www/html/.secure/cookies.txt
+    volumes:
+      - ./storage:/var/www/html/storage
+      - ./.secure:/var/www/html/.secure
+    restart: unless-stopped
