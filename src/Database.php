@@ -70,7 +70,43 @@ CREATE TABLE IF NOT EXISTS shares (
     FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS dropbox_jobs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    file_id INTEGER NULL,
+    async_job_id TEXT NULL,
+    filename TEXT NOT NULL,
+    dropbox_path TEXT NOT NULL,
+    conflict_mode TEXT NOT NULL DEFAULT 'rename',
+    delete_after INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'pending',
+    error TEXT NULL,
+    result_path TEXT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE SET NULL
+);
 SQL);
+
+        self::ensureColumn($pdo, 'users', 'dropbox_default_behavior', "dropbox_default_behavior TEXT NOT NULL DEFAULT 'save_to_disk'");
+        self::ensureColumn($pdo, 'users', 'dropbox_folder', "dropbox_folder TEXT NOT NULL DEFAULT 'Tools Center'");
+        self::ensureColumn($pdo, 'users', 'dropbox_conflict', "dropbox_conflict TEXT NOT NULL DEFAULT 'rename'");
+    }
+
+    private static function ensureColumn(PDO $pdo, string $table, string $column, string $ddl): void
+    {
+        $stmt = $pdo->query('PRAGMA table_info(' . $table . ')');
+        if ($stmt === false) {
+            return;
+        }
+        foreach ($stmt->fetchAll() as $col) {
+            if (($col['name'] ?? '') === $column) {
+                return;
+            }
+        }
+        $pdo->exec('ALTER TABLE ' . $table . ' ADD COLUMN ' . $ddl);
     }
 
     private static function seedAdmin(PDO $pdo): void

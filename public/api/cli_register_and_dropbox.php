@@ -8,6 +8,7 @@ use App\Auth;
 use App\DropboxClient;
 use App\FileRepository;
 use App\ShareService;
+use App\UserRepository;
 
 header('Content-Type: application/json');
 
@@ -53,7 +54,15 @@ if (!$client->isConnected()) {
     ], 400);
 }
 
-$result = $client->saveUrl($publicUrl, $filename);
+$prefs = UserRepository::dropboxPrefs($user);
+$result = $client->startJob(
+    $publicUrl,
+    $filename,
+    $prefs['folder'],
+    $prefs['conflict'],
+    false,
+    $fileId
+);
 $result['file_id'] = $fileId;
 $result['share_url'] = $publicUrl;
 json_response($result, $result['success'] ? 200 : 400);

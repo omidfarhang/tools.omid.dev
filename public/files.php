@@ -6,19 +6,37 @@ require dirname(__DIR__) . '/src/bootstrap.php';
 
 use App\Auth;
 use App\Csrf;
+use App\DropboxJobRepository;
 use App\FileRepository;
 use App\ShareService;
 use App\UserRepository;
 use App\View;
 
 $user = Auth::requireLogin();
+$users = new UserRepository();
+$user = $users->findById((int) $user['id']) ?? $user;
 $files = (new FileRepository())->forUser((int) $user['id']);
-$dropboxConnected = (new UserRepository())->hasDropbox($user);
+$dropboxConnected = $users->hasDropbox($user);
+$prefs = UserRepository::dropboxPrefs($user);
+$dropboxJobs = (new DropboxJobRepository())->recentForUser((int) $user['id']);
+
+$dropboxJob = null;
+if (!empty($_SESSION['_dropbox_monitor'])) {
+    $dropboxJob = $_SESSION['_dropbox_monitor'];
+    unset($_SESSION['_dropbox_monitor']);
+}
 
 ob_start();
 ?>
 <div class="page-header">
     <p class="page-lede">Download files from the host or toggle a public link to share without login.</p>
+</div>
+
+<div id="dropbox-status" class="alert d-none" role="alert">
+    <div id="dropbox-message"></div>
+    <div id="dropbox-progress" class="progress mt-2 d-none">
+        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width:100%"></div>
+    </div>
 </div>
 
 <?php if (!$dropboxConnected): ?>
@@ -87,10 +105,43 @@ ob_start();
                                 </form>
                             <?php endif; ?>
                         </td>
-                        <td class="text-end">
-                            <a class="btn btn-sm btn-outline-danger"
-                               href="/delete.php?id=<?= (int) $file['id'] ?>&_csrf=<?= e(Csrf::token()) ?>"
-                               onclick="return confirm('Delete this file?');">Delete</a>
+                        <td class="text-end" style="min-width:12rem">
+                            <div class="d-flex flex-column align-items-end gap-2">
+                                <?php if ($dropboxConnected): ?>
+                                    <details class="w-100 text-start">
+                                        <summary class="btn btn-sm btn-outline-primary">Send to Dropbox</summary>
+                                        <form method="post" action="/dropbox_send.php" class="border rounded p-2 mt-2 bg-white">
+                                            <?= Csrf::field() ?>
+                                            <input type="hidden" name="file_id" value="<?= (int) $file['id'] ?>">
+                                            <div class="mb-2">
+                                                <label class="form-label small mb-1" for="folder-<?= (int) $file['id'] ?>">Folder</label>
+                                                <input class="form-control form-control-sm mono" type="text"
+                                                       name="dropbox_folder" id="folder-<?= (int) $file['id'] ?>"
+                                                       value="<?= e($prefs['folder']) ?>">
+                                            </div>
+                                            <div class="mb-2">
+                                                <label class="form-label small mb-1" for="conflict-<?= (int) $file['id'] ?>">If exists</label>
+                                                <select class="form-select form-select-sm" name="dropbox_conflict" id="conflict-<?= (int) $file['id'] ?>">
+                                                    <option value="rename" <?= $prefs['conflict'] === 'rename' ? 'selected' : '' ?>>Rename</option>
+                                                    <option value="overwrite" <?= $prefs['conflict'] === 'overwrite' ? 'selected' : '' ?>>Overwrite</option>
+                                                    <option value="skip" <?= $prefs['conflict'] === 'skip' ? 'selected' : '' ?>>Skip</option>
+                                                </select>
+                                            </div>
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" value="1" name="delete_after"
+                                                       id="delete-<?= (int) $file['id'] ?>">
+                                                <label class="form-check-label small" for="delete-<?= (int) $file['id'] ?>">
+                                                    Delete from host after success
+                                                </label>
+                                            </div>
+                                            <button class="btn btn-sm btn-primary" type="submit">Send</button>
+                                        </form>
+                                    </details>
+                                <?php endif; ?>
+                                <a class="btn btn-sm btn-outline-danger"
+                                   href="/delete.php?id=<?= (int) $file['id'] ?>&_csrf=<?= e(Csrf::token()) ?>"
+                                   onclick="return confirm('Delete this file?');">Delete</a>
+                            </div>
                         </td>
                     </tr>
                 <?php endforeach; ?>
@@ -99,5 +150,8 @@ ob_start();
         </div>
     <?php endif; ?>
 </div>
+
 <?php
+include dirname(__DIR__) . '/templates/partials/dropbox_jobs.php';
+include dirname(__DIR__) . '/templates/partials/dropbox_monitor_js.php';
 View::render('My Files', ob_get_clean(), $user);

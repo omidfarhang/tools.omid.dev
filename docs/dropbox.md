@@ -8,7 +8,7 @@ Each user connects their own Dropbox account. There is no shared access token in
 2. Create an app with **Scoped access** and **Full Dropbox** (or App folder if you prefer).
 3. Under **Permissions**, enable at least:
    - `files.content.write`
-   - `files.content.read` (optional)
+   - `files.content.read` (required for conflict checks: rename / overwrite / skip)
 4. Under **OAuth 2**, add the redirect URI:
 
    `{APP_BASE_URL}/oauth/dropbox/callback.php`
@@ -27,12 +27,27 @@ APP_BASE_URL=https://tools.omid.dev
 
 1. Sign in → **Account** → **Connect Dropbox**.
 2. Approve access in Dropbox.
-3. Use **Save To Dropbox** on the home page, or CLI (`scripts/ytdl.sh`) after the CLI user has connected Dropbox.
+3. Optionally set **defaults** on Account: preferred action, destination folder, conflict policy.
+4. Use **Save To Dropbox** / **Save To Disk + Dropbox** on the home page, **Send to Dropbox** on My Files, or CLI (`scripts/ytdl.sh`) after the CLI user has connected Dropbox.
+
+## Features after connect
+
+- **Destination folder** — per job (prefilled from Account default).
+- **Conflict policy** — rename, overwrite, or skip when the Dropbox path already exists.
+- **Disk + Dropbox** — keep a host copy and push to Dropbox in one action.
+- **Delete after success** — optional checkbox per job (never forced by defaults).
+- **Send existing host files** — My Files → Send to Dropbox.
+- **Recent Dropbox jobs** — history with live status on Home and My Files.
 
 ## How uploads work
 
 - Direct HTTP(S) URLs are passed to Dropbox `files/save_url`.
-- YouTube (and CLI) downloads land in `storage/temp`, get a public share URL (`/s/{token}`), then that URL is sent to Dropbox so Dropbox can fetch the file.
+- YouTube, Disk + Dropbox, My Files sends, and CLI downloads land in `storage/temp`, get a public share URL (`/s/{token}`), then that URL is sent to Dropbox so Dropbox can fetch the file.
+- Job rows live in `dropbox_jobs`. Status polling updates them; if the job opted into delete-after, the host file is removed on success.
+
+## Re-authorize after permission changes
+
+If you enable `files.content.read` on an existing Dropbox app, users should **Disconnect** and **Connect** again so the new scope is granted.
 
 ## Disconnect
 

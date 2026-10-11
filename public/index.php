@@ -8,6 +8,7 @@ use App\Auth;
 use App\Csrf;
 use App\DownloadService;
 use App\DropboxClient;
+use App\DropboxJobRepository;
 use App\FileRepository;
 use App\ShareService;
 use App\UserRepository;
@@ -18,6 +19,8 @@ $users = new UserRepository();
 $user = $users->findById((int) $user['id']) ?? $user;
 $dropbox = new DropboxClient($user);
 $dropboxConnected = $dropbox->isConnected();
+$prefs = UserRepository::dropboxPrefs($user);
+$preferred = $prefs['behavior'];
 
 $dropboxJob = null;
 $resultHtml = '';
@@ -28,6 +31,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $url = trim((string) ($_POST['DLURL'] ?? ''));
     $filename = trim((string) ($_POST['DLFILENAME'] ?? ''));
     $ytFormat = (string) ($_POST['yt_format'] ?? 'best');
+    $folder = UserRepository::normalizeFolder((string) ($_POST['dropbox_folder'] ?? $prefs['folder']));
+    $conflict = UserRepository::normalizeConflict((string) ($_POST['dropbox_conflict'] ?? $prefs['conflict']));
+    $deleteAfter = isset($_POST['delete_after']) && (string) $_POST['delete_after'] === '1';
 
     $downloader = new DownloadService();
     $files = new FileRepository();
@@ -38,10 +44,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('/');
     }
 
+    if (!in_array($behavior, ['save_to_disk', 'save_to_dropbox', 'save_to_both'], true)) {
+        flash('error', 'Invalid action.');
+        redirect('/');
+    }
+
+    $needsDropbox = $behavior === 'save_to_dropbox' || $behavior === 'save_to_both';
+    if ($needsDropbox && !$dropboxConnected) {
+        flash('error', 'Connect your Dropbox account first (Account page).');
+        redirect('/user/');
+    }
+
     $ytId = is_youtube($url);
     $downloadResult = null;
+    $fileId = null;
 
-    if ($behavior === 'save_to_disk' || ($behavior === 'save_to_dropbox' && $ytId !== false)) {
+    $needsDisk = $behavior === 'save_to_disk'
+        || $behavior === 'save_to_both'
+        || ($behavior === 'save_to_dropbox' && $ytId !== false);
+
+    if ($needsDisk) {
         $downloadResult = $ytId !== false
             ? $downloader->downloadYoutube($url, $ytFormat)
             : $downloader->downloadUrl($url, $filename !== '' ? $filename : null);
@@ -59,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $url
         );
 
-        if ($behavior === 'save_to_disk') {
+        if ($behavior === 'save_to_disk' || $behavior === 'save_to_both') {
             $resultHtml = '<div class="alert alert-success">'
                 . 'Successfully downloaded <strong>' . e($downloadResult['original_name']) . '</strong> '
                 . '(' . e(human_filesize((int) $downloadResult['size'])) . '). '
@@ -69,29 +91,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    if ($behavior === 'save_to_dropbox') {
-        if (!$dropboxConnected) {
-            flash('error', 'Connect your Dropbox account first (Account page).');
-            redirect('/user/');
-        }
-
-        if ($ytId !== false) {
-            // Dropbox must fetch a public URL — enable a share for the local file.
-            $fileId = $fileId ?? 0;
-            $token = $shares->enable($fileId, (int) $user['id']);
+    if ($needsDropbox) {
+        if ($ytId !== false || $behavior === 'save_to_both') {
+            $token = $shares->enable((int) $fileId, (int) $user['id']);
             $fetchUrl = ShareService::publicUrl($token);
             $dbFilename = $downloadResult['original_name'] ?? 'video.mp4';
+            $localFileId = (int) $fileId;
         } else {
             $fetchUrl = $url;
             $dbFilename = $filename !== '' ? $filename : null;
+            $localFileId = null;
+            $deleteAfter = false;
         }
 
-        $sent = $dropbox->saveUrl($fetchUrl, $dbFilename);
+        $sent = $dropbox->startJob(
+            $fetchUrl,
+            $dbFilename,
+            $folder,
+            $conflict,
+            $deleteAfter,
+            $localFileId
+        );
+
         if ($sent['success']) {
-            $dropboxJob = [
-                'asyncJobId' => $sent['async_job_id'],
-                'filename' => $sent['filename'],
-            ];
+            if (($sent['status'] ?? '') === 'skipped') {
+                $resultHtml .= '<div class="alert alert-warning">'
+                    . e($sent['message'] ?? 'Skipped — file already exists in Dropbox.')
+                    . '</div>';
+            } else {
+                $dropboxJob = [
+                    'asyncJobId' => $sent['async_job_id'] ?? null,
+                    'filename' => $sent['filename'] ?? ($dbFilename ?? 'file'),
+                    'jobId' => $sent['job_id'] ?? null,
+                ];
+            }
         } else {
             $resultHtml .= '<div class="alert alert-danger">' . e($sent['message'] ?? 'Dropbox failed')
                 . (isset($sent['error']) ? ' — ' . e((string) $sent['error']) : '')
@@ -99,6 +132,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+
+$dropboxJobs = (new DropboxJobRepository())->recentForUser((int) $user['id']);
+
+$btnClass = static function (string $action) use ($preferred): string {
+    return $action === $preferred ? 'btn btn-primary' : 'btn btn-outline-primary';
+};
 
 ob_start();
 ?>
@@ -124,7 +163,7 @@ ob_start();
 
 <div class="panel">
     <h2 class="panel-title">New download</h2>
-    <form action="" method="post">
+    <form action="" method="post" id="download-form">
         <?= Csrf::field() ?>
         <div class="mb-3">
             <label for="DLURL" class="form-label">URL</label>
@@ -148,16 +187,46 @@ ob_start();
             <label for="DLFILENAME" class="form-label">Filename</label>
             <input name="DLFILENAME" type="text" class="form-control mono" id="DLFILENAME" placeholder="Auto generated, can be changed">
         </div>
+
+        <?php if ($dropboxConnected): ?>
+            <div class="border rounded p-3 mb-3 bg-white">
+                <div class="mb-3">
+                    <label for="dropbox_folder" class="form-label">Dropbox folder</label>
+                    <input name="dropbox_folder" type="text" class="form-control mono" id="dropbox_folder"
+                           value="<?= e($prefs['folder']) ?>" placeholder="Tools Center">
+                    <div class="form-text">Relative to your Dropbox root. Leave blank for root.</div>
+                </div>
+                <div class="mb-3">
+                    <label for="dropbox_conflict" class="form-label">If file already exists</label>
+                    <select class="form-select" name="dropbox_conflict" id="dropbox_conflict">
+                        <option value="rename" <?= $prefs['conflict'] === 'rename' ? 'selected' : '' ?>>Rename (add number)</option>
+                        <option value="overwrite" <?= $prefs['conflict'] === 'overwrite' ? 'selected' : '' ?>>Overwrite</option>
+                        <option value="skip" <?= $prefs['conflict'] === 'skip' ? 'selected' : '' ?>>Skip</option>
+                    </select>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="1" name="delete_after" id="delete_after">
+                    <label class="form-check-label" for="delete_after">
+                        Delete from host after Dropbox succeeds
+                    </label>
+                    <div class="form-text">Applies when a host copy exists (YouTube, Disk + Dropbox). Ignored for direct URL → Dropbox.</div>
+                </div>
+            </div>
+        <?php endif; ?>
+
         <div class="d-flex flex-wrap gap-2">
-            <button class="btn btn-primary" name="behavior" type="submit" value="save_to_disk">Save To Disk</button>
-            <button class="btn btn-outline-primary" name="behavior" type="submit" value="save_to_dropbox" <?= $dropboxConnected ? '' : 'disabled' ?>>Save To Dropbox</button>
+            <button class="<?= e($btnClass('save_to_disk')) ?>" name="behavior" type="submit" value="save_to_disk">Save To Disk</button>
+            <button class="<?= e($btnClass('save_to_dropbox')) ?>" name="behavior" type="submit" value="save_to_dropbox" <?= $dropboxConnected ? '' : 'disabled' ?>>Save To Dropbox</button>
+            <button class="<?= e($btnClass('save_to_both')) ?>" name="behavior" type="submit" value="save_to_both" <?= $dropboxConnected ? '' : 'disabled' ?>>Save To Disk + Dropbox</button>
         </div>
     </form>
 </div>
 
+<?php
+include dirname(__DIR__) . '/templates/partials/dropbox_jobs.php';
+include dirname(__DIR__) . '/templates/partials/dropbox_monitor_js.php';
+?>
 <script>
-window.dropboxJobData = <?= json_encode($dropboxJob, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-
 function getFileNameFromUrl(url) {
     if (!url) return;
     const isYoutube = url.match(/^(?:http(?:s)?:\/\/)?(?:www\.)?(?:m\.)?(?:youtu\.be\/|youtube\.com\/(?:(?:watch)?\?(?:.*&)?v(?:i)?=|(?:embed|v|vi|user|shorts)\/))([^\?&\"'>]+)/);
@@ -166,71 +235,6 @@ function getFileNameFromUrl(url) {
     url = hashIndex !== -1 ? url.substring(0, hashIndex) : url;
     document.getElementById('DLFILENAME').value = (url.split('/').pop() || '').replace(/[\?].*$/g, '');
 }
-
-function startDropboxMonitoring(asyncJobId, filename) {
-    const statusDiv = document.getElementById('dropbox-status');
-    const messageDiv = document.getElementById('dropbox-message');
-    const progressDiv = document.getElementById('dropbox-progress');
-    statusDiv.className = 'alert alert-info';
-    statusDiv.classList.remove('d-none');
-    messageDiv.textContent = 'Uploading "' + filename + '" to Dropbox...';
-    progressDiv.classList.remove('d-none');
-    checkDropboxStatus(asyncJobId, filename);
-}
-
-function checkDropboxStatus(asyncJobId, filename) {
-    const body = new URLSearchParams({
-        async_job_id: asyncJobId,
-        _csrf: <?= json_encode(Csrf::token()) ?>,
-    });
-
-    fetch('/api/check_dropbox_status.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: body.toString(),
-        credentials: 'same-origin',
-    })
-        .then(function (res) { return res.json(); })
-        .then(function (response) {
-            const statusDiv = document.getElementById('dropbox-status');
-            const messageDiv = document.getElementById('dropbox-message');
-            const progressDiv = document.getElementById('dropbox-progress');
-            if (response.success) {
-                if (response.status === 'in_progress') {
-                    messageDiv.textContent = 'Upload in progress for "' + filename + '"...';
-                    setTimeout(function () { checkDropboxStatus(asyncJobId, filename); }, 2000);
-                } else if (response.status === 'complete') {
-                    statusDiv.className = 'alert alert-success';
-                    progressDiv.classList.add('d-none');
-                    const path = (response.data && (response.data.path_display || response.data.path_lower)) || 'N/A';
-                    messageDiv.textContent = 'Uploaded "' + filename + '" to Dropbox. Path: ' + path;
-                } else if (response.status === 'failed') {
-                    statusDiv.className = 'alert alert-danger';
-                    progressDiv.classList.add('d-none');
-                    messageDiv.textContent = 'Failed to upload "' + filename + '".';
-                } else {
-                    setTimeout(function () { checkDropboxStatus(asyncJobId, filename); }, 2000);
-                }
-            } else {
-                statusDiv.className = 'alert alert-danger';
-                progressDiv.classList.add('d-none');
-                messageDiv.textContent = 'Error: ' + (response.error || 'Unknown error');
-            }
-        })
-        .catch(function () {
-            const statusDiv = document.getElementById('dropbox-status');
-            statusDiv.className = 'alert alert-danger';
-            statusDiv.classList.remove('d-none');
-            document.getElementById('dropbox-progress').classList.add('d-none');
-            document.getElementById('dropbox-message').textContent = 'Error checking upload status.';
-        });
-}
-
-document.addEventListener('DOMContentLoaded', function () {
-    if (window.dropboxJobData) {
-        startDropboxMonitoring(window.dropboxJobData.asyncJobId, window.dropboxJobData.filename);
-    }
-});
 </script>
 <?php
 View::render('Download', ob_get_clean(), $user);

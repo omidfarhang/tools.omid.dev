@@ -23,9 +23,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash('success', 'Dropbox disconnected.');
         redirect('/user/');
     }
+    if ($action === 'save_dropbox_prefs') {
+        $users->updateDropboxPrefs(
+            (int) $user['id'],
+            (string) ($_POST['dropbox_default_behavior'] ?? 'save_to_disk'),
+            (string) ($_POST['dropbox_folder'] ?? 'Tools Center'),
+            (string) ($_POST['dropbox_conflict'] ?? 'rename')
+        );
+        flash('success', 'Dropbox defaults saved.');
+        redirect('/user/');
+    }
 }
 
+$user = $users->findById((int) $user['id']) ?? $user;
 $connected = $users->hasDropbox($user);
+$prefs = UserRepository::dropboxPrefs($user);
 
 ob_start();
 ?>
@@ -55,6 +67,36 @@ ob_start();
                 <div class="alert alert-success">
                     Dropbox connected<?= $user['dropbox_account_id'] ? ' (account <span class="mono">' . e((string) $user['dropbox_account_id']) . '</span>)' : '' ?>.
                 </div>
+
+                <form method="post" class="mb-4">
+                    <?= Csrf::field() ?>
+                    <input type="hidden" name="action" value="save_dropbox_prefs">
+                    <h3 class="h6 mb-3">Defaults</h3>
+                    <div class="mb-3">
+                        <label for="dropbox_default_behavior" class="form-label">Preferred download action</label>
+                        <select class="form-select" name="dropbox_default_behavior" id="dropbox_default_behavior">
+                            <option value="save_to_disk" <?= $prefs['behavior'] === 'save_to_disk' ? 'selected' : '' ?>>Save To Disk</option>
+                            <option value="save_to_dropbox" <?= $prefs['behavior'] === 'save_to_dropbox' ? 'selected' : '' ?>>Save To Dropbox</option>
+                            <option value="save_to_both" <?= $prefs['behavior'] === 'save_to_both' ? 'selected' : '' ?>>Save To Disk + Dropbox</option>
+                        </select>
+                        <div class="form-text">Highlights the primary button on the home page. Auto-delete is chosen per job, not here.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="dropbox_folder" class="form-label">Default folder</label>
+                        <input class="form-control mono" type="text" name="dropbox_folder" id="dropbox_folder"
+                               value="<?= e($prefs['folder']) ?>" placeholder="Tools Center">
+                    </div>
+                    <div class="mb-3">
+                        <label for="dropbox_conflict" class="form-label">Default conflict policy</label>
+                        <select class="form-select" name="dropbox_conflict" id="dropbox_conflict">
+                            <option value="rename" <?= $prefs['conflict'] === 'rename' ? 'selected' : '' ?>>Rename (add number)</option>
+                            <option value="overwrite" <?= $prefs['conflict'] === 'overwrite' ? 'selected' : '' ?>>Overwrite</option>
+                            <option value="skip" <?= $prefs['conflict'] === 'skip' ? 'selected' : '' ?>>Skip</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" type="submit">Save defaults</button>
+                </form>
+
                 <form method="post">
                     <?= Csrf::field() ?>
                     <input type="hidden" name="action" value="disconnect_dropbox">

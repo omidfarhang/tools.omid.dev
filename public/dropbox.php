@@ -6,6 +6,7 @@ require dirname(__DIR__) . '/src/bootstrap.php';
 
 use App\Auth;
 use App\DropboxClient;
+use App\UserRepository;
 
 header('Content-Type: application/json');
 
@@ -29,5 +30,13 @@ if (!$client->isConnected()) {
     json_response(['success' => false, 'error' => 'CLI user has not connected Dropbox'], 400);
 }
 
-$result = $client->saveUrl($url, $filename !== '' ? $filename : null);
+$prefs = UserRepository::dropboxPrefs($user);
+$result = $client->startJob(
+    $url,
+    $filename !== '' ? $filename : null,
+    $prefs['folder'],
+    $prefs['conflict'],
+    false,
+    null
+);
 json_response($result, $result['success'] ? 200 : 400);

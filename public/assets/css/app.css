@@ -521,6 +521,18 @@ code,
     margin-bottom: 1rem;
 }
 
+details > summary.btn {
+    list-style: none;
+}
+
+details > summary.btn::-webkit-details-marker {
+    display: none;
+}
+
+details[open] > summary.btn {
+    margin-bottom: 0.25rem;
+}
+
 /* —— Auth layout —— */
 .layout-auth {
     min-height: 100%;

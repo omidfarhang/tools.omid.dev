@@ -133,6 +133,65 @@ final class UserRepository
         return !empty($user['dropbox_access_token']) || !empty($user['dropbox_refresh_token']);
     }
 
+    public static function normalizeBehavior(string $behavior): string
+    {
+        return match ($behavior) {
+            'save_to_dropbox', 'save_to_both' => $behavior,
+            default => 'save_to_disk',
+        };
+    }
+
+    public static function normalizeConflict(string $conflict): string
+    {
+        return match ($conflict) {
+            'overwrite', 'skip' => $conflict,
+            default => 'rename',
+        };
+    }
+
+    public static function normalizeFolder(string $folder): string
+    {
+        $folder = str_replace('\\', '/', trim($folder));
+        $folder = trim($folder, '/');
+        $parts = [];
+        foreach (explode('/', $folder) as $part) {
+            $part = trim($part);
+            if ($part === '' || $part === '.' || $part === '..') {
+                continue;
+            }
+            $parts[] = $part;
+        }
+
+        return implode('/', $parts);
+    }
+
+    /** @return array{behavior:string,folder:string,conflict:string} */
+    public static function dropboxPrefs(array $user): array
+    {
+        return [
+            'behavior' => self::normalizeBehavior((string) ($user['dropbox_default_behavior'] ?? 'save_to_disk')),
+            'folder' => self::normalizeFolder((string) ($user['dropbox_folder'] ?? 'Tools Center')),
+            'conflict' => self::normalizeConflict((string) ($user['dropbox_conflict'] ?? 'rename')),
+        ];
+    }
+
+    public function updateDropboxPrefs(int $userId, string $behavior, string $folder, string $conflict): void
+    {
+        $stmt = $this->db->prepare(
+            'UPDATE users SET
+                dropbox_default_behavior = :b,
+                dropbox_folder = :f,
+                dropbox_conflict = :c
+             WHERE id = :id'
+        );
+        $stmt->execute([
+            ':b' => self::normalizeBehavior($behavior),
+            ':f' => self::normalizeFolder($folder),
+            ':c' => self::normalizeConflict($conflict),
+            ':id' => $userId,
+        ]);
+    }
+
     public function count(): int
     {
         return (int) $this->db->query('SELECT COUNT(*) FROM users')->fetchColumn();
