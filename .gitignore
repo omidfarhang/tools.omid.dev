@@ -7,6 +7,7 @@
 !/storage/temp/.gitkeep
 /storage/app.db
 /storage/app.db-*
+/storage/ytdlp-cookies.txt
 /cgi-bin/
 *.log
 .DS_Store

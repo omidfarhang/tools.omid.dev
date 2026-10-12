@@ -25,7 +25,7 @@ TEMP_DIR="${TEMP_DIR:-./storage/temp}"
 mkdir -p "$TEMP_DIR"
 
 COOKIE_ARGS=()
-COOKIES="${YTDLP_COOKIES_PATH:-.secure/cookies.txt}"
+COOKIES="${YTDLP_COOKIES_PATH:-storage/ytdlp-cookies.txt}"
 if [[ -f "$COOKIES" ]]; then
   COOKIE_ARGS=(--cookies "$COOKIES")
 fi

@@ -69,6 +69,12 @@ ob_start();
             <p class="action-tile-desc">Browse every stored file, revoke public links, and delete as needed.</p>
         </a>
     </div>
+    <div class="col-md-6">
+        <a class="action-tile" href="/admin/cookies.php">
+            <div class="action-tile-title">yt-dlp cookies</div>
+            <p class="action-tile-desc">Paste or upload Netscape cookies for YouTube and other extractors that need auth.</p>
+        </a>
+    </div>
 </div>
 <?php
 View::render('Admin', ob_get_clean(), $user);

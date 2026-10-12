@@ -24,7 +24,7 @@ final class Config
             'app_name' => getenv('APP_NAME') ?: 'Tools Center',
             'db_path' => getenv('DB_PATH') ?: ($rootDir . '/storage/app.db'),
             'temp_dir' => getenv('TEMP_DIR') ?: ($rootDir . '/storage/temp'),
-            'ytdlp_cookies_path' => getenv('YTDLP_COOKIES_PATH') ?: ($rootDir . '/.secure/cookies.txt'),
+            'ytdlp_cookies_path' => getenv('YTDLP_COOKIES_PATH') ?: ($rootDir . '/storage/ytdlp-cookies.txt'),
             'dropbox_app_key' => getenv('DROPBOX_APP_KEY') ?: '',
             'dropbox_app_secret' => getenv('DROPBOX_APP_SECRET') ?: '',
             'admin_username' => getenv('ADMIN_USERNAME') ?: 'admin',

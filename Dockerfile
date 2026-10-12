@@ -59,14 +59,14 @@ COPY scripts ./scripts
 
 RUN a2ensite tools \
     && sed -i 's/^Listen 80$/Listen 8080/' /etc/apache2/ports.conf \
-    && mkdir -p storage/temp .secure \
-    && chown -R www-data:www-data storage .secure \
+    && mkdir -p storage/temp \
+    && chown -R www-data:www-data storage \
     && chmod +x scripts/ytdl.sh scripts/process_download_job.php /entrypoint.sh
 
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public \
     DB_PATH=/var/www/html/storage/app.db \
     TEMP_DIR=/var/www/html/storage/temp \
-    YTDLP_COOKIES_PATH=/var/www/html/.secure/cookies.txt
+    YTDLP_COOKIES_PATH=/var/www/html/storage/ytdlp-cookies.txt
 
 EXPOSE 8080
 

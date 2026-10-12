@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Download;
 
 use App\Config;
+use App\YtDlpCookieStore;
 
 final class YtDlpRunner
 {
@@ -20,10 +21,10 @@ final class YtDlpRunner
         }
 
         $template = Config::tempDir() . '/%(title).200B [%(id)s].%(ext)s';
-        $cookiePath = (string) Config::get('ytdlp_cookies_path');
+        $cookiePath = (new YtDlpCookieStore())->cookieFilePath();
 
         $cmd = ['yt-dlp', ...$formatArgs, ...$extraArgs, '-o', $template, '--no-playlist', '-q', '--print', 'after_move:filepath'];
-        if (is_file($cookiePath)) {
+        if ($cookiePath !== null && is_file($cookiePath)) {
             $cmd[] = '--cookies';
             $cmd[] = $cookiePath;
         }

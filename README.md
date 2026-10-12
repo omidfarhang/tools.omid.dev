@@ -15,7 +15,7 @@ Personal **Download to Host** toolkit: pull remote URLs to the server (HTTP + cu
 
 - PHP 8.2+ with `curl`, `pdo_sqlite`
 - `yt-dlp` (with EJS), `ffmpeg`, and Deno (bundled in the Docker image; YouTube needs the JS runtime)
-- Optional but usually required for YouTube: Netscape cookies file at `YTDLP_COOKIES_PATH` (default `.secure/cookies.txt`)
+- Optional but usually required for YouTube: Netscape cookies via **Admin → yt-dlp cookies**
 
 ## Quick start (Docker)
 
@@ -49,17 +49,17 @@ cp .env.example .env
 | `APP_CLI_TOKEN` / `APP_CLI_USERNAME` | CLI auth → that user’s cloud account |
 | `DROPBOX_APP_KEY` / `DROPBOX_APP_SECRET` | Dropbox OAuth app credentials (first cloud provider) |
 | `DB_PATH` / `TEMP_DIR` | SQLite + download storage |
-| `YTDLP_COOKIES_PATH` | Optional cookies for yt-dlp (YouTube often needs these) |
+| `YTDLP_COOKIES_PATH` | On-disk cookie file materialized for yt-dlp (managed via Admin UI) |
 
 ### YouTube / yt-dlp cookies
 
-YouTube frequently returns “Sign in to confirm you’re not a bot” from datacenter IPs. The app passes cookies automatically when the file exists:
+YouTube frequently returns “Sign in to confirm you’re not a bot” from datacenter IPs. As an admin:
 
-1. Export YouTube cookies from a logged-in browser session into Netscape format (see [yt-dlp cookie FAQ](https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp) and [YouTube cookie tips](https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies)).
-2. Save as `.secure/cookies.txt` on the host (compose mounts `./.secure` into the container).
-3. Rebuild/restart so the image has Deno + current `yt-dlp[default]` if you are still on an older image: `docker compose up -d --build`.
+1. Export YouTube cookies from a logged-in browser into Netscape format (see [yt-dlp cookie FAQ](https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp) and [YouTube cookie tips](https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies)).
+2. Open **Admin → yt-dlp cookies**, paste or upload the file, and save.
+3. Prefer a throwaway Google account; cookie use can risk the account.
 
-Do not commit `cookies.txt` (`.secure/*` is gitignored except `.gitkeep`).
+Cookies are stored in SQLite and written to `YTDLP_COOKIES_PATH` for yt-dlp / `scripts/ytdl.sh`. A legacy `.secure/cookies.txt` is imported once if present.
 
 See also [docs/dropbox.md](docs/dropbox.md).
 
@@ -67,8 +67,7 @@ See also [docs/dropbox.md](docs/dropbox.md).
 
 - `public/` — webroot
 - `src/` — application code
-- `storage/` — SQLite DB + temp files (mounted volume)
-- `.secure/` — optional yt-dlp cookies (not cloud tokens)
+- `storage/` — SQLite DB + temp files + materialized yt-dlp cookies (mounted volume)
 - `src/Download/` — download source registry (HTTP, curated yt-dlp sites, generic yt-dlp)
 - `src/Cloud/` — cloud provider registry (Dropbox)
 

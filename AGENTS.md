@@ -15,8 +15,7 @@ PHP app: multi-user download-to-host toolkit. Users pull remote URLs via pluggab
 | `public/` | Webroot (PHP entrypoints, static assets) |
 | `src/` | `App\` PSR-4 classes + `helpers.php` (`Download/`, `Cloud/` registries) |
 | `templates/layout.php` | Shared HTML shell (sidebar / auth) |
-| `storage/` | SQLite DB + temp downloads (volume) |
-| `.secure/` | Optional yt-dlp cookies (not cloud tokens) |
+| `storage/` | SQLite DB + temp downloads + materialized yt-dlp cookies (volume) |
 | `assets/` + `scripts/copy-assets.js` | Vendor CSS/JS source → `public/assets` |
 | `config/` | Example PHP config |
 | `docs/` | Operator docs (cloud providers, nginx) |
@@ -49,7 +48,7 @@ Asset pipeline: edit Bootstrap/jQuery via npm, then `npm run build:assets`. App 
 - Auth: `Auth::requireLogin()`, `Auth::requireAdmin()`, or `Auth::requireLoginOrCli()` for CLI/token routes
 - Prefer extending existing repositories/services over new parallel abstractions
 - Do not add frameworks, ORMs, or build tools unless explicitly requested
-- Do not commit secrets (`.env`, cookies, tokens). Cloud tokens are per-user in SQLite only
+- Do not commit secrets (`.env`, cookies, tokens). Cloud tokens are per-user in SQLite; site-wide yt-dlp cookies are admin-managed in SQLite (`Admin → yt-dlp cookies`)
 - New download sites implement `App\Download\DownloadSource` and register in `DownloadRegistry`
 - New cloud backends implement `App\Cloud\CloudProvider` and register in `CloudRegistry`
 

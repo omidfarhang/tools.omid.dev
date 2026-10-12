@@ -29,6 +29,7 @@ $navIcon = static function (string $name): string {
         'user' => '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 19.5c1.5-3 4-4.5 7-4.5s5.5 1.5 7 4.5"/></svg>',
         'admin' => '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3 4.5 6.5v5c0 4.5 3.2 7.8 7.5 9 4.3-1.2 7.5-4.5 7.5-9v-5L12 3Z"/></svg>',
         'users' => '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3.5 19c1.2-2.8 3.3-4.2 5.5-4.2s4.3 1.4 5.5 4.2"/><path d="M14 19c.7-1.8 2-2.8 3.5-2.8 1.2 0 2.2.6 3 1.8"/></svg>',
+        'cookies' => '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 3.5 3.5 0 0 1-3.5-3.5A3.5 3.5 0 0 1 14 5 3.5 3.5 0 0 1 12 3Z"/><circle cx="9" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="14.5" cy="13.5" r="1" fill="currentColor" stroke="none"/><circle cx="10.5" cy="15.5" r="0.9" fill="currentColor" stroke="none"/></svg>',
     ];
     return $icons[$name] ?? '';
 };
@@ -44,9 +45,10 @@ $renderNav = static function () use ($user, $isActive, $navIcon): void {
         <a href="/user/" class="<?= $isActive('/user') ? 'active' : '' ?>"><?= $navIcon('user') ?> Account</a>
         <?php if (($user['role'] ?? '') === 'admin'): ?>
             <div class="nav-section">Admin</div>
-            <a href="/admin/" class="<?= ($isActive('/admin') && !$isActive('/admin/users.php', '/admin/files.php')) ? 'active' : '' ?>"><?= $navIcon('admin') ?> Overview</a>
+            <a href="/admin/" class="<?= ($isActive('/admin') && !$isActive('/admin/users.php', '/admin/files.php', '/admin/cookies.php')) ? 'active' : '' ?>"><?= $navIcon('admin') ?> Overview</a>
             <a href="/admin/users.php" class="<?= $isActive('/admin/users.php') ? 'active' : '' ?>"><?= $navIcon('users') ?> Users</a>
             <a href="/admin/files.php" class="<?= $isActive('/admin/files.php') ? 'active' : '' ?>"><?= $navIcon('files') ?> All files</a>
+            <a href="/admin/cookies.php" class="<?= $isActive('/admin/cookies.php') ? 'active' : '' ?>"><?= $navIcon('cookies') ?> yt-dlp cookies</a>
         <?php endif; ?>
     </nav>
     <?php

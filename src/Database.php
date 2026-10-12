@@ -113,6 +113,12 @@ CREATE TABLE IF NOT EXISTS download_jobs (
     FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE SET NULL,
     FOREIGN KEY (cloud_job_id) REFERENCES cloud_jobs(id) ON DELETE SET NULL
 );
+
+CREATE TABLE IF NOT EXISTS app_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 SQL);
 
         self::ensureColumn($pdo, 'users', 'dropbox_default_behavior', "dropbox_default_behavior TEXT NOT NULL DEFAULT 'save_to_disk'");
@@ -125,6 +131,7 @@ SQL);
         self::migrateBehaviorValues($pdo);
         self::migrateDefaultCloudFolder($pdo);
         self::migrateDownloadHistory($pdo);
+        (new YtDlpCookieStore(new SettingsRepository($pdo)))->importLegacyFileIfNeeded();
     }
 
     private static function migrateDownloadHistory(PDO $pdo): void
