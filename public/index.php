@@ -78,7 +78,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 DownloadJobDispatcher::dispatchPending(5);
-$activeJobs = $jobRepo->activeForUser((int) $user['id']);
+$homeJobs = $jobRepo->homeForUser((int) $user['id'], 8);
+$activeJobCount = count($jobRepo->activeForUser((int) $user['id']));
 
 $destinationLabel = static function (string $behavior): string {
     return match ($behavior) {
@@ -203,10 +204,17 @@ ob_start();
     </form>
 </div>
 
-<div class="panel panel-flush mt-3 <?= $activeJobs ? '' : 'd-none' ?>" id="active-jobs-panel">
+<div class="panel panel-flush mt-3 <?= $homeJobs ? '' : 'd-none' ?>" id="active-jobs-panel">
     <div class="panel-head d-flex justify-content-between align-items-center">
-        <h2 class="panel-title mb-0">Active jobs</h2>
-        <span class="text-muted small" id="active-jobs-count"><?= count($activeJobs) ?> active</span>
+        <h2 class="panel-title mb-0">Jobs</h2>
+        <span class="text-muted small" id="active-jobs-count">
+            <?php if ($activeJobCount > 0): ?>
+                <?= $activeJobCount ?> active
+            <?php else: ?>
+                <?= count($homeJobs) ?> recent
+            <?php endif; ?>
+            · <a href="/history.php">History</a>
+        </span>
     </div>
     <div class="table-responsive">
         <table class="table table-striped align-middle mb-0">
@@ -219,23 +227,33 @@ ob_start();
             </tr>
             </thead>
             <tbody id="active-jobs-body">
-            <?php foreach ($activeJobs as $job): ?>
+            <?php foreach ($homeJobs as $job): ?>
                 <?php
                 $name = (string) ($job['result_filename'] ?? $job['requested_filename'] ?? '');
                 $status = (string) ($job['status'] ?? 'pending');
                 $cloudStatus = (string) ($job['cloud_status'] ?? '');
+                $isActive = in_array($status, ['pending', 'in_progress'], true)
+                    || ($status === 'complete' && in_array($cloudStatus, ['pending', 'in_progress'], true));
                 $displayStatus = $status;
                 if ($status === 'complete' && in_array($cloudStatus, ['pending', 'in_progress'], true)) {
-                    $displayStatus = 'cloud_' . $cloudStatus;
+                    $displayStatus = 'cloud upload';
                 }
+                $badgeStatus = $displayStatus === 'cloud upload' ? 'in_progress' : $status;
+                $fileId = isset($job['file_id']) && $job['file_id'] !== null ? (int) $job['file_id'] : null;
                 ?>
-                <tr data-job-id="<?= (int) $job['id'] ?>">
+                <tr data-job-id="<?= (int) $job['id'] ?>" class="<?= $isActive ? '' : 'text-muted' ?>">
                     <td class="mono small" title="<?= e((string) $job['source_url']) ?>"><?= e($truncateUrl((string) $job['source_url'])) ?></td>
-                    <td class="mono"><?= e($name !== '' ? $name : '—') ?></td>
+                    <td class="mono">
+                        <?php if ($fileId !== null && $status === 'complete'): ?>
+                            <a class="filename" href="/download.php?id=<?= $fileId ?>"><?= e($name !== '' ? $name : 'file') ?></a>
+                        <?php else: ?>
+                            <?= e($name !== '' ? $name : '—') ?>
+                        <?php endif; ?>
+                    </td>
                     <td><?= e($destinationLabel((string) $job['behavior'])) ?></td>
                     <td>
-                        <span class="badge text-bg-<?= e($statusBadge($status === 'complete' && $cloudStatus !== '' ? 'in_progress' : $status)) ?> job-status-badge">
-                            <?= e($displayStatus === 'cloud_in_progress' || $displayStatus === 'cloud_pending' ? 'cloud upload' : $displayStatus) ?>
+                        <span class="badge text-bg-<?= e($statusBadge($badgeStatus)) ?> job-status-badge">
+                            <?= e($displayStatus) ?>
                         </span>
                         <?php if (!empty($job['error'])): ?>
                             <div class="text-muted small mt-1 job-error"><?= e((string) $job['error']) ?></div>
@@ -343,24 +361,29 @@ ob_start();
         return job.status || 'pending';
     }
 
-    function renderJobs(jobs) {
+    function renderJobs(jobs, activeCount) {
         if (!panel || !body || !countEl) return;
         if (!jobs.length) {
             panel.classList.add('d-none');
             body.innerHTML = '';
-            countEl.textContent = '0 active';
+            countEl.innerHTML = '0 recent · <a href="/history.php">History</a>';
             return;
         }
         panel.classList.remove('d-none');
-        countEl.textContent = jobs.length + ' active';
+        const countLabel = activeCount > 0 ? (activeCount + ' active') : (jobs.length + ' recent');
+        countEl.innerHTML = countLabel + ' · <a href="/history.php">History</a>';
         body.innerHTML = jobs.map(function (job) {
             const name = job.result_filename || job.requested_filename || '—';
             const label = displayStatus(job);
             const badgeStatus = label === 'cloud upload' ? 'cloud_upload' : job.status;
-            const err = job.error ? '<div class="text-muted small mt-1 job-error"></div>' : '';
-            return '<tr data-job-id="' + job.id + '">'
+            const rowClass = job.active ? '' : ' class="text-muted"';
+            let nameHtml = escapeHtml(name);
+            if (job.file_id && job.status === 'complete') {
+                nameHtml = '<a class="filename" href="/download.php?id=' + job.file_id + '">' + escapeHtml(name === '—' ? 'file' : name) + '</a>';
+            }
+            return '<tr data-job-id="' + job.id + '"' + rowClass + '>'
                 + '<td class="mono small" title="' + escapeAttr(job.source_url) + '">' + escapeHtml(truncateUrl(job.source_url)) + '</td>'
-                + '<td class="mono">' + escapeHtml(name) + '</td>'
+                + '<td class="mono">' + nameHtml + '</td>'
                 + '<td>' + escapeHtml(destinationLabel(job.behavior)) + '</td>'
                 + '<td><span class="' + statusBadgeClass(badgeStatus) + '">' + escapeHtml(label) + '</span>'
                 + (job.error ? '<div class="text-muted small mt-1">' + escapeHtml(job.error) + '</div>' : '')
@@ -391,8 +414,9 @@ ob_start();
             .then(function (res) { return res.json(); })
             .then(function (data) {
                 if (data && data.success && Array.isArray(data.jobs)) {
-                    renderJobs(data.jobs);
-                    if (data.jobs.length > 0) {
+                    const activeCount = typeof data.active_count === 'number' ? data.active_count : 0;
+                    renderJobs(data.jobs, activeCount);
+                    if (activeCount > 0) {
                         setTimeout(pollActiveJobs, 2000);
                     }
                 }
@@ -402,7 +426,7 @@ ob_start();
             });
     }
 
-    if (<?= $activeJobs ? 'true' : 'false' ?>) {
+    if (<?= $activeJobCount > 0 ? 'true' : 'false' ?>) {
         setTimeout(pollActiveJobs, 2000);
     } else {
         // Still poke once in case a job was queued just before navigation.

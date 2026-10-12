@@ -115,11 +115,7 @@ final class DownloadJobRepository
         ]);
     }
 
-    /** @return list<array<string, mixed>> */
-    public function activeForUser(int $userId): array
-    {
-        $stmt = $this->db->prepare(
-            "SELECT d.*,
+    private const JOB_SELECT = "SELECT d.*,
                     cj.status AS cloud_status,
                     cj.async_job_id AS cloud_async_job_id,
                     cj.provider AS cloud_provider,
@@ -128,7 +124,13 @@ final class DownloadJobRepository
                     cj.error AS cloud_error,
                     cj.filename AS cloud_filename
              FROM download_jobs d
-             LEFT JOIN cloud_jobs cj ON cj.id = d.cloud_job_id
+             LEFT JOIN cloud_jobs cj ON cj.id = d.cloud_job_id";
+
+    /** @return list<array<string, mixed>> */
+    public function activeForUser(int $userId): array
+    {
+        $stmt = $this->db->prepare(
+            self::JOB_SELECT . "
              WHERE d.user_id = :uid
                AND (
                     d.status IN ('pending', 'in_progress')
@@ -142,6 +144,52 @@ final class DownloadJobRepository
         $stmt->execute([':uid' => $userId]);
 
         return $stmt->fetchAll();
+    }
+
+    /**
+     * Active jobs first, then recent finished jobs (excluding ones already listed as active).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function homeForUser(int $userId, int $recentLimit = 8): array
+    {
+        $recentLimit = max(0, min(30, $recentLimit));
+        $active = $this->activeForUser($userId);
+        if ($recentLimit === 0) {
+            return $active;
+        }
+
+        $activeIds = [];
+        foreach ($active as $job) {
+            $activeIds[(int) $job['id']] = true;
+        }
+
+        $stmt = $this->db->prepare(
+            self::JOB_SELECT . "
+             WHERE d.user_id = :uid
+               AND d.status IN ('complete', 'failed')
+               AND NOT (
+                    d.status = 'complete'
+                    AND cj.status IN ('pending', 'in_progress')
+               )
+             ORDER BY d.id DESC
+             LIMIT " . ($recentLimit + count($activeIds))
+        );
+        $stmt->execute([':uid' => $userId]);
+
+        $recent = [];
+        foreach ($stmt->fetchAll() as $job) {
+            $id = (int) $job['id'];
+            if (isset($activeIds[$id])) {
+                continue;
+            }
+            $recent[] = $job;
+            if (count($recent) >= $recentLimit) {
+                break;
+            }
+        }
+
+        return array_merge($active, $recent);
     }
 
     /** @return list<int> */
