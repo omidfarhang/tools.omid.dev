@@ -14,8 +14,8 @@ Personal **Download to Host** toolkit: pull remote URLs to the server (HTTP + cu
 ## Requirements
 
 - PHP 8.2+ with `curl`, `pdo_sqlite`
-- `yt-dlp` and `ffmpeg` (bundled in the Docker image)
-- Optional: yt-dlp cookies at `YTDLP_COOKIES_PATH`
+- `yt-dlp` (with EJS), `ffmpeg`, and Deno (bundled in the Docker image; YouTube needs the JS runtime)
+- Optional but usually required for YouTube: Netscape cookies file at `YTDLP_COOKIES_PATH` (default `.secure/cookies.txt`)
 
 ## Quick start (Docker)
 
@@ -49,7 +49,17 @@ cp .env.example .env
 | `APP_CLI_TOKEN` / `APP_CLI_USERNAME` | CLI auth → that user’s cloud account |
 | `DROPBOX_APP_KEY` / `DROPBOX_APP_SECRET` | Dropbox OAuth app credentials (first cloud provider) |
 | `DB_PATH` / `TEMP_DIR` | SQLite + download storage |
-| `YTDLP_COOKIES_PATH` | Optional cookies for yt-dlp |
+| `YTDLP_COOKIES_PATH` | Optional cookies for yt-dlp (YouTube often needs these) |
+
+### YouTube / yt-dlp cookies
+
+YouTube frequently returns “Sign in to confirm you’re not a bot” from datacenter IPs. The app passes cookies automatically when the file exists:
+
+1. Export YouTube cookies from a logged-in browser session into Netscape format (see [yt-dlp cookie FAQ](https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp) and [YouTube cookie tips](https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies)).
+2. Save as `.secure/cookies.txt` on the host (compose mounts `./.secure` into the container).
+3. Rebuild/restart so the image has Deno + current `yt-dlp[default]` if you are still on an older image: `docker compose up -d --build`.
+
+Do not commit `cookies.txt` (`.secure/*` is gitignored except `.gitkeep`).
 
 See also [docs/dropbox.md](docs/dropbox.md).
 

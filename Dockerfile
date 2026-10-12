@@ -16,7 +16,12 @@ RUN npm run build:assets
 
 FROM php:8.3-apache-bookworm
 
+# Deno is yt-dlp's default JS runtime for YouTube EJS challenges.
+# See https://github.com/yt-dlp/yt-dlp/wiki/EJS
+ARG DENO_VERSION=2.9.7
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates \
         curl \
         ffmpeg \
         libsqlite3-dev \
@@ -24,7 +29,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         python3-pip \
         unzip \
     && docker-php-ext-install pdo pdo_sqlite \
-    && pip3 install --no-cache-dir --break-system-packages yt-dlp \
+    && arch="$(dpkg --print-architecture)" \
+    && case "$arch" in \
+         amd64) deno_arch=x86_64 ;; \
+         arm64) deno_arch=aarch64 ;; \
+         *) echo "unsupported arch: $arch" >&2; exit 1 ;; \
+       esac \
+    && curl -fsSL "https://github.com/denoland/deno/releases/download/v${DENO_VERSION}/deno-${deno_arch}-unknown-linux-gnu.zip" -o /tmp/deno.zip \
+    && unzip -q /tmp/deno.zip -d /usr/local/bin \
+    && chmod +x /usr/local/bin/deno \
+    && rm /tmp/deno.zip \
+    && pip3 install --no-cache-dir --break-system-packages "yt-dlp[default]" \
     && a2enmod rewrite headers \
     && a2dissite 000-default \
     && rm -rf /var/lib/apt/lists/*

@@ -23,7 +23,15 @@ APP_CLI_TOKEN="${APP_CLI_TOKEN:?APP_CLI_TOKEN is required}"
 TEMP_DIR="${TEMP_DIR:-./storage/temp}"
 
 mkdir -p "$TEMP_DIR"
+
+COOKIE_ARGS=()
+COOKIES="${YTDLP_COOKIES_PATH:-.secure/cookies.txt}"
+if [[ -f "$COOKIES" ]]; then
+  COOKIE_ARGS=(--cookies "$COOKIES")
+fi
+
 DLFILE="$(yt-dlp "$URL" "$@" \
+  "${COOKIE_ARGS[@]}" \
   -o "${TEMP_DIR}/%(title).200B [%(id)s].%(ext)s" \
   --no-playlist \
   -q \
