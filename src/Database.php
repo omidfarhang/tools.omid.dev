@@ -131,7 +131,9 @@ SQL);
         self::migrateBehaviorValues($pdo);
         self::migrateDefaultCloudFolder($pdo);
         self::migrateDownloadHistory($pdo);
-        (new YtDlpCookieStore(new SettingsRepository($pdo)))->importLegacyFileIfNeeded();
+        $settings = new SettingsRepository($pdo);
+        (new YtDlpCookieStore($settings))->importLegacyFileIfNeeded();
+        ManagedSettings::importFromEnvIfMissing($settings);
     }
 
     private static function migrateDownloadHistory(PDO $pdo): void

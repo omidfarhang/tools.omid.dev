@@ -90,7 +90,7 @@ ob_start();
         <div class="panel h-100">
             <h2 class="panel-title">Dropbox</h2>
             <?php if (!$oauth->isConfigured()): ?>
-                <div class="alert alert-warning mb-0">Dropbox app credentials are not configured on this server.</div>
+                <div class="alert alert-warning mb-0">Dropbox app credentials are not configured. An admin must set them under Settings → Cloud.</div>
             <?php elseif ($connected): ?>
                 <div class="alert alert-success mb-3">Dropbox connected.</div>
                 <dl class="mb-4">

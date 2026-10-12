@@ -11,6 +11,10 @@ final class Config
     /** @var array<string, mixed> */
     private static array $values = [];
 
+    /** DB-backed overrides for ManagedSettings keys (take precedence over env). */
+    /** @var array<string, string> */
+    private static array $dbOverrides = [];
+
     public static function load(string $rootDir): void
     {
         if (self::$loaded) {
@@ -27,6 +31,7 @@ final class Config
             'ytdlp_cookies_path' => getenv('YTDLP_COOKIES_PATH') ?: ($rootDir . '/storage/ytdlp-cookies.txt'),
             'dropbox_app_key' => getenv('DROPBOX_APP_KEY') ?: '',
             'dropbox_app_secret' => getenv('DROPBOX_APP_SECRET') ?: '',
+            'ytdlp_extra_args' => '',
             'admin_username' => getenv('ADMIN_USERNAME') ?: 'admin',
             'admin_password' => getenv('ADMIN_PASSWORD') ?: '',
             'app_cli_token' => getenv('APP_CLI_TOKEN') ?: '',
@@ -38,9 +43,44 @@ final class Config
         self::$loaded = true;
     }
 
-    public static function get(string $key, mixed $default = null): mixed
+    /**
+     * Load ManagedSettings rows from SQLite so Config::get prefers admin values.
+     * Call after Database::pdo().
+     */
+    public static function hydrateFromDatabase(): void
+    {
+        $repo = new SettingsRepository();
+        self::$dbOverrides = [];
+        foreach (ManagedSettings::configKeys() as $key) {
+            if ($repo->exists($key)) {
+                self::$dbOverrides[$key] = (string) ($repo->get($key) ?? '');
+            }
+        }
+    }
+
+    /** Env/default value only (ignores admin DB overrides). */
+    public static function raw(string $key, mixed $default = null): mixed
     {
         return self::$values[$key] ?? $default;
+    }
+
+    public static function get(string $key, mixed $default = null): mixed
+    {
+        if (array_key_exists($key, self::$dbOverrides)) {
+            return self::$dbOverrides[$key];
+        }
+
+        return self::$values[$key] ?? $default;
+    }
+
+    public static function setOverride(string $key, ?string $value): void
+    {
+        if ($value === null) {
+            unset(self::$dbOverrides[$key]);
+
+            return;
+        }
+        self::$dbOverrides[$key] = $value;
     }
 
     public static function baseUrl(): string

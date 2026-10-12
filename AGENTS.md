@@ -26,9 +26,10 @@ There is no front-end framework or SPA. Pages are server-rendered PHP that call 
 
 ```bash
 # Docker (preferred)
-cp .env.example .env   # set APP_BASE_URL, ADMIN_*, APP_CLI_TOKEN, DROPBOX_APP_*
+cp .env.example .env   # set APP_BASE_URL, ADMIN_*, APP_CLI_TOKEN
 docker compose up -d --build
 # App: http://127.0.0.1:${APP_PORT:-8080}
+# Then Admin → Settings for Dropbox app credentials and yt-dlp cookies
 
 # Local (non-Docker)
 composer install
@@ -48,13 +49,13 @@ Asset pipeline: edit Bootstrap/jQuery via npm, then `npm run build:assets`. App 
 - Auth: `Auth::requireLogin()`, `Auth::requireAdmin()`, or `Auth::requireLoginOrCli()` for CLI/token routes
 - Prefer extending existing repositories/services over new parallel abstractions
 - Do not add frameworks, ORMs, or build tools unless explicitly requested
-- Do not commit secrets (`.env`, cookies, tokens). Cloud tokens are per-user in SQLite; site-wide yt-dlp cookies are admin-managed in SQLite (`Admin → yt-dlp cookies`)
+- Do not commit secrets (`.env`, cookies, tokens). Per-user cloud OAuth tokens are in SQLite; site-wide Dropbox app credentials and yt-dlp cookies/options are admin-managed (`Admin → Settings`)
 - New download sites implement `App\Download\DownloadSource` and register in `DownloadRegistry`
 - New cloud backends implement `App\Cloud\CloudProvider` and register in `CloudRegistry`
 
 ## Product constraints agents must respect
 
-- Per-user cloud OAuth only — never introduce a shared cloud access token in env (Dropbox is the current provider)
+- Per-user cloud OAuth only — never introduce a shared cloud *access* token in env (Dropbox is the current provider). Dropbox *app* key/secret belong in Admin → Cloud (env is legacy fallback only)
 - Self-register creates inactive users until admin approval
 - Share links are opt-in via `ShareService`; do not expose arbitrary filesystem paths
 - CLI auth is `APP_CLI_TOKEN` → `APP_CLI_USERNAME`’s cloud account; see `scripts/ytdl.sh` and `Auth::attemptCliToken()`

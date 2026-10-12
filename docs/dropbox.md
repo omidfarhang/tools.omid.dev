@@ -19,13 +19,17 @@ Upload jobs are stored in the generic `cloud_jobs` table with `provider = 'dropb
 
    Example: `https://tools.omid.dev/oauth/dropbox/callback.php`
 
-5. Copy **App key** and **App secret** into `.env`:
+5. Copy **App key** and **App secret** into **Admin → Settings → Cloud** (preferred).
+
+   Legacy fallback (imported into the DB once if unset):
 
 ```env
 DROPBOX_APP_KEY=...
 DROPBOX_APP_SECRET=...
 APP_BASE_URL=https://tools.omid.dev
 ```
+
+   `APP_BASE_URL` must still be set in `.env` so the OAuth redirect URI matches.
 
 ## User flow
 

@@ -21,14 +21,14 @@ Personal **Download to Host** toolkit: pull remote URLs to the server (HTTP + cu
 
 ```bash
 cp .env.example .env
-# edit APP_BASE_URL, ADMIN_*, APP_CLI_TOKEN, DROPBOX_APP_* 
+# edit APP_BASE_URL, ADMIN_*, APP_CLI_TOKEN
 
 docker compose up -d --build
 ```
 
 App is published on **http://127.0.0.1:8080** by default (`APP_PORT` → container `:8080`). If 8080 is already in use, set e.g. `APP_PORT=9080` in `.env` and point nginx at that host port — see [docs/nginx-reverse-proxy.conf.example](docs/nginx-reverse-proxy.conf.example).
 
-First boot creates an admin from `ADMIN_USERNAME` / `ADMIN_PASSWORD`.
+First boot creates an admin from `ADMIN_USERNAME` / `ADMIN_PASSWORD`. Then use **Admin → Settings** for Dropbox app credentials and yt-dlp cookies/options.
 
 ## Local (non-Docker)
 
@@ -47,21 +47,20 @@ cp .env.example .env
 | `APP_PORT` | Host port for Docker publish (default `8080`) |
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` | Seed admin when DB is empty |
 | `APP_CLI_TOKEN` / `APP_CLI_USERNAME` | CLI auth → that user’s cloud account |
-| `DROPBOX_APP_KEY` / `DROPBOX_APP_SECRET` | Dropbox OAuth app credentials (first cloud provider) |
 | `DB_PATH` / `TEMP_DIR` | SQLite + download storage |
-| `YTDLP_COOKIES_PATH` | On-disk cookie file materialized for yt-dlp (managed via Admin UI) |
+| `YTDLP_COOKIES_PATH` | On-disk cookie file materialized for yt-dlp (managed via Admin → yt-dlp) |
+| `DROPBOX_APP_KEY` / `DROPBOX_APP_SECRET` | Optional legacy fallback; prefer **Admin → Cloud** |
 
-### YouTube / yt-dlp cookies
+### Admin settings
 
-YouTube frequently returns “Sign in to confirm you’re not a bot” from datacenter IPs. As an admin:
+Site config that used to live only in `.env`:
 
-1. Export YouTube cookies from a logged-in browser into Netscape format (see [yt-dlp cookie FAQ](https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp) and [YouTube cookie tips](https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies)).
-2. Open **Admin → yt-dlp cookies**, paste or upload the file, and save.
-3. Prefer a throwaway Google account; cookie use can risk the account.
+| Section | Path | What |
+|---------|------|------|
+| yt-dlp | `/admin/settings/ytdlp.php` | Netscape cookies + optional extra yt-dlp args |
+| Cloud | `/admin/settings/cloud.php` | Dropbox app key / secret |
 
-Cookies are stored in SQLite and written to `YTDLP_COOKIES_PATH` for yt-dlp / `scripts/ytdl.sh`. A legacy `.secure/cookies.txt` is imported once if present.
-
-See also [docs/dropbox.md](docs/dropbox.md).
+Values are stored in SQLite. Env is used as bootstrap fallback and imported once if the DB row is missing. See [docs/dropbox.md](docs/dropbox.md) for Dropbox app setup.
 
 ## Layout
 

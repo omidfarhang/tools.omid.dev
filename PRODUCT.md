@@ -59,8 +59,8 @@ Private / personal deployment. No public pricing. Operators self-host via Docker
 ## Boundaries
 
 - Not a general-purpose CMS, blog, or link shortener
-- Not responsible for site ToS / DRM circumvention policy (YouTube and other yt-dlp extractors) — admins supply cookies via the admin UI and accept host risk
-- Does not store a global cloud token; CLI maps to one configured username’s OAuth
+- Not responsible for site ToS / DRM circumvention policy (YouTube and other yt-dlp extractors) — admins supply cookies via Admin → yt-dlp and accept host risk
+- Dropbox app key/secret are site settings (Admin → Cloud); does not store a global cloud *access* token — CLI maps to one configured username’s OAuth
 - Public share routes (`/s/{token}`) are intentional capability, not accidental open directory listing
 
 ## Stack

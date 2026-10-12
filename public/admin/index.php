@@ -70,9 +70,9 @@ ob_start();
         </a>
     </div>
     <div class="col-md-6">
-        <a class="action-tile" href="/admin/cookies.php">
-            <div class="action-tile-title">yt-dlp cookies</div>
-            <p class="action-tile-desc">Paste or upload Netscape cookies for YouTube and other extractors that need auth.</p>
+        <a class="action-tile" href="/admin/settings/">
+            <div class="action-tile-title">Settings</div>
+            <p class="action-tile-desc">yt-dlp cookies and options, Dropbox app credentials, and other site config.</p>
         </a>
     </div>
 </div>

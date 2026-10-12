@@ -21,3 +21,4 @@ if (!is_dir($temp)) {
 }
 
 Database::pdo();
+Config::hydrateFromDatabase();

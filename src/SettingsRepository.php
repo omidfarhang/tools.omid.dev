@@ -15,6 +15,14 @@ final class SettingsRepository
         $this->db = $db ?? Database::pdo();
     }
 
+    public function exists(string $key): bool
+    {
+        $stmt = $this->db->prepare('SELECT 1 FROM app_settings WHERE key = :k LIMIT 1');
+        $stmt->execute([':k' => $key]);
+
+        return $stmt->fetchColumn() !== false;
+    }
+
     public function get(string $key): ?string
     {
         $stmt = $this->db->prepare('SELECT value FROM app_settings WHERE key = :k');
