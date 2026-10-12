@@ -17,7 +17,7 @@ final class DownloadService
     }
 
     /**
-     * @param array{filename?:?string, yt_format?:string} $options
+     * @param array{filename?:?string, yt_format?:string, force_ytdlp?:bool|int|string} $options
      * @return array{ok:bool, stored_name?:string, original_name?:string, size?:int, error?:string, source?:string}
      */
     public function download(string $url, array $options = []): array

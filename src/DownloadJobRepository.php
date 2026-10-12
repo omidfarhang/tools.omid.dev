@@ -22,6 +22,7 @@ final class DownloadJobRepository
      *   requested_filename?:?string,
      *   behavior:string,
      *   yt_format?:string,
+     *   force_ytdlp?:bool,
      *   cloud_folder?:?string,
      *   cloud_conflict?:?string,
      *   delete_after?:bool
@@ -31,10 +32,10 @@ final class DownloadJobRepository
     {
         $stmt = $this->db->prepare(
             'INSERT INTO download_jobs
-                (user_id, source_url, requested_filename, behavior, yt_format,
+                (user_id, source_url, requested_filename, behavior, yt_format, force_ytdlp,
                  cloud_folder, cloud_conflict, delete_after, status)
              VALUES
-                (:uid, :url, :req, :beh, :yt, :folder, :conflict, :da, :st)'
+                (:uid, :url, :req, :beh, :yt, :fy, :folder, :conflict, :da, :st)'
         );
         $stmt->execute([
             ':uid' => $data['user_id'],
@@ -42,6 +43,7 @@ final class DownloadJobRepository
             ':req' => $data['requested_filename'] ?? null,
             ':beh' => $data['behavior'],
             ':yt' => $data['yt_format'] ?? 'best',
+            ':fy' => !empty($data['force_ytdlp']) ? 1 : 0,
             ':folder' => $data['cloud_folder'] ?? null,
             ':conflict' => $data['cloud_conflict'] ?? null,
             ':da' => !empty($data['delete_after']) ? 1 : 0,

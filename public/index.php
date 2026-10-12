@@ -40,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $url = trim((string) ($_POST['DLURL'] ?? ''));
     $filename = trim((string) ($_POST['DLFILENAME'] ?? ''));
-    $ytFormat = (string) ($_POST['yt_format'] ?? 'best');
+    $forceRequested = isset($_POST['force_ytdlp']) && (string) $_POST['force_ytdlp'] === '1';
     $folder = UserRepository::normalizeFolder((string) ($_POST['cloud_folder'] ?? $_POST['dropbox_folder'] ?? $prefs['folder']));
     $conflict = UserRepository::normalizeConflict((string) ($_POST['cloud_conflict'] ?? $_POST['dropbox_conflict'] ?? $prefs['conflict']));
     $deleteAfter = isset($_POST['delete_after']) && (string) $_POST['delete_after'] === '1';
@@ -50,10 +50,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('/');
     }
 
-    $source = $downloads->resolve($url);
+    $autoSource = $downloads->resolve($url);
+    $curatedIds = ['youtube', 'twitter', 'instagram', 'tiktok'];
+    $isCurated = $autoSource !== null && in_array($autoSource->id(), $curatedIds, true);
+    $forceYtdlp = $forceRequested && !$isCurated;
+    $source = $downloads->resolve($url, ['force_ytdlp' => $forceYtdlp]);
     if ($source === null) {
         flash('error', 'No download source supports this URL.');
         redirect('/');
+    }
+
+    $ytFormat = 'best';
+    if ($isCurated) {
+        $ytFormat = match ($autoSource->id()) {
+            'youtube' => (string) ($_POST['yt_format'] ?? 'best'),
+            'twitter' => (string) ($_POST['twitter_format'] ?? 'best'),
+            'instagram' => (string) ($_POST['instagram_format'] ?? 'best'),
+            'tiktok' => (string) ($_POST['tiktok_format'] ?? 'best'),
+            default => 'best',
+        };
+    } elseif ($forceYtdlp) {
+        $ytFormat = (string) ($_POST['ytdlp_format'] ?? 'best');
     }
 
     $needsCloud = $behavior === 'save_to_cloud' || $behavior === 'save_to_both';
@@ -68,6 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'requested_filename' => $filename !== '' ? $filename : null,
         'behavior' => $behavior,
         'yt_format' => $ytFormat,
+        'force_ytdlp' => $forceYtdlp,
         'cloud_folder' => $needsCloud ? $folder : null,
         'cloud_conflict' => $needsCloud ? $conflict : null,
         'delete_after' => $needsCloud && $deleteAfter,
@@ -159,7 +177,7 @@ ob_start();
             <input name="DLURL" type="url" class="form-control" id="DLURL" placeholder="https://..." required>
         </div>
         <div class="mb-3 d-none" id="youtube-options">
-            <label for="yt_format" class="form-label">YouTube Format</label>
+            <label for="yt_format" class="form-label">YouTube quality</label>
             <select class="form-select" name="yt_format" id="yt_format">
                 <option value="best" selected>Best</option>
                 <option value="4320">4320p (8k)</option>
@@ -171,6 +189,49 @@ ob_start();
                 <option value="360">360p (SD)</option>
                 <option value="240">240p (SD)</option>
             </select>
+        </div>
+        <div class="mb-3 d-none" id="twitter-options">
+            <label for="twitter_format" class="form-label">X / Twitter quality</label>
+            <select class="form-select" name="twitter_format" id="twitter_format">
+                <option value="best" selected>Best</option>
+                <option value="720">720p</option>
+                <option value="480">480p</option>
+            </select>
+        </div>
+        <div class="mb-3 d-none" id="instagram-options">
+            <label for="instagram_format" class="form-label">Instagram quality</label>
+            <select class="form-select" name="instagram_format" id="instagram_format">
+                <option value="best" selected>Best</option>
+                <option value="720">720p</option>
+            </select>
+        </div>
+        <div class="mb-3 d-none" id="tiktok-options">
+            <label for="tiktok_format" class="form-label">TikTok quality</label>
+            <select class="form-select" name="tiktok_format" id="tiktok_format">
+                <option value="best" selected>Best</option>
+                <option value="720">720p</option>
+            </select>
+        </div>
+        <div class="mb-3 d-none" id="ytdlp-options">
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" value="1" name="force_ytdlp" id="force_ytdlp">
+                <label class="form-check-label" for="force_ytdlp">Use yt-dlp</label>
+                <div class="form-text">For pages yt-dlp can extract (not a direct file URL).</div>
+            </div>
+            <div class="d-none" id="ytdlp-format-wrap">
+                <label for="ytdlp_format" class="form-label">yt-dlp quality</label>
+                <select class="form-select" name="ytdlp_format" id="ytdlp_format">
+                    <option value="best" selected>Best</option>
+                    <option value="4320">4320p (8k)</option>
+                    <option value="2160">2160p (4K)</option>
+                    <option value="1440">1440p (2k)</option>
+                    <option value="1080">1080p (HD)</option>
+                    <option value="720">720p (HD)</option>
+                    <option value="480">480p (SD)</option>
+                    <option value="360">360p (SD)</option>
+                    <option value="240">240p (SD)</option>
+                </select>
+            </div>
         </div>
 
         <fieldset class="mb-3">
@@ -201,7 +262,7 @@ ob_start();
         <div class="mb-3">
             <label for="DLFILENAME" class="form-label">Filename</label>
             <input name="DLFILENAME" type="text" class="form-control mono" id="DLFILENAME" placeholder="Auto from URL, can be changed">
-            <div class="form-text d-none" id="filename-youtube-hint">YouTube sets the name from the video title.</div>
+            <div class="form-text d-none" id="filename-ytdlp-hint">yt-dlp sets the name from the media title.</div>
         </div>
 
         <?php if ($cloudConnected): ?>
@@ -225,7 +286,7 @@ ob_start();
                     <label class="form-check-label" for="delete_after">
                         Delete from host after cloud succeeds
                     </label>
-                    <div class="form-text">Only when this download also keeps a host copy (YouTube → cloud, or Disk + Cloud).</div>
+                    <div class="form-text">Only when this download also keeps a host copy (yt-dlp sources → cloud, or Disk + Cloud).</div>
                 </div>
             </div>
         <?php endif; ?>
@@ -326,15 +387,27 @@ ob_start();
     const urlInput = document.getElementById('DLURL');
     const filenameInput = document.getElementById('DLFILENAME');
     const youtubeOptions = document.getElementById('youtube-options');
-    const youtubeHint = document.getElementById('filename-youtube-hint');
+    const twitterOptions = document.getElementById('twitter-options');
+    const instagramOptions = document.getElementById('instagram-options');
+    const tiktokOptions = document.getElementById('tiktok-options');
+    const ytdlpOptions = document.getElementById('ytdlp-options');
+    const ytdlpFormatWrap = document.getElementById('ytdlp-format-wrap');
+    const forceYtdlp = document.getElementById('force_ytdlp');
+    const filenameHint = document.getElementById('filename-ytdlp-hint');
     const cloudOptions = document.getElementById('cloud-options');
     let filenameDirty = false;
 
     const youtubeRe = /^(?:http(?:s)?:\/\/)?(?:www\.)?(?:m\.)?(?:youtu\.be\/|youtube\.com\/(?:(?:watch)?\?(?:.*&)?v(?:i)?=|(?:embed|v|vi|user|shorts)\/))([^\?&\"'>]+)/;
+    const twitterRe = /^(?:https?:\/\/)?(?:www\.|mobile\.)?(?:twitter\.com|x\.com)\/[^/\s?#]+\/status\/\d+/i;
+    const instagramRe = /^(?:https?:\/\/)?(?:www\.)?(?:instagram\.com|instagr\.am)\/(?:p|reel|reels|tv)\/[A-Za-z0-9_-]+/i;
+    const tiktokRe = /^(?:https?:\/\/)?(?:(?:vm|vt)\.tiktok\.com\/[A-Za-z0-9_-]+|(?:www\.|m\.)?tiktok\.com\/@[^/\s?#]+\/video\/\d+)/i;
 
-    function isYoutubeUrl(url) {
-        const match = url.match(youtubeRe);
-        return !!(match && match[1]);
+    function detectSource(url) {
+        if (youtubeRe.test(url)) return 'youtube';
+        if (twitterRe.test(url)) return 'twitter';
+        if (instagramRe.test(url)) return 'instagram';
+        if (tiktokRe.test(url)) return 'tiktok';
+        return url.trim() !== '' ? 'other' : null;
     }
 
     function filenameFromUrl(url) {
@@ -345,17 +418,29 @@ ob_start();
         return (url.split('/').pop() || '').replace(/[\?].*$/g, '');
     }
 
-    function syncFilenameForUrl(url) {
-        const yt = isYoutubeUrl(url);
-        youtubeOptions.classList.toggle('d-none', !yt);
-        youtubeHint.classList.toggle('d-none', !yt);
-        filenameInput.disabled = yt;
-        if (yt) {
+    function syncSourceOptions() {
+        const url = urlInput.value;
+        const source = detectSource(url);
+        const curated = source === 'youtube' || source === 'twitter' || source === 'instagram' || source === 'tiktok';
+        const useYtdlp = !curated && forceYtdlp && forceYtdlp.checked;
+        const ytdlpActive = curated || useYtdlp;
+
+        youtubeOptions.classList.toggle('d-none', source !== 'youtube');
+        twitterOptions.classList.toggle('d-none', source !== 'twitter');
+        instagramOptions.classList.toggle('d-none', source !== 'instagram');
+        tiktokOptions.classList.toggle('d-none', source !== 'tiktok');
+        ytdlpOptions.classList.toggle('d-none', source !== 'other');
+        if (ytdlpFormatWrap) {
+            ytdlpFormatWrap.classList.toggle('d-none', !useYtdlp);
+        }
+        if (filenameHint) {
+            filenameHint.classList.toggle('d-none', !ytdlpActive);
+        }
+        filenameInput.disabled = ytdlpActive;
+        if (ytdlpActive) {
             filenameInput.value = '';
             filenameDirty = false;
-            return;
-        }
-        if (!filenameDirty) {
+        } else if (!filenameDirty) {
             filenameInput.value = filenameFromUrl(url);
         }
     }
@@ -374,15 +459,16 @@ ob_start();
         }
     });
 
-    urlInput.addEventListener('input', function () {
-        syncFilenameForUrl(urlInput.value);
-    });
+    urlInput.addEventListener('input', syncSourceOptions);
+    if (forceYtdlp) {
+        forceYtdlp.addEventListener('change', syncSourceOptions);
+    }
 
     document.querySelectorAll('input[name="behavior"]').forEach(function (el) {
         el.addEventListener('change', syncCloudOptions);
     });
 
-    syncFilenameForUrl(urlInput.value);
+    syncSourceOptions();
     syncCloudOptions();
 
     const body = document.getElementById('active-jobs-body');

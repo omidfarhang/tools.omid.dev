@@ -6,7 +6,7 @@ Before UI or product-facing copy changes, read [PRODUCT.md](PRODUCT.md) and [DES
 
 ## Project overview
 
-PHP app: multi-user download-to-host toolkit. Users pull remote URLs via pluggable download sources (HTTP + YouTube today), manage files, optional public share links (`/s/{token}`), and per-user cloud OAuth (Dropbox is the first provider). Docker + Apache; SQLite; Bootstrap 5 + custom CSS.
+PHP app: multi-user download-to-host toolkit. Users pull remote URLs via pluggable download sources (HTTP + curated yt-dlp sites + optional generic yt-dlp), manage files, optional public share links (`/s/{token}`), and per-user cloud OAuth (Dropbox is the first provider). Docker + Apache; SQLite; Bootstrap 5 + custom CSS.
 
 ## Layout
 

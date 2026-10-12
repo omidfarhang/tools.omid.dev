@@ -1,11 +1,11 @@
 # tools.omid.dev
 
-Personal **Download to Host** toolkit: pull remote URLs to the server (HTTP + YouTube today), manage them per user, optional public share links, and per-user cloud OAuth (Dropbox is the first provider).
+Personal **Download to Host** toolkit: pull remote URLs to the server (HTTP + curated yt-dlp sites + optional generic yt-dlp), manage them per user, optional public share links, and per-user cloud OAuth (Dropbox is the first provider).
 
 ## Features
 
 - Multi-user auth (`admin` / `user`); self-register (inactive until admin approves) or admin-created accounts
-- Pluggable download sources: HTTP(S) and YouTube (`yt-dlp`)
+- Pluggable download sources: HTTP(S); curated yt-dlp (YouTube, X/Twitter, Instagram, TikTok); optional generic yt-dlp
 - Public share links (`/s/{token}`) without login
 - Pluggable cloud providers: Dropbox connect (no shared cloud token)
 - CLI helper `scripts/ytdl.sh` (uses `APP_CLI_TOKEN` + CLI user’s cloud)
@@ -15,7 +15,7 @@ Personal **Download to Host** toolkit: pull remote URLs to the server (HTTP + Yo
 
 - PHP 8.2+ with `curl`, `pdo_sqlite`
 - `yt-dlp` and `ffmpeg` (bundled in the Docker image)
-- Optional: YouTube cookies at `YTDLP_COOKIES_PATH`
+- Optional: yt-dlp cookies at `YTDLP_COOKIES_PATH`
 
 ## Quick start (Docker)
 
@@ -59,7 +59,7 @@ See also [docs/dropbox.md](docs/dropbox.md).
 - `src/` — application code
 - `storage/` — SQLite DB + temp files (mounted volume)
 - `.secure/` — optional yt-dlp cookies (not cloud tokens)
-- `src/Download/` — download source registry (HTTP, YouTube)
+- `src/Download/` — download source registry (HTTP, curated yt-dlp sites, generic yt-dlp)
 - `src/Cloud/` — cloud provider registry (Dropbox)
 
 ## GHCR

@@ -99,6 +99,7 @@ CREATE TABLE IF NOT EXISTS download_jobs (
     result_filename TEXT NULL,
     behavior TEXT NOT NULL,
     yt_format TEXT NOT NULL DEFAULT 'best',
+    force_ytdlp INTEGER NOT NULL DEFAULT 0,
     cloud_folder TEXT NULL,
     cloud_conflict TEXT NULL,
     delete_after INTEGER NOT NULL DEFAULT 0,
@@ -119,6 +120,7 @@ SQL);
         self::ensureColumn($pdo, 'users', 'dropbox_conflict', "dropbox_conflict TEXT NOT NULL DEFAULT 'rename'");
         self::ensureColumn($pdo, 'users', 'dropbox_email', 'dropbox_email TEXT NULL');
         self::ensureColumn($pdo, 'users', 'dropbox_display_name', 'dropbox_display_name TEXT NULL');
+        self::ensureColumn($pdo, 'download_jobs', 'force_ytdlp', 'force_ytdlp INTEGER NOT NULL DEFAULT 0');
         self::migrateDropboxJobs($pdo);
         self::migrateBehaviorValues($pdo);
         self::migrateDefaultCloudFolder($pdo);

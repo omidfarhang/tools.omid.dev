@@ -63,11 +63,13 @@ final class DownloadJobProcessor
         $filename = trim((string) ($job['requested_filename'] ?? ''));
         $behavior = UserRepository::normalizeBehavior((string) $job['behavior']);
         $ytFormat = (string) ($job['yt_format'] ?? 'best');
+        $forceYtdlp = (int) ($job['force_ytdlp'] ?? 0) === 1;
         $folder = UserRepository::normalizeFolder((string) ($job['cloud_folder'] ?? ''));
         $conflict = UserRepository::normalizeConflict((string) ($job['cloud_conflict'] ?? 'rename'));
         $deleteAfter = (int) ($job['delete_after'] ?? 0) === 1;
 
-        $source = $this->downloads->resolve($url);
+        $resolveOpts = ['force_ytdlp' => $forceYtdlp];
+        $source = $this->downloads->resolve($url, $resolveOpts);
         if ($source === null) {
             $this->jobs->markFailed($jobId, 'No download source supports this URL.');
             return;
@@ -94,6 +96,7 @@ final class DownloadJobProcessor
                 $downloadResult = $this->downloads->download($url, [
                     'filename' => $filename !== '' ? $filename : null,
                     'yt_format' => $ytFormat,
+                    'force_ytdlp' => $forceYtdlp,
                 ]);
 
                 if (!$downloadResult['ok']) {
