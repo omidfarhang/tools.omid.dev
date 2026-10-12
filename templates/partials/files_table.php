@@ -46,7 +46,7 @@ $sortMark = static function (string $col) use ($sort, $dir): string {
     </div>
 </div>
 
-<div class="table-responsive">
+<div class="files-table-scroll">
     <table class="table table-striped align-middle mb-0 files-table" data-files-table>
         <thead>
         <tr>
@@ -104,8 +104,9 @@ $sortMark = static function (string $col) use ($sort, $dir): string {
                 <td class="files-col-actions text-end">
                     <div class="dropdown">
                         <button class="btn btn-sm btn-outline-secondary files-actions-btn" type="button"
-                                data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions for <?= e($name) ?>">
-                            Actions
+                                data-bs-toggle="dropdown"
+                                aria-expanded="false" aria-label="Actions for <?= e($name) ?>">
+                            ···
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li>

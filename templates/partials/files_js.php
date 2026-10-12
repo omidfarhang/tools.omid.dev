@@ -1,7 +1,7 @@
 <script>
-(function () {
+document.addEventListener('DOMContentLoaded', function () {
     const table = document.querySelector('[data-files-table]');
-    if (!table) return;
+    if (!table || typeof bootstrap === 'undefined') return;
 
     table.querySelectorAll('[data-bs-toggle="dropdown"]').forEach(function (el) {
         bootstrap.Dropdown.getOrCreateInstance(el, {
@@ -156,25 +156,31 @@
         }
     }
 
-    document.querySelector('[data-bulk-delete]')?.addEventListener('click', function () {
-        const boxes = checkedBoxes();
-        if (!boxes.length) return;
-        const ids = boxes.map(function (b) { return b.value; });
-        const names = boxes.map(function (b) {
-            const row = b.closest('[data-file-row]');
-            const link = row ? row.querySelector('.filename') : null;
-            return link ? link.textContent : '';
+    const bulkDeleteBtn = document.querySelector('[data-bulk-delete]');
+    if (bulkDeleteBtn) {
+        bulkDeleteBtn.addEventListener('click', function () {
+            const boxes = checkedBoxes();
+            if (!boxes.length) return;
+            const ids = boxes.map(function (b) { return b.value; });
+            const names = boxes.map(function (b) {
+                const row = b.closest('[data-file-row]');
+                const link = row ? row.querySelector('.filename') : null;
+                return link ? link.textContent : '';
+            });
+            showDeleteModal({ bulkIds: ids, names: names });
         });
-        showDeleteModal({ bulkIds: ids, names: names });
-    });
+    }
 
-    document.querySelector('[data-bulk-revoke]')?.addEventListener('click', function () {
-        const boxes = checkedBoxes();
-        if (!boxes.length || !bulkForm || !bulkAction) return;
-        fillBulkIds(boxes.map(function (b) { return b.value; }));
-        bulkAction.value = 'revoke';
-        bulkForm.submit();
-    });
+    const bulkRevokeBtn = document.querySelector('[data-bulk-revoke]');
+    if (bulkRevokeBtn) {
+        bulkRevokeBtn.addEventListener('click', function () {
+            const boxes = checkedBoxes();
+            if (!boxes.length || !bulkForm || !bulkAction) return;
+            fillBulkIds(boxes.map(function (b) { return b.value; }));
+            bulkAction.value = 'revoke';
+            bulkForm.submit();
+        });
+    }
 
     document.addEventListener('click', function (e) {
         const copyBtn = e.target.closest('[data-copy-share]');
@@ -225,5 +231,5 @@
             });
         }
     });
-})();
+});
 </script>
