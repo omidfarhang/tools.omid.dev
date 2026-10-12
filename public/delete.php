@@ -9,21 +9,18 @@ use App\Csrf;
 use App\FileRepository;
 
 $user = Auth::requireLogin();
+Csrf::requireValid();
 
-$token = $_GET['_csrf'] ?? '';
-if (!Csrf::validate(is_string($token) ? $token : null)) {
-    http_response_code(403);
-    echo 'Invalid CSRF token.';
-    exit;
-}
+$id = (int) ($_POST['id'] ?? 0);
+$redirect = (string) ($_POST['redirect'] ?? '/files.php');
+$redirect = $redirect === '/admin/files.php' ? '/admin/files.php' : '/files.php';
 
-$id = (int) ($_GET['id'] ?? 0);
 $repo = new FileRepository();
 $file = $repo->findById($id);
 
 if ($file === null) {
     flash('error', 'File not found.');
-    redirect('/files.php');
+    redirect($redirect);
 }
 
 $isOwner = (int) $file['user_id'] === (int) $user['id'];
@@ -41,4 +38,4 @@ if ($path !== null && is_file($path)) {
 $repo->delete($id);
 
 flash('success', 'File deleted.');
-redirect($isAdmin && !$isOwner ? '/admin/files.php' : '/files.php');
+redirect($isAdmin && !$isOwner ? '/admin/files.php' : $redirect);

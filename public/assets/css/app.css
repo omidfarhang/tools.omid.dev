@@ -502,6 +502,144 @@ code,
     --bs-table-bg-type: #fafbfc;
 }
 
+/* —— Files list —— */
+.files-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+    padding: 0.75rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    background: #f8fafc;
+}
+
+.files-toolbar-main {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.files-search {
+    max-width: 16rem;
+    width: 100%;
+}
+
+.files-bulk-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.files-bulk-bar.d-none {
+    display: none !important;
+}
+
+.files-sort-link {
+    color: inherit;
+    text-decoration: none;
+}
+
+.files-sort-link:hover {
+    color: var(--accent);
+}
+
+.files-table .files-col-check {
+    width: 2.5rem;
+    padding-right: 0.25rem;
+}
+
+.files-table .files-col-name {
+    min-width: 10rem;
+    max-width: 28rem;
+}
+
+.files-table .files-col-name .filename {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.files-table .files-col-owner {
+    white-space: nowrap;
+}
+
+.files-table .files-col-size,
+.files-table .files-col-date {
+    white-space: nowrap;
+    color: var(--muted);
+}
+
+.files-table .files-col-share {
+    width: 6.5rem;
+}
+
+.files-table .files-col-actions {
+    width: 6.5rem;
+    white-space: nowrap;
+}
+
+.files-actions-btn {
+    min-width: 5.5rem;
+}
+
+.files-share-badge {
+    font-weight: 550;
+    font-size: 0.7rem;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    border-radius: var(--radius-sm);
+    padding: 0.35em 0.55em;
+}
+
+.files-share-public {
+    color: var(--accent);
+    background: var(--accent-soft);
+}
+
+.files-share-private {
+    color: var(--muted);
+    background: #eef2f6;
+}
+
+.modal-content {
+    border-radius: var(--radius);
+    border-color: var(--border);
+    box-shadow: var(--shadow);
+}
+
+.modal-header,
+.modal-footer {
+    border-color: var(--border);
+}
+
+.modal-title {
+    font-weight: 650;
+    letter-spacing: -0.01em;
+}
+
+.dropdown-menu {
+    border-radius: var(--radius-sm);
+    border-color: var(--border);
+    box-shadow: var(--shadow);
+    font-size: 0.9rem;
+}
+
+.dropdown-item {
+    font-weight: 500;
+}
+
+.dropdown-item.text-danger:hover,
+.dropdown-item.text-danger:focus {
+    color: #fff;
+    background-color: var(--danger);
+}
+
 .alert {
     border-radius: var(--radius-sm);
     border: 1px solid transparent;

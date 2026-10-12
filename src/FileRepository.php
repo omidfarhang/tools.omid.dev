@@ -10,6 +10,14 @@ final class FileRepository
 {
     private PDO $db;
 
+    /** @var array<string, string> */
+    private const SORT_COLUMNS = [
+        'name' => 'f.original_name',
+        'size' => 'f.size_bytes',
+        'date' => 'f.created_at',
+        'owner' => 'u.username',
+    ];
+
     public function __construct(?PDO $db = null)
     {
         $this->db = $db ?? Database::pdo();
@@ -41,15 +49,47 @@ final class FileRepository
         return $row ?: null;
     }
 
-    /** @return list<array<string, mixed>> */
-    public function forUser(int $userId): array
+    public function rename(int $id, string $originalName): void
     {
+        $stmt = $this->db->prepare('UPDATE files SET original_name = :on WHERE id = :id');
+        $stmt->execute([
+            ':on' => $originalName,
+            ':id' => $id,
+        ]);
+    }
+
+    /**
+     * @return array{sort:string, dir:string}
+     */
+    public static function normalizeSort(?string $sort, ?string $dir, bool $allowOwner = false): array
+    {
+        $allowed = ['name', 'size', 'date'];
+        if ($allowOwner) {
+            $allowed[] = 'owner';
+        }
+        $sortKey = is_string($sort) && in_array($sort, $allowed, true) ? $sort : 'date';
+        $dirKey = strtolower((string) $dir) === 'asc' ? 'ASC' : 'DESC';
+
+        return ['sort' => $sortKey, 'dir' => $dirKey];
+    }
+
+    private function orderClause(string $sort, string $dir): string
+    {
+        $column = self::SORT_COLUMNS[$sort] ?? self::SORT_COLUMNS['date'];
+
+        return $column . ' ' . $dir . ', f.id ' . $dir;
+    }
+
+    /** @return list<array<string, mixed>> */
+    public function forUser(int $userId, string $sort = 'date', string $dir = 'DESC'): array
+    {
+        $order = $this->orderClause($sort, $dir);
         $stmt = $this->db->prepare(
-            'SELECT f.*,
+            "SELECT f.*,
                 (SELECT s.token FROM shares s WHERE s.file_id = f.id AND s.revoked_at IS NULL ORDER BY s.id DESC LIMIT 1) AS share_token
              FROM files f
              WHERE f.user_id = :uid
-             ORDER BY f.created_at DESC'
+             ORDER BY {$order}"
         );
         $stmt->execute([':uid' => $userId]);
 
@@ -57,14 +97,16 @@ final class FileRepository
     }
 
     /** @return list<array<string, mixed>> */
-    public function allWithOwner(): array
+    public function allWithOwner(string $sort = 'date', string $dir = 'DESC'): array
     {
+        $order = $this->orderClause($sort, $dir);
+
         return $this->db->query(
-            'SELECT f.*, u.username AS owner_username,
+            "SELECT f.*, u.username AS owner_username,
                 (SELECT s.token FROM shares s WHERE s.file_id = f.id AND s.revoked_at IS NULL ORDER BY s.id DESC LIMIT 1) AS share_token
              FROM files f
              JOIN users u ON u.id = f.user_id
-             ORDER BY f.created_at DESC'
+             ORDER BY {$order}"
         )->fetchAll();
     }
 
