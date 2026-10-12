@@ -41,26 +41,25 @@ foreach ($active as $job) {
     }
 }
 
-// Re-query after cloud status refresh so finished cloud phases move into "recent".
-$jobs = $jobRepo->homeForUser((int) $user['id'], 8);
-$activeCount = count($jobRepo->activeForUser((int) $user['id']));
+$jobs = $jobRepo->homeForUser((int) $user['id'], 10);
+$activeCount = 0;
+foreach ($jobs as $job) {
+    if (DownloadJobRepository::isActiveRow($job)) {
+        $activeCount++;
+    }
+}
 
 json_response([
     'success' => true,
     'active_count' => $activeCount,
     'jobs' => array_map(static function (array $job): array {
-        $status = (string) $job['status'];
-        $cloudStatus = (string) ($job['cloud_status'] ?? '');
-        $isActive = in_array($status, ['pending', 'in_progress'], true)
-            || ($status === 'complete' && in_array($cloudStatus, ['pending', 'in_progress'], true));
-
         return [
             'id' => (int) $job['id'],
             'source_url' => (string) $job['source_url'],
             'requested_filename' => $job['requested_filename'] ?? null,
             'result_filename' => $job['result_filename'] ?? null,
             'behavior' => (string) $job['behavior'],
-            'status' => $status,
+            'status' => (string) $job['status'],
             'error' => $job['error'] ?? null,
             'file_id' => isset($job['file_id']) && $job['file_id'] !== null ? (int) $job['file_id'] : null,
             'cloud_job_id' => isset($job['cloud_job_id']) && $job['cloud_job_id'] !== null ? (int) $job['cloud_job_id'] : null,
@@ -70,7 +69,7 @@ json_response([
             'cloud_path' => $job['cloud_result_path'] ?? $job['cloud_remote_path'] ?? null,
             'cloud_error' => $job['cloud_error'] ?? null,
             'updated_at' => (string) ($job['updated_at'] ?? $job['created_at'] ?? ''),
-            'active' => $isActive,
+            'active' => DownloadJobRepository::isActiveRow($job),
         ];
     }, $jobs),
 ]);

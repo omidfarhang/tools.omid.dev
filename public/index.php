@@ -6,9 +6,11 @@ require dirname(__DIR__) . '/src/bootstrap.php';
 
 use App\Auth;
 use App\Cloud\CloudSendService;
+use App\Config;
 use App\Csrf;
 use App\Download\DownloadRegistry;
 use App\DownloadJobDispatcher;
+use App\DownloadJobProcessor;
 use App\DownloadJobRepository;
 use App\UserRepository;
 use App\View;
@@ -73,13 +75,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     flash('success', 'Download queued.');
     session_write_close();
-    DownloadJobDispatcher::dispatch($jobId);
-    redirect('/');
+
+    // Send the redirect first, then process in this request so Apache does not
+    // kill a background CLI child before the job runs.
+    $dest = rtrim((string) Config::get('app_base_url'), '/') . '/';
+    header('Location: ' . $dest);
+    header('Connection: close');
+    header('Content-Length: 0');
+    http_response_code(302);
+    while (ob_get_level() > 0) {
+        @ob_end_flush();
+    }
+    @flush();
+    if (function_exists('fastcgi_finish_request')) {
+        @fastcgi_finish_request();
+    }
+
+    ignore_user_abort(true);
+    @set_time_limit(0);
+    try {
+        (new DownloadJobProcessor())->process($jobId);
+    } catch (\Throwable) {
+        // Job stays pending/in_progress for Home/API retry.
+    }
+    exit;
 }
 
-DownloadJobDispatcher::dispatchPending(5);
-$homeJobs = $jobRepo->homeForUser((int) $user['id'], 8);
-$activeJobCount = count($jobRepo->activeForUser((int) $user['id']));
+// Retry any leftover pending jobs after this page response.
+DownloadJobDispatcher::dispatchPending(3);
+$homeJobs = $jobRepo->homeForUser((int) $user['id'], 10);
+$activeJobCount = 0;
+foreach ($homeJobs as $job) {
+    if (DownloadJobRepository::isActiveRow($job)) {
+        $activeJobCount++;
+    }
+}
 
 $destinationLabel = static function (string $behavior): string {
     return match ($behavior) {
@@ -204,66 +234,91 @@ ob_start();
     </form>
 </div>
 
-<div class="panel panel-flush mt-3 <?= $homeJobs ? '' : 'd-none' ?>" id="active-jobs-panel">
+<div class="panel panel-flush mt-3" id="active-jobs-panel">
     <div class="panel-head d-flex justify-content-between align-items-center">
         <h2 class="panel-title mb-0">Jobs</h2>
         <span class="text-muted small" id="active-jobs-count">
             <?php if ($activeJobCount > 0): ?>
                 <?= $activeJobCount ?> active
-            <?php else: ?>
+            <?php elseif ($homeJobs): ?>
                 <?= count($homeJobs) ?> recent
+            <?php else: ?>
+                none yet
             <?php endif; ?>
             · <a href="/history.php">History</a>
         </span>
     </div>
-    <div class="table-responsive">
-        <table class="table table-striped align-middle mb-0">
-            <thead>
-            <tr>
-                <th>Source</th>
-                <th>Name</th>
-                <th>Destination</th>
-                <th>Status</th>
-            </tr>
-            </thead>
-            <tbody id="active-jobs-body">
-            <?php foreach ($homeJobs as $job): ?>
-                <?php
-                $name = (string) ($job['result_filename'] ?? $job['requested_filename'] ?? '');
-                $status = (string) ($job['status'] ?? 'pending');
-                $cloudStatus = (string) ($job['cloud_status'] ?? '');
-                $isActive = in_array($status, ['pending', 'in_progress'], true)
-                    || ($status === 'complete' && in_array($cloudStatus, ['pending', 'in_progress'], true));
-                $displayStatus = $status;
-                if ($status === 'complete' && in_array($cloudStatus, ['pending', 'in_progress'], true)) {
-                    $displayStatus = 'cloud upload';
-                }
-                $badgeStatus = $displayStatus === 'cloud upload' ? 'in_progress' : $status;
-                $fileId = isset($job['file_id']) && $job['file_id'] !== null ? (int) $job['file_id'] : null;
-                ?>
-                <tr data-job-id="<?= (int) $job['id'] ?>" class="<?= $isActive ? '' : 'text-muted' ?>">
-                    <td class="mono small" title="<?= e((string) $job['source_url']) ?>"><?= e($truncateUrl((string) $job['source_url'])) ?></td>
-                    <td class="mono">
-                        <?php if ($fileId !== null && $status === 'complete'): ?>
-                            <a class="filename" href="/download.php?id=<?= $fileId ?>"><?= e($name !== '' ? $name : 'file') ?></a>
-                        <?php else: ?>
-                            <?= e($name !== '' ? $name : '—') ?>
-                        <?php endif; ?>
-                    </td>
-                    <td><?= e($destinationLabel((string) $job['behavior'])) ?></td>
-                    <td>
-                        <span class="badge text-bg-<?= e($statusBadge($badgeStatus)) ?> job-status-badge">
-                            <?= e($displayStatus) ?>
-                        </span>
-                        <?php if (!empty($job['error'])): ?>
-                            <div class="text-muted small mt-1 job-error"><?= e((string) $job['error']) ?></div>
-                        <?php endif; ?>
-                    </td>
+    <?php if (!$homeJobs): ?>
+        <div class="empty-state" id="active-jobs-empty">
+            <strong>No jobs yet</strong>
+            Queue a URL above. Recent and in-progress jobs show up here.
+        </div>
+        <div class="table-responsive d-none" id="active-jobs-table-wrap">
+            <table class="table table-striped align-middle mb-0">
+                <thead>
+                <tr>
+                    <th>Source</th>
+                    <th>Name</th>
+                    <th>Destination</th>
+                    <th>Status</th>
                 </tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
+                </thead>
+                <tbody id="active-jobs-body"></tbody>
+            </table>
+        </div>
+    <?php else: ?>
+        <div class="empty-state d-none" id="active-jobs-empty">
+            <strong>No jobs yet</strong>
+            Queue a URL above. Recent and in-progress jobs show up here.
+        </div>
+        <div class="table-responsive" id="active-jobs-table-wrap">
+            <table class="table table-striped align-middle mb-0">
+                <thead>
+                <tr>
+                    <th>Source</th>
+                    <th>Name</th>
+                    <th>Destination</th>
+                    <th>Status</th>
+                </tr>
+                </thead>
+                <tbody id="active-jobs-body">
+                <?php foreach ($homeJobs as $job): ?>
+                    <?php
+                    $name = (string) ($job['result_filename'] ?? $job['requested_filename'] ?? '');
+                    $status = (string) ($job['status'] ?? 'pending');
+                    $cloudStatus = (string) ($job['cloud_status'] ?? '');
+                    $isActive = DownloadJobRepository::isActiveRow($job);
+                    $displayStatus = $status;
+                    if ($status === 'complete' && in_array($cloudStatus, ['pending', 'in_progress'], true)) {
+                        $displayStatus = 'cloud upload';
+                    }
+                    $badgeStatus = $displayStatus === 'cloud upload' ? 'in_progress' : $status;
+                    $fileId = isset($job['file_id']) && $job['file_id'] !== null ? (int) $job['file_id'] : null;
+                    ?>
+                    <tr data-job-id="<?= (int) $job['id'] ?>" class="<?= $isActive ? '' : 'text-muted' ?>">
+                        <td class="mono small" title="<?= e((string) $job['source_url']) ?>"><?= e($truncateUrl((string) $job['source_url'])) ?></td>
+                        <td class="mono">
+                            <?php if ($fileId !== null && $status === 'complete'): ?>
+                                <a class="filename" href="/download.php?id=<?= $fileId ?>"><?= e($name !== '' ? $name : 'file') ?></a>
+                            <?php else: ?>
+                                <?= e($name !== '' ? $name : '—') ?>
+                            <?php endif; ?>
+                        </td>
+                        <td><?= e($destinationLabel((string) $job['behavior'])) ?></td>
+                        <td>
+                            <span class="badge text-bg-<?= e($statusBadge($badgeStatus)) ?> job-status-badge">
+                                <?= e($displayStatus) ?>
+                            </span>
+                            <?php if (!empty($job['error'])): ?>
+                                <div class="text-muted small mt-1 job-error"><?= e((string) $job['error']) ?></div>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    <?php endif; ?>
 </div>
 
 <script>
@@ -330,9 +385,10 @@ ob_start();
     syncFilenameForUrl(urlInput.value);
     syncCloudOptions();
 
-    const panel = document.getElementById('active-jobs-panel');
     const body = document.getElementById('active-jobs-body');
     const countEl = document.getElementById('active-jobs-count');
+    const emptyEl = document.getElementById('active-jobs-empty');
+    const tableWrap = document.getElementById('active-jobs-table-wrap');
     const csrf = <?= json_encode(Csrf::token()) ?>;
 
     function destinationLabel(behavior) {
@@ -362,14 +418,16 @@ ob_start();
     }
 
     function renderJobs(jobs, activeCount) {
-        if (!panel || !body || !countEl) return;
+        if (!body || !countEl) return;
         if (!jobs.length) {
-            panel.classList.add('d-none');
+            if (emptyEl) emptyEl.classList.remove('d-none');
+            if (tableWrap) tableWrap.classList.add('d-none');
             body.innerHTML = '';
-            countEl.innerHTML = '0 recent · <a href="/history.php">History</a>';
+            countEl.innerHTML = 'none yet · <a href="/history.php">History</a>';
             return;
         }
-        panel.classList.remove('d-none');
+        if (emptyEl) emptyEl.classList.add('d-none');
+        if (tableWrap) tableWrap.classList.remove('d-none');
         const countLabel = activeCount > 0 ? (activeCount + ' active') : (jobs.length + ' recent');
         countEl.innerHTML = countLabel + ' · <a href="/history.php">History</a>';
         body.innerHTML = jobs.map(function (job) {
@@ -422,15 +480,17 @@ ob_start();
                 }
             })
             .catch(function () {
-                setTimeout(pollActiveJobs, 4000);
+                if (<?= $activeJobCount > 0 ? 'true' : 'false' ?>) {
+                    setTimeout(pollActiveJobs, 4000);
+                }
             });
     }
 
     if (<?= $activeJobCount > 0 ? 'true' : 'false' ?>) {
         setTimeout(pollActiveJobs, 2000);
     } else {
-        // Still poke once in case a job was queued just before navigation.
-        setTimeout(pollActiveJobs, 1500);
+        // Refresh once so a job that finished during redirect appears without reload.
+        setTimeout(pollActiveJobs, 1200);
     }
 })();
 </script>

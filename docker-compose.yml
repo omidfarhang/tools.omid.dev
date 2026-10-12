@@ -12,6 +12,11 @@ services:
       TEMP_DIR: /var/www/html/storage/temp
       YTDLP_COOKIES_PATH: /var/www/html/.secure/cookies.txt
     volumes:
+      # Mount app code so local edits apply without rebuilding the image.
+      - ./public:/var/www/html/public
+      - ./src:/var/www/html/src
+      - ./templates:/var/www/html/templates
+      - ./scripts:/var/www/html/scripts
       - ./storage:/var/www/html/storage
       - ./.secure:/var/www/html/.secure
     restart: unless-stopped
