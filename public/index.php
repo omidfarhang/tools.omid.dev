@@ -169,60 +169,20 @@ ob_start();
     </div>
 <?php endif; ?>
 
-<div class="panel">
-    <h2 class="panel-title">New download</h2>
-    <form action="" method="post" id="download-form">
+<div class="panel download-panel">
+    <form action="" method="post" id="download-form" class="download-form">
         <?= Csrf::field() ?>
-        <div class="mb-3">
-            <label for="DLURL" class="form-label">URL</label>
-            <input name="DLURL" type="url" class="form-control" id="DLURL" placeholder="https://..." required>
-        </div>
-        <div class="mb-3 d-none" id="youtube-options">
-            <label for="yt_format" class="form-label">YouTube quality</label>
-            <select class="form-select" name="yt_format" id="yt_format">
-                <option value="best" selected>Best</option>
-                <option value="4320">4320p (8k)</option>
-                <option value="2160">2160p (4K)</option>
-                <option value="1440">1440p (2k)</option>
-                <option value="1080">1080p (HD)</option>
-                <option value="720">720p (HD)</option>
-                <option value="480">480p (SD)</option>
-                <option value="360">360p (SD)</option>
-                <option value="240">240p (SD)</option>
-            </select>
-        </div>
-        <div class="mb-3 d-none" id="twitter-options">
-            <label for="twitter_format" class="form-label">X / Twitter quality</label>
-            <select class="form-select" name="twitter_format" id="twitter_format">
-                <option value="best" selected>Best</option>
-                <option value="720">720p</option>
-                <option value="480">480p</option>
-            </select>
-        </div>
-        <div class="mb-3 d-none" id="instagram-options">
-            <label for="instagram_format" class="form-label">Instagram quality</label>
-            <select class="form-select" name="instagram_format" id="instagram_format">
-                <option value="best" selected>Best</option>
-                <option value="720">720p</option>
-            </select>
-        </div>
-        <div class="mb-3 d-none" id="tiktok-options">
-            <label for="tiktok_format" class="form-label">TikTok quality</label>
-            <select class="form-select" name="tiktok_format" id="tiktok_format">
-                <option value="best" selected>Best</option>
-                <option value="720">720p</option>
-            </select>
-        </div>
-        <div class="mb-3 d-none" id="ytdlp-options">
-            <div class="form-check mb-2">
-                <input type="hidden" name="force_ytdlp" value="0">
-                <input class="form-check-input" type="checkbox" value="1" name="force_ytdlp" id="force_ytdlp">
-                <label class="form-check-label" for="force_ytdlp">Use yt-dlp</label>
-                <div class="form-text">On by default for sites yt-dlp knows. Uncheck for a direct file download.</div>
+
+        <section class="form-section">
+            <h2 class="form-section-title">Source</h2>
+            <div class="mb-0">
+                <label for="DLURL" class="form-label">URL</label>
+                <input name="DLURL" type="url" class="form-control" id="DLURL" placeholder="https://..." required autocomplete="off" spellcheck="false">
             </div>
-            <div class="d-none" id="ytdlp-format-wrap">
-                <label for="ytdlp_format" class="form-label">yt-dlp quality</label>
-                <select class="form-select" name="ytdlp_format" id="ytdlp_format">
+
+            <div class="source-options mt-3 d-none" id="youtube-options">
+                <label for="yt_format" class="form-label">YouTube quality</label>
+                <select class="form-select form-control-narrow" name="yt_format" id="yt_format">
                     <option value="best" selected>Best</option>
                     <option value="4320">4320p (8k)</option>
                     <option value="2160">2160p (4K)</option>
@@ -234,66 +194,129 @@ ob_start();
                     <option value="240">240p (SD)</option>
                 </select>
             </div>
-        </div>
-
-        <fieldset class="mb-3">
-            <legend class="form-label mb-2">Save to</legend>
-            <div class="d-flex flex-column gap-2">
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="behavior" id="behavior_disk"
-                           value="save_to_disk" <?= $preferred === 'save_to_disk' ? 'checked' : '' ?>>
-                    <label class="form-check-label" for="behavior_disk">Disk</label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="behavior" id="behavior_cloud"
-                           value="save_to_cloud"
-                           <?= $preferred === 'save_to_cloud' ? 'checked' : '' ?>
-                           <?= $cloudConnected ? '' : 'disabled' ?>>
-                    <label class="form-check-label" for="behavior_cloud">Cloud</label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="behavior" id="behavior_both"
-                           value="save_to_both"
-                           <?= $preferred === 'save_to_both' ? 'checked' : '' ?>
-                           <?= $cloudConnected ? '' : 'disabled' ?>>
-                    <label class="form-check-label" for="behavior_both">Disk + Cloud</label>
-                </div>
+            <div class="source-options mt-3 d-none" id="twitter-options">
+                <label for="twitter_format" class="form-label">X / Twitter quality</label>
+                <select class="form-select form-control-narrow" name="twitter_format" id="twitter_format">
+                    <option value="best" selected>Best</option>
+                    <option value="720">720p</option>
+                    <option value="480">480p</option>
+                </select>
             </div>
-        </fieldset>
-
-        <div class="mb-3">
-            <label for="DLFILENAME" class="form-label">Filename</label>
-            <input name="DLFILENAME" type="text" class="form-control mono" id="DLFILENAME" placeholder="Auto from URL, can be changed">
-            <div class="form-text d-none" id="filename-ytdlp-hint">yt-dlp sets the name from the media title.</div>
-        </div>
-
-        <?php if ($cloudConnected): ?>
-            <div class="border rounded p-3 mb-3 bg-white d-none" id="cloud-options">
-                <div class="mb-3">
-                    <label for="cloud_folder" class="form-label">Cloud folder</label>
-                    <input name="cloud_folder" type="text" class="form-control mono" id="cloud_folder"
-                           value="<?= e($prefs['folder']) ?>" placeholder="(root)">
-                    <div class="form-text">Relative to your cloud root. Leave blank for root.</div>
+            <div class="source-options mt-3 d-none" id="instagram-options">
+                <label for="instagram_format" class="form-label">Instagram quality</label>
+                <select class="form-select form-control-narrow" name="instagram_format" id="instagram_format">
+                    <option value="best" selected>Best</option>
+                    <option value="720">720p</option>
+                </select>
+            </div>
+            <div class="source-options mt-3 d-none" id="tiktok-options">
+                <label for="tiktok_format" class="form-label">TikTok quality</label>
+                <select class="form-select form-control-narrow" name="tiktok_format" id="tiktok_format">
+                    <option value="best" selected>Best</option>
+                    <option value="720">720p</option>
+                </select>
+            </div>
+            <div class="source-options source-options-block mt-3 d-none" id="ytdlp-options">
+                <div class="form-check mb-0">
+                    <input type="hidden" name="force_ytdlp" value="0">
+                    <input class="form-check-input" type="checkbox" value="1" name="force_ytdlp" id="force_ytdlp">
+                    <label class="form-check-label" for="force_ytdlp">Use yt-dlp</label>
+                    <div class="form-text">On by default for sites yt-dlp knows. Uncheck for a direct file download.</div>
                 </div>
-                <div class="mb-3">
-                    <label for="cloud_conflict" class="form-label">If file already exists</label>
-                    <select class="form-select" name="cloud_conflict" id="cloud_conflict">
-                        <option value="rename" <?= $prefs['conflict'] === 'rename' ? 'selected' : '' ?>>Rename (add number)</option>
-                        <option value="overwrite" <?= $prefs['conflict'] === 'overwrite' ? 'selected' : '' ?>>Overwrite</option>
-                        <option value="skip" <?= $prefs['conflict'] === 'skip' ? 'selected' : '' ?>>Skip</option>
+                <div class="source-options-nested d-none" id="ytdlp-format-wrap">
+                    <label for="ytdlp_format" class="form-label">Quality</label>
+                    <select class="form-select form-control-narrow" name="ytdlp_format" id="ytdlp_format">
+                        <option value="best" selected>Best</option>
+                        <option value="4320">4320p (8k)</option>
+                        <option value="2160">2160p (4K)</option>
+                        <option value="1440">1440p (2k)</option>
+                        <option value="1080">1080p (HD)</option>
+                        <option value="720">720p (HD)</option>
+                        <option value="480">480p (SD)</option>
+                        <option value="360">360p (SD)</option>
+                        <option value="240">240p (SD)</option>
                     </select>
                 </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" value="1" name="delete_after" id="delete_after">
-                    <label class="form-check-label" for="delete_after">
-                        Delete from host after cloud succeeds
-                    </label>
-                    <div class="form-text">Only when this download also keeps a host copy (yt-dlp sources → cloud, or Disk + Cloud).</div>
-                </div>
             </div>
-        <?php endif; ?>
+        </section>
 
-        <button class="btn btn-primary" type="submit">Start download</button>
+        <section class="form-section">
+            <h2 class="form-section-title">Save to</h2>
+            <fieldset class="choice-fieldset">
+                <legend class="visually-hidden">Save destination</legend>
+                <div class="choice-grid">
+                    <label class="choice-tile" for="behavior_disk">
+                        <input class="form-check-input" type="radio" name="behavior" id="behavior_disk"
+                               value="save_to_disk" <?= $preferred === 'save_to_disk' ? 'checked' : '' ?>>
+                        <span class="choice-tile-body">
+                            <span class="choice-tile-title">Disk</span>
+                            <span class="choice-tile-desc">Keep on this host</span>
+                        </span>
+                    </label>
+                    <label class="choice-tile<?= $cloudConnected ? '' : ' is-disabled' ?>" for="behavior_cloud">
+                        <input class="form-check-input" type="radio" name="behavior" id="behavior_cloud"
+                               value="save_to_cloud"
+                               <?= $preferred === 'save_to_cloud' ? 'checked' : '' ?>
+                               <?= $cloudConnected ? '' : 'disabled' ?>>
+                        <span class="choice-tile-body">
+                            <span class="choice-tile-title">Cloud</span>
+                            <span class="choice-tile-desc"><?= $cloudConnected ? 'Upload only' : 'Connect Dropbox first' ?></span>
+                        </span>
+                    </label>
+                    <label class="choice-tile<?= $cloudConnected ? '' : ' is-disabled' ?>" for="behavior_both">
+                        <input class="form-check-input" type="radio" name="behavior" id="behavior_both"
+                               value="save_to_both"
+                               <?= $preferred === 'save_to_both' ? 'checked' : '' ?>
+                               <?= $cloudConnected ? '' : 'disabled' ?>>
+                        <span class="choice-tile-body">
+                            <span class="choice-tile-title">Disk + Cloud</span>
+                            <span class="choice-tile-desc"><?= $cloudConnected ? 'Host copy and upload' : 'Connect Dropbox first' ?></span>
+                        </span>
+                    </label>
+                </div>
+            </fieldset>
+
+            <?php if ($cloudConnected): ?>
+                <div class="cloud-options d-none" id="cloud-options">
+                    <div class="row g-3">
+                        <div class="col-md-7">
+                            <label for="cloud_folder" class="form-label">Cloud folder</label>
+                            <input name="cloud_folder" type="text" class="form-control mono" id="cloud_folder"
+                                   value="<?= e($prefs['folder']) ?>" placeholder="(root)">
+                            <div class="form-text">Relative to your cloud root. Leave blank for root.</div>
+                        </div>
+                        <div class="col-md-5">
+                            <label for="cloud_conflict" class="form-label">If file already exists</label>
+                            <select class="form-select" name="cloud_conflict" id="cloud_conflict">
+                                <option value="rename" <?= $prefs['conflict'] === 'rename' ? 'selected' : '' ?>>Rename (add number)</option>
+                                <option value="overwrite" <?= $prefs['conflict'] === 'overwrite' ? 'selected' : '' ?>>Overwrite</option>
+                                <option value="skip" <?= $prefs['conflict'] === 'skip' ? 'selected' : '' ?>>Skip</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="1" name="delete_after" id="delete_after">
+                                <label class="form-check-label" for="delete_after">
+                                    Delete from host after cloud succeeds
+                                </label>
+                                <div class="form-text">Only when this download also keeps a host copy (yt-dlp sources → cloud, or Disk + Cloud).</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
+        </section>
+
+        <section class="form-section">
+            <h2 class="form-section-title">Filename</h2>
+            <label for="DLFILENAME" class="form-label visually-hidden">Filename</label>
+            <input name="DLFILENAME" type="text" class="form-control mono" id="DLFILENAME" placeholder="Auto from URL, can be changed" autocomplete="off" spellcheck="false">
+            <div class="form-text d-none" id="filename-ytdlp-hint">yt-dlp sets the name from the media title.</div>
+        </section>
+
+        <div class="form-actions">
+            <button class="btn btn-primary" type="submit">Start download</button>
+        </div>
     </form>
 </div>
 
