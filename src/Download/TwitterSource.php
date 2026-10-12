@@ -46,7 +46,7 @@ final class TwitterSource implements DownloadSource
         }
 
         if (!preg_match(
-            '#^(?:https?://)?(?:www\.|mobile\.)?(?:twitter\.com|x\.com)/([^/\s?#]+)/status/(\d+)#i',
+            '#^(?:https?://)?(?:www\.|mobile\.)?(?:twitter\.com|x\.com)/([^/\s?\#]+)/status/(\d+)#i',
             $url,
             $matches
         )) {

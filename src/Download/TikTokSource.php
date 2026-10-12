@@ -53,7 +53,7 @@ final class TikTokSource implements DownloadSource
         }
 
         if (preg_match(
-            '#^(?:https?://)?(?:www\.|m\.)?tiktok\.com/@([^/\s?#]+)/video/(\d+)#i',
+            '#^(?:https?://)?(?:www\.|m\.)?tiktok\.com/@([^/\s?\#]+)/video/(\d+)#i',
             $url,
             $matches
         )) {
