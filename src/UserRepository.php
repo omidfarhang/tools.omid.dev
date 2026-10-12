@@ -179,7 +179,7 @@ final class UserRepository
     {
         return [
             'behavior' => self::normalizeBehavior((string) ($user['dropbox_default_behavior'] ?? 'save_to_disk')),
-            'folder' => self::normalizeFolder((string) ($user['dropbox_folder'] ?? 'Tools Center')),
+            'folder' => self::normalizeFolder((string) ($user['dropbox_folder'] ?? '')),
             'conflict' => self::normalizeConflict((string) ($user['dropbox_conflict'] ?? 'rename')),
         ];
     }
@@ -190,21 +190,36 @@ final class UserRepository
         return self::cloudPrefs($user);
     }
 
-    public function updateCloudPrefs(int $userId, string $behavior, string $folder, string $conflict): void
+    public function updateDefaultBehavior(int $userId, string $behavior): void
+    {
+        $stmt = $this->db->prepare(
+            'UPDATE users SET dropbox_default_behavior = :b WHERE id = :id'
+        );
+        $stmt->execute([
+            ':b' => self::normalizeBehavior($behavior),
+            ':id' => $userId,
+        ]);
+    }
+
+    public function updateCloudDestinationPrefs(int $userId, string $folder, string $conflict): void
     {
         $stmt = $this->db->prepare(
             'UPDATE users SET
-                dropbox_default_behavior = :b,
                 dropbox_folder = :f,
                 dropbox_conflict = :c
              WHERE id = :id'
         );
         $stmt->execute([
-            ':b' => self::normalizeBehavior($behavior),
             ':f' => self::normalizeFolder($folder),
             ':c' => self::normalizeConflict($conflict),
             ':id' => $userId,
         ]);
+    }
+
+    public function updateCloudPrefs(int $userId, string $behavior, string $folder, string $conflict): void
+    {
+        $this->updateDefaultBehavior($userId, $behavior);
+        $this->updateCloudDestinationPrefs($userId, $folder, $conflict);
     }
 
     /** @deprecated Use updateCloudPrefs() */

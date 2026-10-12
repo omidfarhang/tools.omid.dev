@@ -25,11 +25,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash('success', 'Dropbox disconnected.');
         redirect('/user/');
     }
-    if ($action === 'save_dropbox_prefs' || $action === 'save_cloud_prefs') {
-        $users->updateCloudPrefs(
+    if ($action === 'save_download_prefs') {
+        $users->updateDefaultBehavior(
             (int) $user['id'],
-            (string) ($_POST['cloud_default_behavior'] ?? $_POST['dropbox_default_behavior'] ?? 'save_to_disk'),
-            (string) ($_POST['cloud_folder'] ?? $_POST['dropbox_folder'] ?? 'Tools Center'),
+            (string) ($_POST['cloud_default_behavior'] ?? $_POST['dropbox_default_behavior'] ?? 'save_to_disk')
+        );
+        flash('success', 'Download preference saved.');
+        redirect('/user/');
+    }
+    if ($action === 'save_dropbox_prefs' || $action === 'save_cloud_prefs') {
+        $users->updateCloudDestinationPrefs(
+            (int) $user['id'],
+            (string) ($_POST['cloud_folder'] ?? $_POST['dropbox_folder'] ?? ''),
             (string) ($_POST['cloud_conflict'] ?? $_POST['dropbox_conflict'] ?? 'rename')
         );
         flash('success', 'Cloud defaults saved.');
@@ -60,6 +67,22 @@ ob_start();
                 <dt class="text-muted small">Role</dt>
                 <dd class="mb-0"><span class="user-chip"><span class="user-chip-dot" aria-hidden="true"></span><?= e($user['role']) ?></span></dd>
             </dl>
+
+            <form method="post" class="mt-4">
+                <?= Csrf::field() ?>
+                <input type="hidden" name="action" value="save_download_prefs">
+                <div class="mb-3">
+                    <label for="cloud_default_behavior" class="form-label">Preferred download action</label>
+                    <select class="form-select" name="cloud_default_behavior" id="cloud_default_behavior">
+                        <option value="save_to_disk" <?= $prefs['behavior'] === 'save_to_disk' ? 'selected' : '' ?>>Save To Disk</option>
+                        <option value="save_to_cloud" <?= $prefs['behavior'] === 'save_to_cloud' ? 'selected' : '' ?>>Save To Cloud</option>
+                        <option value="save_to_both" <?= $prefs['behavior'] === 'save_to_both' ? 'selected' : '' ?>>Save To Disk + Cloud</option>
+                    </select>
+                    <div class="form-text">Highlights the primary button on the home page. Cloud options need a connected provider. Auto-delete is chosen per job, not here.</div>
+                </div>
+                <button class="btn btn-primary" type="submit">Save preference</button>
+            </form>
+
             <p class="mt-4 mb-0"><a href="/files.php">Manage my files &amp; public links</a></p>
         </div>
     </div>
@@ -90,18 +113,10 @@ ob_start();
                     <input type="hidden" name="action" value="save_cloud_prefs">
                     <h3 class="h6 mb-3">Defaults</h3>
                     <div class="mb-3">
-                        <label for="cloud_default_behavior" class="form-label">Preferred download action</label>
-                        <select class="form-select" name="cloud_default_behavior" id="cloud_default_behavior">
-                            <option value="save_to_disk" <?= $prefs['behavior'] === 'save_to_disk' ? 'selected' : '' ?>>Save To Disk</option>
-                            <option value="save_to_cloud" <?= $prefs['behavior'] === 'save_to_cloud' ? 'selected' : '' ?>>Save To Cloud</option>
-                            <option value="save_to_both" <?= $prefs['behavior'] === 'save_to_both' ? 'selected' : '' ?>>Save To Disk + Cloud</option>
-                        </select>
-                        <div class="form-text">Highlights the primary button on the home page. Auto-delete is chosen per job, not here.</div>
-                    </div>
-                    <div class="mb-3">
                         <label for="cloud_folder" class="form-label">Default folder</label>
                         <input class="form-control mono" type="text" name="cloud_folder" id="cloud_folder"
-                               value="<?= e($prefs['folder']) ?>" placeholder="Tools Center">
+                               value="<?= e($prefs['folder']) ?>" placeholder="(root)">
+                        <div class="form-text">Relative to your Dropbox root. Leave blank for root.</div>
                     </div>
                     <div class="mb-3">
                         <label for="cloud_conflict" class="form-label">Default conflict policy</label>

@@ -115,12 +115,13 @@ CREATE TABLE IF NOT EXISTS download_jobs (
 SQL);
 
         self::ensureColumn($pdo, 'users', 'dropbox_default_behavior', "dropbox_default_behavior TEXT NOT NULL DEFAULT 'save_to_disk'");
-        self::ensureColumn($pdo, 'users', 'dropbox_folder', "dropbox_folder TEXT NOT NULL DEFAULT 'Tools Center'");
+        self::ensureColumn($pdo, 'users', 'dropbox_folder', "dropbox_folder TEXT NOT NULL DEFAULT ''");
         self::ensureColumn($pdo, 'users', 'dropbox_conflict', "dropbox_conflict TEXT NOT NULL DEFAULT 'rename'");
         self::ensureColumn($pdo, 'users', 'dropbox_email', 'dropbox_email TEXT NULL');
         self::ensureColumn($pdo, 'users', 'dropbox_display_name', 'dropbox_display_name TEXT NULL');
         self::migrateDropboxJobs($pdo);
         self::migrateBehaviorValues($pdo);
+        self::migrateDefaultCloudFolder($pdo);
         self::migrateDownloadHistory($pdo);
     }
 
@@ -176,6 +177,15 @@ SQL);
         $pdo->exec(
             "UPDATE users SET dropbox_default_behavior = 'save_to_cloud'
              WHERE dropbox_default_behavior = 'save_to_dropbox'"
+        );
+    }
+
+    private static function migrateDefaultCloudFolder(PDO $pdo): void
+    {
+        // Former product default was a "Tools Center" subfolder; root is preferred.
+        $pdo->exec(
+            "UPDATE users SET dropbox_folder = ''
+             WHERE dropbox_folder = 'Tools Center'"
         );
     }
 

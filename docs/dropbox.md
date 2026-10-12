@@ -31,7 +31,7 @@ APP_BASE_URL=https://tools.omid.dev
 
 1. Sign in → **Account** → **Connect Dropbox**.
 2. Approve access in Dropbox.
-3. Optionally set **defaults** on Account: preferred action, destination folder, conflict policy.
+3. Optionally set Dropbox **defaults** on Account: destination folder (blank = root) and conflict policy. Preferred download action lives under Profile (user setting).
 4. Use **Save to** → Cloud or Disk + Cloud on the home page, **Send to cloud** on My Files, or CLI (`scripts/ytdl.sh`) after the CLI user has connected Dropbox.
 
 ## Features after connect

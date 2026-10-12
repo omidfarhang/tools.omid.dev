@@ -209,7 +209,7 @@ ob_start();
                 <div class="mb-3">
                     <label for="cloud_folder" class="form-label">Cloud folder</label>
                     <input name="cloud_folder" type="text" class="form-control mono" id="cloud_folder"
-                           value="<?= e($prefs['folder']) ?>" placeholder="Tools Center">
+                           value="<?= e($prefs['folder']) ?>" placeholder="(root)">
                     <div class="form-text">Relative to your cloud root. Leave blank for root.</div>
                 </div>
                 <div class="mb-3">

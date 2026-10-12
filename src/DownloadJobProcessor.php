@@ -63,7 +63,7 @@ final class DownloadJobProcessor
         $filename = trim((string) ($job['requested_filename'] ?? ''));
         $behavior = UserRepository::normalizeBehavior((string) $job['behavior']);
         $ytFormat = (string) ($job['yt_format'] ?? 'best');
-        $folder = UserRepository::normalizeFolder((string) ($job['cloud_folder'] ?? 'Tools Center'));
+        $folder = UserRepository::normalizeFolder((string) ($job['cloud_folder'] ?? ''));
         $conflict = UserRepository::normalizeConflict((string) ($job['cloud_conflict'] ?? 'rename'));
         $deleteAfter = (int) ($job['delete_after'] ?? 0) === 1;
 
