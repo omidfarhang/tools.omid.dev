@@ -9,6 +9,7 @@ use App\Cloud\CloudSendService;
 use App\Config;
 use App\Csrf;
 use App\Download\DownloadRegistry;
+use App\Download\YtDlpKnownHosts;
 use App\DownloadJobDispatcher;
 use App\DownloadJobProcessor;
 use App\DownloadJobRepository;
@@ -214,9 +215,10 @@ ob_start();
         </div>
         <div class="mb-3 d-none" id="ytdlp-options">
             <div class="form-check mb-2">
+                <input type="hidden" name="force_ytdlp" value="0">
                 <input class="form-check-input" type="checkbox" value="1" name="force_ytdlp" id="force_ytdlp">
                 <label class="form-check-label" for="force_ytdlp">Use yt-dlp</label>
-                <div class="form-text">For pages yt-dlp can extract (not a direct file URL).</div>
+                <div class="form-text">On by default for sites yt-dlp knows. Uncheck for a direct file download.</div>
             </div>
             <div class="d-none" id="ytdlp-format-wrap">
                 <label for="ytdlp_format" class="form-label">yt-dlp quality</label>
@@ -396,6 +398,10 @@ ob_start();
     const filenameHint = document.getElementById('filename-ytdlp-hint');
     const cloudOptions = document.getElementById('cloud-options');
     let filenameDirty = false;
+    let lastYtdlpHost = null;
+    let ytdlpTouched = false;
+
+    const knownYtdlpHosts = new Set(<?= json_encode(YtDlpKnownHosts::hosts(), JSON_UNESCAPED_SLASHES) ?>);
 
     const youtubeRe = /^(?:http(?:s)?:\/\/)?(?:www\.)?(?:m\.)?(?:youtu\.be\/|youtube\.com\/(?:(?:watch)?\?(?:.*&)?v(?:i)?=|(?:embed|v|vi|user|shorts)\/))([^\?&\"'>]+)/;
     const twitterRe = /^(?:https?:\/\/)?(?:www\.|mobile\.)?(?:twitter\.com|x\.com)\/[^/\s?#]+\/status\/\d+/i;
@@ -410,6 +416,35 @@ ob_start();
         return url.trim() !== '' ? 'other' : null;
     }
 
+    function hostFromUrl(url) {
+        url = (url || '').trim();
+        if (!url) return null;
+        try {
+            if (!/^https?:\/\//i.test(url)) {
+                url = 'https://' + url;
+            }
+            let host = new URL(url).hostname.toLowerCase();
+            if (host.startsWith('www.')) {
+                host = host.slice(4);
+            }
+            return host || null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function isKnownYtdlpHost(host) {
+        if (!host) return false;
+        let candidate = host;
+        while (candidate) {
+            if (knownYtdlpHosts.has(candidate)) return true;
+            const dot = candidate.indexOf('.');
+            if (dot === -1) return false;
+            candidate = candidate.slice(dot + 1);
+        }
+        return false;
+    }
+
     function filenameFromUrl(url) {
         const hashIndex = url.indexOf('#');
         if (hashIndex !== -1) {
@@ -422,6 +457,21 @@ ob_start();
         const url = urlInput.value;
         const source = detectSource(url);
         const curated = source === 'youtube' || source === 'twitter' || source === 'instagram' || source === 'tiktok';
+        const host = hostFromUrl(url);
+
+        if (forceYtdlp && source === 'other') {
+            if (host !== lastYtdlpHost) {
+                lastYtdlpHost = host;
+                ytdlpTouched = false;
+            }
+            if (!ytdlpTouched) {
+                forceYtdlp.checked = isKnownYtdlpHost(host);
+            }
+        } else if (host !== lastYtdlpHost) {
+            lastYtdlpHost = host;
+            ytdlpTouched = false;
+        }
+
         const useYtdlp = !curated && forceYtdlp && forceYtdlp.checked;
         const ytdlpActive = curated || useYtdlp;
 
@@ -461,7 +511,10 @@ ob_start();
 
     urlInput.addEventListener('input', syncSourceOptions);
     if (forceYtdlp) {
-        forceYtdlp.addEventListener('change', syncSourceOptions);
+        forceYtdlp.addEventListener('change', function () {
+            ytdlpTouched = true;
+            syncSourceOptions();
+        });
     }
 
     document.querySelectorAll('input[name="behavior"]').forEach(function (el) {
