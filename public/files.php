@@ -60,16 +60,19 @@ ob_start();
 <?php endif; ?>
 
 <div class="panel panel-flush">
-    <div class="panel-head d-flex justify-content-between align-items-center">
-        <h2 class="panel-title mb-0">Your files</h2>
-    </div>
     <?php if (!$files): ?>
+        <div class="panel-head d-flex justify-content-between align-items-center">
+            <h2 class="panel-title mb-0">Your files</h2>
+        </div>
         <div class="empty-state">
             <strong>No files yet</strong>
             Pull a URL from the <a href="/">Download</a> page to get started.
         </div>
     <?php else: ?>
-        <?php include dirname(__DIR__) . '/templates/partials/files_table.php'; ?>
+        <?php
+        $panelTitle = 'Your files';
+        include dirname(__DIR__) . '/templates/partials/files_table.php';
+        ?>
     <?php endif; ?>
 </div>
 

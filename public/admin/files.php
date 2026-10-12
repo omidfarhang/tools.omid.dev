@@ -33,16 +33,19 @@ ob_start();
 </div>
 
 <div class="panel panel-flush">
-    <div class="panel-head d-flex justify-content-between align-items-center">
-        <h2 class="panel-title mb-0">All files</h2>
-    </div>
     <?php if (!$files): ?>
+        <div class="panel-head d-flex justify-content-between align-items-center">
+            <h2 class="panel-title mb-0">All files</h2>
+        </div>
         <div class="empty-state">
             <strong>No files stored</strong>
             Nothing has been downloaded yet.
         </div>
     <?php else: ?>
-        <?php include dirname(__DIR__, 2) . '/templates/partials/files_table.php'; ?>
+        <?php
+        $panelTitle = 'All files';
+        include dirname(__DIR__, 2) . '/templates/partials/files_table.php';
+        ?>
     <?php endif; ?>
 </div>
 

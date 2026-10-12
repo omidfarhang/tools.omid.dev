@@ -63,9 +63,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function updateCount() {
-        const n = visibleRows().length;
         if (countEl) {
-            countEl.textContent = n === 1 ? '1 file' : n + ' files';
+            countEl.textContent = String(visibleRows().length);
         }
     }
 

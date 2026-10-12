@@ -1,6 +1,7 @@
 <?php
 /**
  * @var string $mode 'user'|'admin'
+ * @var string $panelTitle
  * @var list<array<string, mixed>> $files
  * @var string $sort
  * @var string $dir ASC|DESC
@@ -10,6 +11,7 @@
  */
 $mode = $mode ?? 'user';
 $isAdmin = $mode === 'admin';
+$panelTitle = $panelTitle ?? ($isAdmin ? 'All files' : 'Your files');
 $redirect = $redirect ?? ($isAdmin ? '/admin/files.php' : '/files.php');
 $cloudConnected = $cloudConnected ?? false;
 $prefs = $prefs ?? ['folder' => '', 'conflict' => 'rename'];
@@ -31,18 +33,22 @@ $sortMark = static function (string $col) use ($sort, $dir): string {
     return $dir === 'ASC' ? ' ↑' : ' ↓';
 };
 ?>
-<div class="files-toolbar" data-files-toolbar>
-    <div class="files-toolbar-main">
+<div class="panel-head files-panel-head">
+    <h2 class="panel-title mb-0"><?= e($panelTitle) ?></h2>
+    <div class="files-panel-tools">
         <label class="visually-hidden" for="files-search">Search files</label>
-        <input type="search" id="files-search" class="form-control form-control-sm files-search"
-               placeholder="<?= $isAdmin ? 'Search name or owner…' : 'Search files…' ?>"
+        <input type="search" id="files-search" class="files-search"
+               placeholder="<?= $isAdmin ? 'Filter…' : 'Filter…' ?>"
                data-files-search autocomplete="off">
-        <span class="text-muted small files-count" data-files-count><?= count($files) ?> file<?= count($files) === 1 ? '' : 's' ?></span>
+        <span class="files-count" data-files-count><?= count($files) ?></span>
     </div>
-    <div class="files-bulk-bar d-none" data-files-bulk>
-        <span class="small" data-files-bulk-count>0 selected</span>
-        <button type="button" class="btn btn-sm btn-outline-secondary" data-bulk-revoke>Disable public links</button>
-        <button type="button" class="btn btn-sm btn-outline-danger" data-bulk-delete>Delete selected</button>
+</div>
+
+<div class="files-selection-bar d-none" data-files-bulk>
+    <span class="files-selection-label" data-files-bulk-count>0 selected</span>
+    <div class="files-selection-actions">
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-bulk-revoke>Disable links</button>
+        <button type="button" class="btn btn-sm btn-outline-danger" data-bulk-delete>Delete</button>
     </div>
 </div>
 
