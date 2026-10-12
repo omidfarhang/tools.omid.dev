@@ -75,6 +75,30 @@ final class CloudJobRepository
         return $stmt->fetchAll();
     }
 
+    /**
+     * Cloud jobs that are not already linked from a download job (e.g. My Files → Send to cloud).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function recentUnlinkedForUser(int $userId, int $limit = 50): array
+    {
+        $limit = max(1, min(100, $limit));
+        $stmt = $this->db->prepare(
+            'SELECT cj.*
+             FROM cloud_jobs cj
+             WHERE cj.user_id = :uid
+               AND NOT EXISTS (
+                    SELECT 1 FROM download_jobs d
+                    WHERE d.cloud_job_id = cj.id
+               )
+             ORDER BY cj.id DESC
+             LIMIT ' . $limit
+        );
+        $stmt->execute([':uid' => $userId]);
+
+        return $stmt->fetchAll();
+    }
+
     public function markInProgress(int $id, string $asyncJobId, string $remotePath): void
     {
         $stmt = $this->db->prepare(

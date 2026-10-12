@@ -27,6 +27,7 @@ final class Database
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         ]);
         self::$pdo->exec('PRAGMA foreign_keys = ON');
+        self::$pdo->exec('PRAGMA journal_mode = WAL');
         self::migrate(self::$pdo);
         self::seedAdmin(self::$pdo);
 
@@ -90,18 +91,23 @@ CREATE TABLE IF NOT EXISTS cloud_jobs (
     FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE SET NULL
 );
 
-CREATE TABLE IF NOT EXISTS download_history (
+CREATE TABLE IF NOT EXISTS download_jobs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     source_url TEXT NOT NULL,
     requested_filename TEXT NULL,
     result_filename TEXT NULL,
     behavior TEXT NOT NULL,
-    status TEXT NOT NULL,
+    yt_format TEXT NOT NULL DEFAULT 'best',
+    cloud_folder TEXT NULL,
+    cloud_conflict TEXT NULL,
+    delete_after INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'pending',
     error TEXT NULL,
     file_id INTEGER NULL,
     cloud_job_id INTEGER NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE SET NULL,
     FOREIGN KEY (cloud_job_id) REFERENCES cloud_jobs(id) ON DELETE SET NULL
@@ -115,6 +121,31 @@ SQL);
         self::ensureColumn($pdo, 'users', 'dropbox_display_name', 'dropbox_display_name TEXT NULL');
         self::migrateDropboxJobs($pdo);
         self::migrateBehaviorValues($pdo);
+        self::migrateDownloadHistory($pdo);
+    }
+
+    private static function migrateDownloadHistory(PDO $pdo): void
+    {
+        $tables = $pdo->query("SELECT name FROM sqlite_master WHERE type='table' AND name='download_history'")->fetchAll();
+        if ($tables === []) {
+            return;
+        }
+
+        $count = (int) $pdo->query('SELECT COUNT(*) FROM download_jobs')->fetchColumn();
+        if ($count === 0) {
+            $pdo->exec(
+                "INSERT INTO download_jobs
+                    (id, user_id, source_url, requested_filename, result_filename, behavior,
+                     status, error, file_id, cloud_job_id, created_at, updated_at)
+                 SELECT
+                    id, user_id, source_url, requested_filename, result_filename, behavior,
+                    CASE WHEN status = 'success' THEN 'complete' ELSE status END,
+                    error, file_id, cloud_job_id, created_at, created_at
+                 FROM download_history"
+            );
+        }
+
+        $pdo->exec('DROP TABLE IF EXISTS download_history');
     }
 
     private static function migrateDropboxJobs(PDO $pdo): void

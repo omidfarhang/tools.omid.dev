@@ -41,7 +41,7 @@ APP_BASE_URL=https://tools.omid.dev
 - **Disk + Cloud** — keep a host copy and push to Dropbox in one action.
 - **Delete after success** — optional checkbox per job (never forced by defaults).
 - **Send existing host files** — My Files → Send to cloud.
-- **History** — URL pull activity (including cloud destinations) on the History page; in-flight cloud jobs still show a live status banner on Home / My Files after you start a send.
+- **History** — URL pull jobs on the History page (expand a row for linked cloud details). Standalone My Files → cloud sends appear there too without duplicating download rows. Active download jobs show on Home while pending/in progress.
 
 ## How uploads work
 

@@ -40,13 +40,13 @@ COPY public ./public
 COPY --from=assets /app/public/assets ./public/assets
 COPY docker/apache-vhost.conf /etc/apache2/sites-available/tools.conf
 COPY docker/entrypoint.sh /entrypoint.sh
-COPY scripts/ytdl.sh ./scripts/ytdl.sh
+COPY scripts ./scripts
 
 RUN a2ensite tools \
     && sed -i 's/^Listen 80$/Listen 8080/' /etc/apache2/ports.conf \
     && mkdir -p storage/temp .secure \
     && chown -R www-data:www-data storage .secure \
-    && chmod +x scripts/ytdl.sh /entrypoint.sh
+    && chmod +x scripts/ytdl.sh scripts/process_download_job.php /entrypoint.sh
 
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public \
     DB_PATH=/var/www/html/storage/app.db \

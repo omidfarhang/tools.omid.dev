@@ -8,9 +8,8 @@ use App\Auth;
 use App\Cloud\CloudSendService;
 use App\Csrf;
 use App\Download\DownloadRegistry;
-use App\DownloadHistoryRepository;
-use App\FileRepository;
-use App\ShareService;
+use App\DownloadJobDispatcher;
+use App\DownloadJobRepository;
 use App\UserRepository;
 use App\View;
 
@@ -25,10 +24,8 @@ if (!$cloudConnected && in_array($preferred, ['save_to_cloud', 'save_to_both'], 
     $preferred = 'save_to_disk';
 }
 
-$cloudJob = null;
-$resultHtml = '';
 $downloads = DownloadRegistry::default();
-$history = new DownloadHistoryRepository();
+$jobRepo = new DownloadJobRepository();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     Csrf::requireValid();
@@ -45,9 +42,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $folder = UserRepository::normalizeFolder((string) ($_POST['cloud_folder'] ?? $_POST['dropbox_folder'] ?? $prefs['folder']));
     $conflict = UserRepository::normalizeConflict((string) ($_POST['cloud_conflict'] ?? $_POST['dropbox_conflict'] ?? $prefs['conflict']));
     $deleteAfter = isset($_POST['delete_after']) && (string) $_POST['delete_after'] === '1';
-
-    $files = new FileRepository();
-    $shares = new ShareService();
 
     if ($url === '') {
         flash('error', 'URL is required.');
@@ -66,148 +60,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('/user/');
     }
 
-    $downloadResult = null;
-    $fileId = null;
-    $cloudJobId = null;
-    $historyStatus = 'success';
-    $historyError = null;
-    $resultFilename = $filename !== '' ? $filename : null;
+    $jobId = $jobRepo->create([
+        'user_id' => (int) $user['id'],
+        'source_url' => $url,
+        'requested_filename' => $filename !== '' ? $filename : null,
+        'behavior' => $behavior,
+        'yt_format' => $ytFormat,
+        'cloud_folder' => $needsCloud ? $folder : null,
+        'cloud_conflict' => $needsCloud ? $conflict : null,
+        'delete_after' => $needsCloud && $deleteAfter,
+    ]);
 
-    $recordHistory = static function () use (
-        $history,
-        $user,
-        $url,
-        $filename,
-        &$resultFilename,
-        $behavior,
-        &$historyStatus,
-        &$historyError,
-        &$fileId,
-        &$cloudJobId
-    ): void {
-        $history->record([
-            'user_id' => (int) $user['id'],
-            'source_url' => $url,
-            'requested_filename' => $filename !== '' ? $filename : null,
-            'result_filename' => $resultFilename,
-            'behavior' => $behavior,
-            'status' => $historyStatus,
-            'error' => $historyError,
-            'file_id' => $fileId,
-            'cloud_job_id' => $cloudJobId,
-        ]);
-    };
-
-    $needsDisk = $behavior === 'save_to_disk'
-        || $behavior === 'save_to_both'
-        || ($behavior === 'save_to_cloud' && $source->requiresLocalFile());
-
-    if ($needsDisk) {
-        $downloadResult = $downloads->download($url, [
-            'filename' => $filename !== '' ? $filename : null,
-            'yt_format' => $ytFormat,
-        ]);
-
-        if (!$downloadResult['ok']) {
-            $historyStatus = 'failed';
-            $historyError = $downloadResult['error'] ?? 'Download failed.';
-            $recordHistory();
-            flash('error', $historyError);
-            redirect('/');
-        }
-
-        $resultFilename = $downloadResult['original_name'] ?? $resultFilename;
-        $fileId = $files->create(
-            (int) $user['id'],
-            $downloadResult['stored_name'],
-            $downloadResult['original_name'],
-            (int) $downloadResult['size'],
-            $url
-        );
-
-        if ($behavior === 'save_to_disk' || $behavior === 'save_to_both') {
-            $resultHtml = '<div class="alert alert-success">'
-                . 'Successfully downloaded <strong>' . e($downloadResult['original_name']) . '</strong> '
-                . '(' . e(human_filesize((int) $downloadResult['size'])) . '). '
-                . '<a href="/download.php?id=' . (int) $fileId . '">Download</a> · '
-                . '<a href="/files.php">My Files</a> · '
-                . '<a href="/history.php">History</a>'
-                . '</div>';
-        }
-    }
-
-    if ($needsCloud) {
-        if ($source->requiresLocalFile() || $behavior === 'save_to_both') {
-            $token = $shares->enable((int) $fileId, (int) $user['id']);
-            $fetchUrl = ShareService::publicUrl($token);
-            $cloudFilename = $downloadResult['original_name'] ?? 'video.mp4';
-            $localFileId = (int) $fileId;
-        } else {
-            $fetchUrl = $url;
-            $cloudFilename = $filename !== '' ? $filename : null;
-            $localFileId = null;
-            $deleteAfter = false;
-        }
-
-        $sent = $cloud->startForUser(
-            $user,
-            $fetchUrl,
-            $cloudFilename,
-            $folder,
-            $conflict,
-            $deleteAfter,
-            $localFileId,
-            'dropbox'
-        );
-
-        $cloudJobId = isset($sent['job_id']) ? (int) $sent['job_id'] : null;
-        if ($resultFilename === null && isset($sent['filename'])) {
-            $resultFilename = (string) $sent['filename'];
-        } elseif ($resultFilename === null && $cloudFilename !== null) {
-            $resultFilename = $cloudFilename;
-        }
-
-        if ($sent['success']) {
-            if (($sent['status'] ?? '') === 'skipped') {
-                $resultHtml .= '<div class="alert alert-warning">'
-                    . e($sent['message'] ?? 'Skipped — file already exists in cloud.')
-                    . ' <a href="/history.php">View history</a>'
-                    . '</div>';
-            } else {
-                $cloudJob = [
-                    'asyncJobId' => $sent['async_job_id'] ?? null,
-                    'filename' => $sent['filename'] ?? ($cloudFilename ?? 'file'),
-                    'jobId' => $sent['job_id'] ?? null,
-                    'provider' => 'dropbox',
-                ];
-            }
-        } else {
-            $historyStatus = 'failed';
-            $historyError = ($sent['message'] ?? 'Cloud upload failed')
-                . (isset($sent['error']) ? ' — ' . (string) $sent['error'] : '');
-            $resultHtml .= '<div class="alert alert-danger">' . e($historyError)
-                . ' <a href="/history.php">View history</a>'
-                . '</div>';
-        }
-    }
-
-    $recordHistory();
+    flash('success', 'Download queued.');
+    session_write_close();
+    DownloadJobDispatcher::dispatch($jobId);
+    redirect('/');
 }
+
+DownloadJobDispatcher::dispatchPending(5);
+$activeJobs = $jobRepo->activeForUser((int) $user['id']);
+
+$destinationLabel = static function (string $behavior): string {
+    return match ($behavior) {
+        'save_to_cloud', 'save_to_dropbox' => 'Cloud',
+        'save_to_both' => 'Disk + Cloud',
+        default => 'Disk',
+    };
+};
+
+$statusBadge = static function (string $status): string {
+    return match ($status) {
+        'complete' => 'success',
+        'failed' => 'danger',
+        'in_progress' => 'info',
+        'pending' => 'secondary',
+        default => 'secondary',
+    };
+};
+
+$truncateUrl = static function (string $url, int $max = 56): string {
+    if (strlen($url) <= $max) {
+        return $url;
+    }
+
+    return substr($url, 0, $max - 1) . '…';
+};
 
 ob_start();
 ?>
 <div class="page-header">
     <p class="page-lede">Paste a URL to pull onto this host, or send it to your connected cloud.</p>
 </div>
-
-<div id="cloud-status" class="alert d-none" role="alert">
-    <div id="cloud-message"></div>
-    <div id="cloud-progress" class="progress mt-2 d-none">
-        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width:100%"></div>
-    </div>
-</div>
-
-<?= $resultHtml ?>
 
 <?php if (!$cloudConnected): ?>
     <div class="status-callout">
@@ -300,7 +203,51 @@ ob_start();
     </form>
 </div>
 
-<?php include dirname(__DIR__) . '/templates/partials/cloud_monitor_js.php'; ?>
+<div class="panel panel-flush mt-3 <?= $activeJobs ? '' : 'd-none' ?>" id="active-jobs-panel">
+    <div class="panel-head d-flex justify-content-between align-items-center">
+        <h2 class="panel-title mb-0">Active jobs</h2>
+        <span class="text-muted small" id="active-jobs-count"><?= count($activeJobs) ?> active</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-striped align-middle mb-0">
+            <thead>
+            <tr>
+                <th>Source</th>
+                <th>Name</th>
+                <th>Destination</th>
+                <th>Status</th>
+            </tr>
+            </thead>
+            <tbody id="active-jobs-body">
+            <?php foreach ($activeJobs as $job): ?>
+                <?php
+                $name = (string) ($job['result_filename'] ?? $job['requested_filename'] ?? '');
+                $status = (string) ($job['status'] ?? 'pending');
+                $cloudStatus = (string) ($job['cloud_status'] ?? '');
+                $displayStatus = $status;
+                if ($status === 'complete' && in_array($cloudStatus, ['pending', 'in_progress'], true)) {
+                    $displayStatus = 'cloud_' . $cloudStatus;
+                }
+                ?>
+                <tr data-job-id="<?= (int) $job['id'] ?>">
+                    <td class="mono small" title="<?= e((string) $job['source_url']) ?>"><?= e($truncateUrl((string) $job['source_url'])) ?></td>
+                    <td class="mono"><?= e($name !== '' ? $name : '—') ?></td>
+                    <td><?= e($destinationLabel((string) $job['behavior'])) ?></td>
+                    <td>
+                        <span class="badge text-bg-<?= e($statusBadge($status === 'complete' && $cloudStatus !== '' ? 'in_progress' : $status)) ?> job-status-badge">
+                            <?= e($displayStatus === 'cloud_in_progress' || $displayStatus === 'cloud_pending' ? 'cloud upload' : $displayStatus) ?>
+                        </span>
+                        <?php if (!empty($job['error'])): ?>
+                            <div class="text-muted small mt-1 job-error"><?= e((string) $job['error']) ?></div>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+
 <script>
 (function () {
     const urlInput = document.getElementById('DLURL');
@@ -364,6 +311,103 @@ ob_start();
 
     syncFilenameForUrl(urlInput.value);
     syncCloudOptions();
+
+    const panel = document.getElementById('active-jobs-panel');
+    const body = document.getElementById('active-jobs-body');
+    const countEl = document.getElementById('active-jobs-count');
+    const csrf = <?= json_encode(Csrf::token()) ?>;
+
+    function destinationLabel(behavior) {
+        if (behavior === 'save_to_cloud' || behavior === 'save_to_dropbox') return 'Cloud';
+        if (behavior === 'save_to_both') return 'Disk + Cloud';
+        return 'Disk';
+    }
+
+    function statusBadgeClass(status) {
+        if (status === 'complete') return 'badge text-bg-success job-status-badge';
+        if (status === 'failed') return 'badge text-bg-danger job-status-badge';
+        if (status === 'in_progress' || status === 'cloud_upload') return 'badge text-bg-info job-status-badge';
+        return 'badge text-bg-secondary job-status-badge';
+    }
+
+    function truncateUrl(url, max) {
+        max = max || 56;
+        if (!url || url.length <= max) return url || '';
+        return url.substring(0, max - 1) + '…';
+    }
+
+    function displayStatus(job) {
+        if (job.status === 'complete' && (job.cloud_status === 'pending' || job.cloud_status === 'in_progress')) {
+            return 'cloud upload';
+        }
+        return job.status || 'pending';
+    }
+
+    function renderJobs(jobs) {
+        if (!panel || !body || !countEl) return;
+        if (!jobs.length) {
+            panel.classList.add('d-none');
+            body.innerHTML = '';
+            countEl.textContent = '0 active';
+            return;
+        }
+        panel.classList.remove('d-none');
+        countEl.textContent = jobs.length + ' active';
+        body.innerHTML = jobs.map(function (job) {
+            const name = job.result_filename || job.requested_filename || '—';
+            const label = displayStatus(job);
+            const badgeStatus = label === 'cloud upload' ? 'cloud_upload' : job.status;
+            const err = job.error ? '<div class="text-muted small mt-1 job-error"></div>' : '';
+            return '<tr data-job-id="' + job.id + '">'
+                + '<td class="mono small" title="' + escapeAttr(job.source_url) + '">' + escapeHtml(truncateUrl(job.source_url)) + '</td>'
+                + '<td class="mono">' + escapeHtml(name) + '</td>'
+                + '<td>' + escapeHtml(destinationLabel(job.behavior)) + '</td>'
+                + '<td><span class="' + statusBadgeClass(badgeStatus) + '">' + escapeHtml(label) + '</span>'
+                + (job.error ? '<div class="text-muted small mt-1">' + escapeHtml(job.error) + '</div>' : '')
+                + '</td></tr>';
+        }).join('');
+    }
+
+    function escapeHtml(str) {
+        return String(str == null ? '' : str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function escapeAttr(str) {
+        return escapeHtml(str).replace(/'/g, '&#39;');
+    }
+
+    function pollActiveJobs() {
+        const bodyParams = new URLSearchParams({ _csrf: csrf });
+        fetch('/api/download_jobs_status.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: bodyParams.toString(),
+            credentials: 'same-origin',
+        })
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+                if (data && data.success && Array.isArray(data.jobs)) {
+                    renderJobs(data.jobs);
+                    if (data.jobs.length > 0) {
+                        setTimeout(pollActiveJobs, 2000);
+                    }
+                }
+            })
+            .catch(function () {
+                setTimeout(pollActiveJobs, 4000);
+            });
+    }
+
+    if (<?= $activeJobs ? 'true' : 'false' ?>) {
+        setTimeout(pollActiveJobs, 2000);
+    } else {
+        // Still poke once in case a job was queued just before navigation.
+        setTimeout(pollActiveJobs, 1500);
+    }
 })();
 </script>
 <?php
