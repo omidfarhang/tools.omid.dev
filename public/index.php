@@ -5,10 +5,10 @@ declare(strict_types=1);
 require dirname(__DIR__) . '/src/bootstrap.php';
 
 use App\Auth;
-use App\Cloud\CloudJobRepository;
 use App\Cloud\CloudSendService;
 use App\Csrf;
 use App\Download\DownloadRegistry;
+use App\DownloadHistoryRepository;
 use App\FileRepository;
 use App\ShareService;
 use App\UserRepository;
@@ -21,10 +21,14 @@ $cloud = CloudSendService::create();
 $cloudConnected = $cloud->registry()->anyConnected($user);
 $prefs = UserRepository::cloudPrefs($user);
 $preferred = $prefs['behavior'];
+if (!$cloudConnected && in_array($preferred, ['save_to_cloud', 'save_to_both'], true)) {
+    $preferred = 'save_to_disk';
+}
 
 $cloudJob = null;
 $resultHtml = '';
 $downloads = DownloadRegistry::default();
+$history = new DownloadHistoryRepository();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     Csrf::requireValid();
@@ -64,6 +68,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $downloadResult = null;
     $fileId = null;
+    $cloudJobId = null;
+    $historyStatus = 'success';
+    $historyError = null;
+    $resultFilename = $filename !== '' ? $filename : null;
+
+    $recordHistory = static function () use (
+        $history,
+        $user,
+        $url,
+        $filename,
+        &$resultFilename,
+        $behavior,
+        &$historyStatus,
+        &$historyError,
+        &$fileId,
+        &$cloudJobId
+    ): void {
+        $history->record([
+            'user_id' => (int) $user['id'],
+            'source_url' => $url,
+            'requested_filename' => $filename !== '' ? $filename : null,
+            'result_filename' => $resultFilename,
+            'behavior' => $behavior,
+            'status' => $historyStatus,
+            'error' => $historyError,
+            'file_id' => $fileId,
+            'cloud_job_id' => $cloudJobId,
+        ]);
+    };
 
     $needsDisk = $behavior === 'save_to_disk'
         || $behavior === 'save_to_both'
@@ -76,10 +109,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ]);
 
         if (!$downloadResult['ok']) {
-            flash('error', $downloadResult['error'] ?? 'Download failed.');
+            $historyStatus = 'failed';
+            $historyError = $downloadResult['error'] ?? 'Download failed.';
+            $recordHistory();
+            flash('error', $historyError);
             redirect('/');
         }
 
+        $resultFilename = $downloadResult['original_name'] ?? $resultFilename;
         $fileId = $files->create(
             (int) $user['id'],
             $downloadResult['stored_name'],
@@ -93,7 +130,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 . 'Successfully downloaded <strong>' . e($downloadResult['original_name']) . '</strong> '
                 . '(' . e(human_filesize((int) $downloadResult['size'])) . '). '
                 . '<a href="/download.php?id=' . (int) $fileId . '">Download</a> · '
-                . '<a href="/files.php">My Files</a>'
+                . '<a href="/files.php">My Files</a> · '
+                . '<a href="/history.php">History</a>'
                 . '</div>';
         }
     }
@@ -122,10 +160,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'dropbox'
         );
 
+        $cloudJobId = isset($sent['job_id']) ? (int) $sent['job_id'] : null;
+        if ($resultFilename === null && isset($sent['filename'])) {
+            $resultFilename = (string) $sent['filename'];
+        } elseif ($resultFilename === null && $cloudFilename !== null) {
+            $resultFilename = $cloudFilename;
+        }
+
         if ($sent['success']) {
             if (($sent['status'] ?? '') === 'skipped') {
                 $resultHtml .= '<div class="alert alert-warning">'
                     . e($sent['message'] ?? 'Skipped — file already exists in cloud.')
+                    . ' <a href="/history.php">View history</a>'
                     . '</div>';
             } else {
                 $cloudJob = [
@@ -136,18 +182,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ];
             }
         } else {
-            $resultHtml .= '<div class="alert alert-danger">' . e($sent['message'] ?? 'Cloud upload failed')
-                . (isset($sent['error']) ? ' — ' . e((string) $sent['error']) : '')
+            $historyStatus = 'failed';
+            $historyError = ($sent['message'] ?? 'Cloud upload failed')
+                . (isset($sent['error']) ? ' — ' . (string) $sent['error'] : '');
+            $resultHtml .= '<div class="alert alert-danger">' . e($historyError)
+                . ' <a href="/history.php">View history</a>'
                 . '</div>';
         }
     }
+
+    $recordHistory();
 }
-
-$cloudJobs = (new CloudJobRepository())->recentForUser((int) $user['id']);
-
-$btnClass = static function (string $action) use ($preferred): string {
-    return $action === $preferred ? 'btn btn-primary' : 'btn btn-outline-primary';
-};
 
 ob_start();
 ?>
@@ -177,7 +222,7 @@ ob_start();
         <?= Csrf::field() ?>
         <div class="mb-3">
             <label for="DLURL" class="form-label">URL</label>
-            <input name="DLURL" type="url" class="form-control" id="DLURL" oninput="getFileNameFromUrl(this.value)" placeholder="https://..." required>
+            <input name="DLURL" type="url" class="form-control" id="DLURL" placeholder="https://..." required>
         </div>
         <div class="mb-3 d-none" id="youtube-options">
             <label for="yt_format" class="form-label">YouTube Format</label>
@@ -193,13 +238,40 @@ ob_start();
                 <option value="240">240p (SD)</option>
             </select>
         </div>
+
+        <fieldset class="mb-3">
+            <legend class="form-label mb-2">Save to</legend>
+            <div class="d-flex flex-column gap-2">
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="behavior" id="behavior_disk"
+                           value="save_to_disk" <?= $preferred === 'save_to_disk' ? 'checked' : '' ?>>
+                    <label class="form-check-label" for="behavior_disk">Disk</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="behavior" id="behavior_cloud"
+                           value="save_to_cloud"
+                           <?= $preferred === 'save_to_cloud' ? 'checked' : '' ?>
+                           <?= $cloudConnected ? '' : 'disabled' ?>>
+                    <label class="form-check-label" for="behavior_cloud">Cloud</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="behavior" id="behavior_both"
+                           value="save_to_both"
+                           <?= $preferred === 'save_to_both' ? 'checked' : '' ?>
+                           <?= $cloudConnected ? '' : 'disabled' ?>>
+                    <label class="form-check-label" for="behavior_both">Disk + Cloud</label>
+                </div>
+            </div>
+        </fieldset>
+
         <div class="mb-3">
             <label for="DLFILENAME" class="form-label">Filename</label>
-            <input name="DLFILENAME" type="text" class="form-control mono" id="DLFILENAME" placeholder="Auto generated, can be changed">
+            <input name="DLFILENAME" type="text" class="form-control mono" id="DLFILENAME" placeholder="Auto from URL, can be changed">
+            <div class="form-text d-none" id="filename-youtube-hint">YouTube sets the name from the video title.</div>
         </div>
 
         <?php if ($cloudConnected): ?>
-            <div class="border rounded p-3 mb-3 bg-white">
+            <div class="border rounded p-3 mb-3 bg-white d-none" id="cloud-options">
                 <div class="mb-3">
                     <label for="cloud_folder" class="form-label">Cloud folder</label>
                     <input name="cloud_folder" type="text" class="form-control mono" id="cloud_folder"
@@ -219,32 +291,80 @@ ob_start();
                     <label class="form-check-label" for="delete_after">
                         Delete from host after cloud succeeds
                     </label>
-                    <div class="form-text">Applies when a host copy exists (YouTube, Disk + Cloud). Ignored for direct URL → cloud.</div>
+                    <div class="form-text">Only when this download also keeps a host copy (YouTube → cloud, or Disk + Cloud).</div>
                 </div>
             </div>
         <?php endif; ?>
 
-        <div class="d-flex flex-wrap gap-2">
-            <button class="<?= e($btnClass('save_to_disk')) ?>" name="behavior" type="submit" value="save_to_disk">Save To Disk</button>
-            <button class="<?= e($btnClass('save_to_cloud')) ?>" name="behavior" type="submit" value="save_to_cloud" <?= $cloudConnected ? '' : 'disabled' ?>>Save To Cloud</button>
-            <button class="<?= e($btnClass('save_to_both')) ?>" name="behavior" type="submit" value="save_to_both" <?= $cloudConnected ? '' : 'disabled' ?>>Save To Disk + Cloud</button>
-        </div>
+        <button class="btn btn-primary" type="submit">Start download</button>
     </form>
 </div>
 
-<?php
-include dirname(__DIR__) . '/templates/partials/cloud_jobs.php';
-include dirname(__DIR__) . '/templates/partials/cloud_monitor_js.php';
-?>
+<?php include dirname(__DIR__) . '/templates/partials/cloud_monitor_js.php'; ?>
 <script>
-function getFileNameFromUrl(url) {
-    if (!url) return;
-    const isYoutube = url.match(/^(?:http(?:s)?:\/\/)?(?:www\.)?(?:m\.)?(?:youtu\.be\/|youtube\.com\/(?:(?:watch)?\?(?:.*&)?v(?:i)?=|(?:embed|v|vi|user|shorts)\/))([^\?&\"'>]+)/);
-    document.getElementById('youtube-options').classList.toggle('d-none', !(isYoutube && isYoutube[1]));
-    const hashIndex = url.indexOf('#');
-    url = hashIndex !== -1 ? url.substring(0, hashIndex) : url;
-    document.getElementById('DLFILENAME').value = (url.split('/').pop() || '').replace(/[\?].*$/g, '');
-}
+(function () {
+    const urlInput = document.getElementById('DLURL');
+    const filenameInput = document.getElementById('DLFILENAME');
+    const youtubeOptions = document.getElementById('youtube-options');
+    const youtubeHint = document.getElementById('filename-youtube-hint');
+    const cloudOptions = document.getElementById('cloud-options');
+    let filenameDirty = false;
+
+    const youtubeRe = /^(?:http(?:s)?:\/\/)?(?:www\.)?(?:m\.)?(?:youtu\.be\/|youtube\.com\/(?:(?:watch)?\?(?:.*&)?v(?:i)?=|(?:embed|v|vi|user|shorts)\/))([^\?&\"'>]+)/;
+
+    function isYoutubeUrl(url) {
+        const match = url.match(youtubeRe);
+        return !!(match && match[1]);
+    }
+
+    function filenameFromUrl(url) {
+        const hashIndex = url.indexOf('#');
+        if (hashIndex !== -1) {
+            url = url.substring(0, hashIndex);
+        }
+        return (url.split('/').pop() || '').replace(/[\?].*$/g, '');
+    }
+
+    function syncFilenameForUrl(url) {
+        const yt = isYoutubeUrl(url);
+        youtubeOptions.classList.toggle('d-none', !yt);
+        youtubeHint.classList.toggle('d-none', !yt);
+        filenameInput.disabled = yt;
+        if (yt) {
+            filenameInput.value = '';
+            filenameDirty = false;
+            return;
+        }
+        if (!filenameDirty) {
+            filenameInput.value = filenameFromUrl(url);
+        }
+    }
+
+    function syncCloudOptions() {
+        if (!cloudOptions) return;
+        const selected = document.querySelector('input[name="behavior"]:checked');
+        const value = selected ? selected.value : 'save_to_disk';
+        const show = value === 'save_to_cloud' || value === 'save_to_both';
+        cloudOptions.classList.toggle('d-none', !show);
+    }
+
+    filenameInput.addEventListener('input', function () {
+        if (!filenameInput.disabled) {
+            filenameDirty = true;
+        }
+    });
+
+    urlInput.addEventListener('input', function () {
+        syncFilenameForUrl(urlInput.value);
+    });
+
+    document.querySelectorAll('input[name="behavior"]').forEach(function (el) {
+        el.addEventListener('change', syncCloudOptions);
+    });
+
+    syncFilenameForUrl(urlInput.value);
+    syncCloudOptions();
+})();
 </script>
 <?php
 View::render('Download', ob_get_clean(), $user);

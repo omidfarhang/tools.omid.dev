@@ -89,6 +89,23 @@ CREATE TABLE IF NOT EXISTS cloud_jobs (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE SET NULL
 );
+
+CREATE TABLE IF NOT EXISTS download_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    source_url TEXT NOT NULL,
+    requested_filename TEXT NULL,
+    result_filename TEXT NULL,
+    behavior TEXT NOT NULL,
+    status TEXT NOT NULL,
+    error TEXT NULL,
+    file_id INTEGER NULL,
+    cloud_job_id INTEGER NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE SET NULL,
+    FOREIGN KEY (cloud_job_id) REFERENCES cloud_jobs(id) ON DELETE SET NULL
+);
 SQL);
 
         self::ensureColumn($pdo, 'users', 'dropbox_default_behavior', "dropbox_default_behavior TEXT NOT NULL DEFAULT 'save_to_disk'");

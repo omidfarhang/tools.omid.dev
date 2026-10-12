@@ -25,6 +25,7 @@ $navIcon = static function (string $name): string {
     $icons = [
         'home' => '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-9.5Z"/></svg>',
         'files' => '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 4h6l4 4v12a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z"/><path d="M14 4v4h4"/></svg>',
+        'history' => '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 1.5"/></svg>',
         'user' => '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 19.5c1.5-3 4-4.5 7-4.5s5.5 1.5 7 4.5"/></svg>',
         'admin' => '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3 4.5 6.5v5c0 4.5 3.2 7.8 7.5 9 4.3-1.2 7.5-4.5 7.5-9v-5L12 3Z"/></svg>',
         'users' => '<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3.5 19c1.2-2.8 3.3-4.2 5.5-4.2s4.3 1.4 5.5 4.2"/><path d="M14 19c.7-1.8 2-2.8 3.5-2.8 1.2 0 2.2.6 3 1.8"/></svg>',
@@ -39,6 +40,7 @@ $renderNav = static function () use ($user, $isActive, $navIcon): void {
     <nav class="sidebar-nav">
         <a href="/" class="<?= $isActive('/', '/index.php') ? 'active' : '' ?>"><?= $navIcon('home') ?> Home</a>
         <a href="/files.php" class="<?= $isActive('/files.php') ? 'active' : '' ?>"><?= $navIcon('files') ?> My Files</a>
+        <a href="/history.php" class="<?= $isActive('/history.php') ? 'active' : '' ?>"><?= $navIcon('history') ?> History</a>
         <a href="/user/" class="<?= $isActive('/user') ? 'active' : '' ?>"><?= $navIcon('user') ?> Account</a>
         <?php if (($user['role'] ?? '') === 'admin'): ?>
             <div class="nav-section">Admin</div>

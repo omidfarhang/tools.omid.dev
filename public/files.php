@@ -5,7 +5,6 @@ declare(strict_types=1);
 require dirname(__DIR__) . '/src/bootstrap.php';
 
 use App\Auth;
-use App\Cloud\CloudJobRepository;
 use App\Cloud\CloudSendService;
 use App\Csrf;
 use App\FileRepository;
@@ -20,7 +19,6 @@ $files = (new FileRepository())->forUser((int) $user['id']);
 $cloud = CloudSendService::create();
 $cloudConnected = $cloud->registry()->anyConnected($user);
 $prefs = UserRepository::cloudPrefs($user);
-$cloudJobs = (new CloudJobRepository())->recentForUser((int) $user['id']);
 
 $cloudJob = null;
 if (!empty($_SESSION['_cloud_monitor'])) {
@@ -159,6 +157,5 @@ ob_start();
 </div>
 
 <?php
-include dirname(__DIR__) . '/templates/partials/cloud_jobs.php';
 include dirname(__DIR__) . '/templates/partials/cloud_monitor_js.php';
 View::render('My Files', ob_get_clean(), $user);
