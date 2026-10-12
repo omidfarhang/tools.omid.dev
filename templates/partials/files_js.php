@@ -45,12 +45,16 @@ document.addEventListener('DOMContentLoaded', function () {
     function updateBulkBar() {
         const checked = checkedBoxes();
         const n = checked.length;
+        const hasSelection = n > 0;
         if (bulkBar) {
-            bulkBar.classList.toggle('d-none', n === 0);
+            bulkBar.classList.toggle('is-active', hasSelection);
         }
         if (bulkCount) {
             bulkCount.textContent = n === 1 ? '1 selected' : n + ' selected';
         }
+        document.querySelectorAll('[data-bulk-revoke], [data-bulk-delete]').forEach(function (btn) {
+            btn.disabled = !hasSelection;
+        });
         if (selectAll) {
             const rows = visibleRows();
             const allChecked = rows.length > 0 && rows.every(function (row) {

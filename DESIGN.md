@@ -159,7 +159,7 @@ Keep corners consistent within a view; do not mix sharp and pill shapes on the s
 - **Panel / panel-flush:** Primary content container for forms and tables.
 - **Stat-card / action-tile:** Home overview only; hover lift; tiles border to accent on hover.
 - **Tables:** Muted uppercase heads, mono filenames, striped odd rows near-white.
-- **Files table / toolbar:** Checkbox + truncated mono name + size/date + Public/Private badge + single Actions dropdown. Compact filter + count sit in the panel head; a teal selection strip appears only when rows are checked. Sort via column header links.
+- **Files table / toolbar:** Checkbox + truncated mono name + size/date + Public/Private badge + single Actions dropdown. Compact filter + count sit in the panel head; a fixed-height selection strip stays reserved with bulk actions disabled until rows are checked. Sort via column header links.
 - **Confirm / rename / cloud modals:** Bootstrap modals with panel radius and border tokens; delete confirms with mono filename; no native `confirm()`.
 - **Forms:** Bootstrap controls restyled — border, 8px radius, teal focus ring.
 - **Buttons:** Primary = accent teal; outline secondary for Logout and secondary actions; keep font-weight ~550.
