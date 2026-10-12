@@ -36,7 +36,7 @@ $sortMark = static function (string $col) use ($sort, $dir): string {
 <div class="panel-head files-panel-head">
     <h2 class="panel-title mb-0"><?= e($panelTitle) ?></h2>
     <div class="files-panel-tools">
-        <label class="visually-hidden" for="files-search">Search files</label>
+        <label class="visually-hidden" for="files-search">Filter files</label>
         <input type="search" id="files-search" class="form-control form-control-sm files-search"
                placeholder="Filter…"
                data-files-search autocomplete="off">
@@ -46,10 +46,8 @@ $sortMark = static function (string $col) use ($sort, $dir): string {
 
 <div class="files-selection-bar" data-files-bulk>
     <span class="files-selection-label" data-files-bulk-count>0 selected</span>
-    <div class="files-selection-actions">
-        <button type="button" class="btn btn-sm btn-outline-secondary" data-bulk-revoke disabled>Disable links</button>
-        <button type="button" class="btn btn-sm btn-outline-danger" data-bulk-delete disabled>Delete</button>
-    </div>
+    <button type="button" class="btn btn-sm btn-outline-secondary" data-bulk-revoke disabled>Disable links</button>
+    <button type="button" class="btn btn-sm btn-outline-danger" data-bulk-delete disabled>Delete</button>
 </div>
 
 <div class="files-table-scroll">
