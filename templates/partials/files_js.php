@@ -1,10 +1,10 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const table = document.querySelector('[data-files-table]');
-    if (!table || typeof bootstrap === 'undefined') return;
+    if (!table || typeof tabler === 'undefined') return;
 
     table.querySelectorAll('[data-bs-toggle="dropdown"]').forEach(function (el) {
-        bootstrap.Dropdown.getOrCreateInstance(el, {
+        tabler.Dropdown.getOrCreateInstance(el, {
             popperConfig: function (defaultConfig) {
                 return Object.assign({}, defaultConfig, { strategy: 'fixed' });
             }
@@ -23,9 +23,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const deleteModalEl = document.getElementById('filesDeleteModal');
     const renameModalEl = document.getElementById('filesRenameModal');
     const cloudModalEl = document.getElementById('filesCloudModal');
-    const deleteModal = deleteModalEl ? bootstrap.Modal.getOrCreateInstance(deleteModalEl) : null;
-    const renameModal = renameModalEl ? bootstrap.Modal.getOrCreateInstance(renameModalEl) : null;
-    const cloudModal = cloudModalEl ? bootstrap.Modal.getOrCreateInstance(cloudModalEl) : null;
+    const deleteModal = deleteModalEl ? tabler.Modal.getOrCreateInstance(deleteModalEl) : null;
+    const renameModal = renameModalEl ? tabler.Modal.getOrCreateInstance(renameModalEl) : null;
+    const cloudModal = cloudModalEl ? tabler.Modal.getOrCreateInstance(cloudModalEl) : null;
 
     let pendingBulkDelete = null;
 

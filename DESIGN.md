@@ -128,14 +128,14 @@ Auth screens use soft radial teal + slate washes over a cool gradient — not fl
 - **Technical:** Platform monospace (`ui-monospace`, SF Mono, Menlo, Consolas) for filenames, code, and table links.
 - No webfonts — rely on the OS UI face so the app reads as a plain operator dashboard.
 - Uppercase micro-labels (nav sections, table heads, stat labels) with modest letter-spacing — sparingly. Avoid tight negative tracking on titles.
-- **Bootstrap bridge:** Stock Bootstrap 5 CSS is kept; theme it by mapping `--bs-font-sans-serif`, `--bs-font-monospace`, `--bs-body-*`, `--bs-border-*`, and `--bs-primary*` to app tokens in `app.css` `:root`. Badges/buttons/forms also set `font-family: var(--font)` so Bootstrap component rules cannot drift.
+- **Tabler bridge:** UI kit is [`@tabler/core`](https://tabler.io) (Bootstrap-compatible). Theme it by mapping `--tblr-font-*`, `--tblr-body-*`, `--tblr-border-*`, and `--tblr-primary*` to app tokens in `app.css` `:root`. Override fonts to system UI (no Tabler webfonts). Keep the custom sidebar/topbar shell — do not adopt Tabler’s full demo chrome.
 
 ## Layout
 
-- **App shell:** Fixed 260px sidebar + sticky frosted topbar (64px) + padded content. Below 992px, sidebar becomes Bootstrap offcanvas; hamburger in topbar.
+- **App shell:** Fixed 260px sidebar + sticky frosted topbar (64px) + padded content. Below 992px, sidebar becomes offcanvas; hamburger in topbar.
 - **Auth shell:** Centered panel (~420px), brand above the form, footer below.
-- **Content rhythm:** Panels stack vertically; home uses stat cards / action tiles in Bootstrap grids. Prefer one page header (title + short lede) then panels — not dashboard widget sprawl.
-- Spacing follows ~8px rhythm via Bootstrap + custom padding (`1.25rem`–`1.5rem` content).
+- **Content rhythm:** Panels stack vertically; home uses stat cards / action tiles in grid utilities. Prefer one page header (title + short lede) then panels — not dashboard widget sprawl.
+- Spacing follows ~8px rhythm via Tabler/Bootstrap utilities + custom padding (`1.25rem`–`1.5rem` content).
 
 ## Elevation & Depth
 
@@ -158,11 +158,11 @@ Keep corners consistent within a view; do not mix sharp and pill shapes on the s
 - **Stat-card / action-tile:** Home overview only; hover lift; tiles border to accent on hover.
 - **Tables:** Muted uppercase heads, mono filenames, striped odd rows near-white.
 - **Files table / toolbar:** Checkbox + truncated mono name + size/date + Public/Private badge + single Actions dropdown. Compact filter + count sit in the panel head; a fixed-height selection strip stays reserved with bulk actions disabled until rows are checked. Sort via column header links.
-- **Confirm / rename / cloud modals:** Bootstrap modals with panel radius and border tokens; delete confirms with mono filename; no native `confirm()`.
-- **Forms:** Bootstrap controls restyled — border, 8px radius, teal focus ring. Multi-step tool forms (home download) use `.form-section` + uppercase `.form-section-title` dividers, optional `.source-options-block` for nested extractor options, and `.choice-tile` grids for exclusive destinations.
-- **Buttons:** Primary = accent teal; outline secondary for Logout and secondary actions; keep font-weight 500.
-- **Badges:** Dashboard weight 600 (not Bootstrap’s default 700), `0.75rem`, small radius — status chips and share Public/Private.
-- **Alerts / status-callout:** Bootstrap alerts for flashes; warning callout for Dropbox/setup hints.
+- **Confirm / rename / cloud modals:** Tabler/Bootstrap modals (`tabler.Modal` in JS) with panel radius and border tokens; delete confirms with mono filename; no native `confirm()`.
+- **Forms:** Form controls restyled — border, 8px radius, teal focus ring. Multi-step tool forms (home download) use `.form-section` + uppercase `.form-section-title` dividers, optional `.source-options-block` for nested extractor options, and `.choice-tile` grids for exclusive destinations.
+- **Buttons:** Primary = accent teal (via `--tblr-primary`); outline secondary for Logout and secondary actions; keep font-weight 500.
+- **Badges:** Dashboard weight 600, `0.75rem`, small radius — status chips and share Public/Private.
+- **Alerts / status-callout:** Alerts for flashes; warning callout for Dropbox/setup hints.
 - **Empty state:** Centered muted copy with a strong first line.
 
 Reuse these before inventing new card/tile variants.
@@ -171,8 +171,8 @@ Reuse these before inventing new card/tile variants.
 
 - Do keep the teal accent reserved for primary actions, links, and active indicators
 - Do use the system UI + platform mono stacks as defined in `app.css` (no Bunny/Google font loads)
-- Do theme Bootstrap via `--bs-*` bridges in `app.css` rather than forking or Sass-compiling Bootstrap for typography/color tweaks
-- Do preserve the sidebar + topbar shell for authenticated pages and the centered auth panel for guests
+- Do theme Tabler via `--tblr-*` bridges in `app.css`; do not load a separate Bootstrap package alongside Tabler
+- Do preserve the custom sidebar + topbar shell for authenticated pages and the centered auth panel for guests (avoid Tabler demo layouts)
 - Don’t introduce purple/indigo gradients, cream-and-terracotta themes, or dark-mode-by-default
 - Don’t add glassmorphism stacks, emoji ornamentation, or floating badge clutter
 - Don’t put marketing heroes, stat strips, or multi-CTA landings on tool screens

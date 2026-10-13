@@ -9,9 +9,14 @@ fs.mkdirSync(outCss, { recursive: true });
 fs.mkdirSync(outJs, { recursive: true });
 
 const copies = [
-  ['node_modules/bootstrap/dist/css/bootstrap.min.css', 'public/assets/css/bootstrap.min.css'],
-  ['node_modules/bootstrap/dist/js/bootstrap.bundle.min.js', 'public/assets/js/bootstrap.bundle.min.js'],
-  ['node_modules/jquery/dist/jquery.min.js', 'public/assets/js/jquery.min.js'],
+  ['node_modules/@tabler/core/dist/css/tabler.min.css', 'public/assets/css/tabler.min.css'],
+  ['node_modules/@tabler/core/dist/js/tabler.min.js', 'public/assets/js/tabler.min.js'],
+];
+
+const remove = [
+  'public/assets/css/bootstrap.min.css',
+  'public/assets/js/bootstrap.bundle.min.js',
+  'public/assets/js/jquery.min.js',
 ];
 
 for (const [from, to] of copies) {
@@ -23,4 +28,12 @@ for (const [from, to] of copies) {
   }
   fs.copyFileSync(src, dest);
   console.log('Copied', to);
+}
+
+for (const rel of remove) {
+  const file = path.join(root, rel);
+  if (fs.existsSync(file)) {
+    fs.unlinkSync(file);
+    console.log('Removed', rel);
+  }
 }

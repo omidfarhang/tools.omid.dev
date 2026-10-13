@@ -6,7 +6,7 @@ Before UI or product-facing copy changes, read [PRODUCT.md](PRODUCT.md) and [DES
 
 ## Project overview
 
-PHP app: multi-user download-to-host toolkit. Users pull remote URLs via pluggable download sources (HTTP + curated yt-dlp sites + optional generic yt-dlp), manage files, optional public share links (`/s/{token}`), and per-user cloud OAuth (Dropbox is the first provider). Docker + Apache; SQLite; Bootstrap 5 + custom CSS.
+PHP app: multi-user download-to-host toolkit. Users pull remote URLs via pluggable download sources (HTTP + curated yt-dlp sites + optional generic yt-dlp), manage files, optional public share links (`/s/{token}`), and per-user cloud OAuth (Dropbox is the first provider). Docker + Apache; SQLite; Tabler (`@tabler/core`) + custom CSS.
 
 ## Layout
 
@@ -38,7 +38,7 @@ cp .env.example .env
 # Point vhost document root at public/
 ```
 
-Asset pipeline: edit Bootstrap/jQuery via npm, then `npm run build:assets`. App styles live in `public/assets/css/app.css` (and CSS variables at the top of that file). Keep `DESIGN.md` tokens in sync when you change those variables.
+Asset pipeline: `@tabler/core` via npm, then `npm run build:assets` (copies Tabler CSS/JS into `public/assets`). App styles live in `public/assets/css/app.css` (and CSS variables at the top of that file). Keep `DESIGN.md` tokens in sync when you change those variables. Do not also load standalone Bootstrap — Tabler already bundles it.
 
 ## Code conventions
 
@@ -63,7 +63,7 @@ Asset pipeline: edit Bootstrap/jQuery via npm, then `npm run build:assets`. App 
 ## UI work
 
 1. Read `DESIGN.md` (tokens are normative)
-2. Reuse classes in `app.css` / Bootstrap overrides (`.panel`, `.stat-card`, `.action-tile`, sidebar, auth-panel)
+2. Reuse classes in `app.css` / Tabler overrides (`.panel`, `.stat-card`, `.action-tile`, sidebar, auth-panel)
 3. Ask before inventing new radii, accent colors, font families, or layout shells
 4. After approved visual changes, update CSS variables in `app.css` and the front matter in `DESIGN.md`
 

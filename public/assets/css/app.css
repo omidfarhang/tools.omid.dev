@@ -22,20 +22,22 @@
     --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 
-    /* Bridge Bootstrap 5 tokens → app design tokens */
-    --bs-font-sans-serif: var(--font);
-    --bs-font-monospace: var(--mono);
-    --bs-body-font-family: var(--font);
-    --bs-body-color: var(--text);
-    --bs-body-bg: var(--bg);
-    --bs-border-color: var(--border);
-    --bs-border-radius: var(--radius-sm);
-    --bs-border-radius-sm: var(--radius-sm);
-    --bs-border-radius-lg: var(--radius);
-    --bs-primary: var(--accent);
-    --bs-primary-rgb: 15, 118, 110;
-    --bs-link-color: var(--accent);
-    --bs-link-hover-color: var(--accent-hover);
+    /* Bridge Tabler (@tabler/core) tokens → app design tokens */
+    --tblr-font-sans-serif: var(--font);
+    --tblr-font-monospace: var(--mono);
+    --tblr-body-font-family: var(--font);
+    --tblr-body-font-size: 1rem;
+    --tblr-body-color: var(--text);
+    --tblr-body-bg: var(--bg);
+    --tblr-border-color: var(--border);
+    --tblr-border-radius: var(--radius-sm);
+    --tblr-border-radius-sm: var(--radius-sm);
+    --tblr-border-radius-lg: var(--radius);
+    --tblr-primary: var(--accent);
+    --tblr-primary-rgb: 15, 118, 110;
+    --tblr-primary-darken: var(--accent-hover);
+    --tblr-link-color: var(--accent);
+    --tblr-link-hover-color: var(--accent-hover);
 }
 
 *,
@@ -441,30 +443,10 @@ code,
     margin-bottom: 0.35rem;
 }
 
-/* —— Bootstrap overrides —— */
+/* —— Tabler / component overrides —— */
 .btn {
     font-family: var(--font);
     font-weight: 500;
-}
-
-.btn-primary {
-    --bs-btn-bg: var(--accent);
-    --bs-btn-border-color: var(--accent);
-    --bs-btn-hover-bg: var(--accent-hover);
-    --bs-btn-hover-border-color: var(--accent-hover);
-    --bs-btn-active-bg: #0f766e;
-    --bs-btn-active-border-color: #0f766e;
-    --bs-btn-disabled-bg: var(--accent);
-    --bs-btn-disabled-border-color: var(--accent);
-}
-
-.btn-outline-primary {
-    --bs-btn-color: var(--accent);
-    --bs-btn-border-color: var(--accent);
-    --bs-btn-hover-bg: var(--accent);
-    --bs-btn-hover-border-color: var(--accent);
-    --bs-btn-active-bg: var(--accent);
-    --bs-btn-active-border-color: var(--accent);
 }
 
 .badge {
@@ -474,6 +456,7 @@ code,
     letter-spacing: 0.01em;
     padding: 0.35em 0.55em;
     border-radius: var(--radius-sm);
+    margin-inline-start: 0;
 }
 
 .form-control,
@@ -511,7 +494,7 @@ code,
 }
 
 .table {
-    --bs-table-bg: transparent;
+    --tblr-table-bg: transparent;
     margin-bottom: 0;
 }
 
@@ -532,7 +515,7 @@ code,
 }
 
 .table-striped > tbody > tr:nth-of-type(odd) > * {
-    --bs-table-bg-type: #fafbfc;
+    --tblr-table-bg-type: #fafbfc;
 }
 
 /* —— Files list —— */

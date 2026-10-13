@@ -65,7 +65,7 @@ $renderNav = static function () use ($user, $isActive, $navIcon): void {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/png" sizes="32x32" href="https://omid.dev/logo/favicon-32x32.png">
     <title><?= e($title) ?> · <?= e($appName) ?></title>
-    <link href="/assets/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/assets/css/tabler.min.css" rel="stylesheet">
     <link href="/assets/css/app.css" rel="stylesheet">
 </head>
 <body class="<?= $user ? 'layout-app' : 'layout-auth' ?>">
@@ -134,7 +134,6 @@ $renderNav = static function () use ($user, $isActive, $navIcon): void {
         All Rights Reserved <?= date('Y') ?> | Omid Farhang
     </footer>
 <?php endif; ?>
-<script src="/assets/js/jquery.min.js"></script>
-<script src="/assets/js/bootstrap.bundle.min.js"></script>
+<script src="/assets/js/tabler.min.js"></script>
 </body>
 </html>

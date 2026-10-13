@@ -5,7 +5,6 @@
     "build:assets": "node scripts/copy-assets.js"
   },
   "dependencies": {
-    "bootstrap": "^5.3.3",
-    "jquery": "^3.7.1"
+    "@tabler/core": "^1.6.1"
   }
 }

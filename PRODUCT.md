@@ -47,7 +47,7 @@ Quiet, precise, operator-facing. Copy is short and literal (“My Files”, “C
 
 ## Accessibility & Inclusion
 
-- Semantic structure via Bootstrap patterns; focus rings and form labels stay intact
+- Semantic structure via Tabler/Bootstrap-compatible patterns; focus rings and form labels stay intact
 - Color contrast for body text on surfaces meets WCAG AA; accent teal is for actions and highlights, not long body copy
 - Auth and app shells remain usable on narrow viewports (offcanvas nav under ~992px)
 - Do not convey status by color alone when an alert or label can carry the message
