@@ -87,6 +87,7 @@ final class CloudJobRepository
             'SELECT cj.*
              FROM cloud_jobs cj
              WHERE cj.user_id = :uid
+               AND cj.hidden_at IS NULL
                AND NOT EXISTS (
                     SELECT 1 FROM download_jobs d
                     WHERE d.cloud_job_id = cj.id
@@ -95,6 +96,55 @@ final class CloudJobRepository
              LIMIT ' . $limit
         );
         $stmt->execute([':uid' => $userId]);
+
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Soft-hide a finished standalone cloud job from the owning user's History.
+     */
+    public function hideForUser(int $id, int $userId): bool
+    {
+        $stmt = $this->db->prepare(
+            "UPDATE cloud_jobs SET
+                hidden_at = datetime('now'),
+                updated_at = datetime('now')
+             WHERE id = :id
+               AND user_id = :uid
+               AND hidden_at IS NULL
+               AND status IN ('complete', 'failed', 'skipped')
+               AND NOT EXISTS (
+                    SELECT 1 FROM download_jobs d
+                    WHERE d.cloud_job_id = :cjid
+               )"
+        );
+        $stmt->execute([':id' => $id, ':uid' => $userId, ':cjid' => $id]);
+
+        return $stmt->rowCount() > 0;
+    }
+
+    /**
+     * Unlinked cloud jobs for admin history (includes soft-hidden rows).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function recentUnlinkedAll(int $limit = 200): array
+    {
+        $limit = max(1, min(500, $limit));
+        $stmt = $this->db->query(
+            'SELECT cj.*, u.username AS owner_username
+             FROM cloud_jobs cj
+             JOIN users u ON u.id = cj.user_id
+             WHERE NOT EXISTS (
+                    SELECT 1 FROM download_jobs d
+                    WHERE d.cloud_job_id = cj.id
+               )
+             ORDER BY cj.id DESC
+             LIMIT ' . $limit
+        );
+        if ($stmt === false) {
+            return [];
+        }
 
         return $stmt->fetchAll();
     }

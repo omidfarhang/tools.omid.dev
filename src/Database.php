@@ -85,6 +85,7 @@ CREATE TABLE IF NOT EXISTS cloud_jobs (
     status TEXT NOT NULL DEFAULT 'pending',
     error TEXT NULL,
     result_path TEXT NULL,
+    hidden_at TEXT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -107,6 +108,7 @@ CREATE TABLE IF NOT EXISTS download_jobs (
     error TEXT NULL,
     file_id INTEGER NULL,
     cloud_job_id INTEGER NULL,
+    hidden_at TEXT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -127,6 +129,8 @@ SQL);
         self::ensureColumn($pdo, 'users', 'dropbox_email', 'dropbox_email TEXT NULL');
         self::ensureColumn($pdo, 'users', 'dropbox_display_name', 'dropbox_display_name TEXT NULL');
         self::ensureColumn($pdo, 'download_jobs', 'force_ytdlp', 'force_ytdlp INTEGER NOT NULL DEFAULT 0');
+        self::ensureColumn($pdo, 'download_jobs', 'hidden_at', 'hidden_at TEXT NULL');
+        self::ensureColumn($pdo, 'cloud_jobs', 'hidden_at', 'hidden_at TEXT NULL');
         self::migrateDropboxJobs($pdo);
         self::migrateBehaviorValues($pdo);
         self::migrateDefaultCloudFolder($pdo);

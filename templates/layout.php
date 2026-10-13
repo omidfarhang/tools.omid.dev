@@ -47,9 +47,10 @@ $renderNav = static function () use ($user, $isActive, $navIcon): void {
         <a href="/user/" class="<?= $isActive('/user') ? 'active' : '' ?>"><?= $navIcon('user') ?> Account</a>
         <?php if (($user['role'] ?? '') === 'admin'): ?>
             <div class="nav-section">Admin</div>
-            <a href="/admin/" class="<?= ($isActive('/admin') && !$isActive('/admin/users.php', '/admin/files.php', '/admin/settings', '/admin/cookies.php')) ? 'active' : '' ?>"><?= $navIcon('admin') ?> Overview</a>
+            <a href="/admin/" class="<?= ($isActive('/admin') && !$isActive('/admin/users.php', '/admin/files.php', '/admin/history.php', '/admin/settings', '/admin/cookies.php')) ? 'active' : '' ?>"><?= $navIcon('admin') ?> Overview</a>
             <a href="/admin/users.php" class="<?= $isActive('/admin/users.php') ? 'active' : '' ?>"><?= $navIcon('users') ?> Users</a>
             <a href="/admin/files.php" class="<?= $isActive('/admin/files.php') ? 'active' : '' ?>"><?= $navIcon('files') ?> All files</a>
+            <a href="/admin/history.php" class="<?= $isActive('/admin/history.php') ? 'active' : '' ?>"><?= $navIcon('history') ?> All history</a>
             <div class="nav-section">Settings</div>
             <a href="/admin/settings/ytdlp.php" class="<?= $isActive('/admin/settings/ytdlp.php') ? 'active' : '' ?>"><?= $navIcon('ytdlp') ?> yt-dlp</a>
             <a href="/admin/settings/cloud.php" class="<?= $isActive('/admin/settings/cloud.php') ? 'active' : '' ?>"><?= $navIcon('cloud') ?> Cloud</a>

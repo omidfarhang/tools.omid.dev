@@ -171,6 +171,7 @@ final class DownloadJobRepository
         $stmt = $this->db->prepare(
             $this->jobSelectSql() . '
              WHERE d.user_id = :uid
+               AND d.hidden_at IS NULL
              ORDER BY d.id DESC
              LIMIT ' . $limit
         );
@@ -210,10 +211,62 @@ final class DownloadJobRepository
              LEFT JOIN cloud_jobs cj ON cj.id = d.cloud_job_id
              WHERE d.user_id = :uid
                AND d.status IN ('complete', 'failed')
+               AND d.hidden_at IS NULL
              ORDER BY d.id DESC
              LIMIT " . $limit
         );
         $stmt->execute([':uid' => $userId]);
+
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Soft-hide a finished download job from the owning user's History / Home lists.
+     */
+    public function hideForUser(int $id, int $userId): bool
+    {
+        $stmt = $this->db->prepare(
+            "UPDATE download_jobs SET
+                hidden_at = datetime('now'),
+                updated_at = datetime('now')
+             WHERE id = :id
+               AND user_id = :uid
+               AND hidden_at IS NULL
+               AND status IN ('complete', 'failed')"
+        );
+        $stmt->execute([':id' => $id, ':uid' => $userId]);
+
+        return $stmt->rowCount() > 0;
+    }
+
+    /**
+     * All finished download jobs for admin (includes soft-hidden rows).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function historyAll(int $limit = 200): array
+    {
+        $limit = max(1, min(500, $limit));
+        $stmt = $this->db->query(
+            "SELECT d.*,
+                    u.username AS owner_username,
+                    cj.status AS cloud_status,
+                    cj.provider AS cloud_provider,
+                    cj.result_path AS cloud_result_path,
+                    cj.remote_path AS cloud_remote_path,
+                    cj.error AS cloud_error,
+                    cj.filename AS cloud_filename,
+                    cj.updated_at AS cloud_updated_at
+             FROM download_jobs d
+             JOIN users u ON u.id = d.user_id
+             LEFT JOIN cloud_jobs cj ON cj.id = d.cloud_job_id
+             WHERE d.status IN ('complete', 'failed')
+             ORDER BY d.id DESC
+             LIMIT " . $limit
+        );
+        if ($stmt === false) {
+            return [];
+        }
 
         return $stmt->fetchAll();
     }

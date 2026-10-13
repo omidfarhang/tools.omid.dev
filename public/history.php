@@ -6,6 +6,7 @@ require dirname(__DIR__) . '/src/bootstrap.php';
 
 use App\Auth;
 use App\Cloud\CloudJobRepository;
+use App\Csrf;
 use App\DownloadJobRepository;
 use App\UserRepository;
 use App\View;
@@ -123,11 +124,17 @@ ob_start();
                                 <?php endif; ?>
                             </td>
                             <td class="text-end small">
-                                <?php if ($fileId !== null): ?>
-                                    <a href="/download.php?id=<?= $fileId ?>" onclick="event.stopPropagation()">File</a>
-                                <?php else: ?>
-                                    —
-                                <?php endif; ?>
+                                <div class="d-inline-flex align-items-center gap-2" onclick="event.stopPropagation()">
+                                    <?php if ($fileId !== null): ?>
+                                        <a href="/download.php?id=<?= $fileId ?>">File</a>
+                                    <?php endif; ?>
+                                    <form method="post" action="/history_hide.php" class="d-inline">
+                                        <?= Csrf::field() ?>
+                                        <input type="hidden" name="kind" value="download">
+                                        <input type="hidden" name="id" value="<?= (int) $job['id'] ?>">
+                                        <button type="submit" class="btn btn-link btn-sm text-muted p-0 align-baseline">Remove</button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                         <?php if ($hasCloud): ?>
@@ -177,7 +184,19 @@ ob_start();
                                     <div class="text-muted small mt-1"><?= e((string) $job['error']) ?></div>
                                 <?php endif; ?>
                             </td>
-                            <td class="text-end small mono" title="<?= e($path) ?>"><?= e($path !== '' ? $truncateUrl($path, 40) : '—') ?></td>
+                            <td class="text-end small">
+                                <div class="d-inline-flex align-items-center gap-2">
+                                    <span class="mono" title="<?= e($path) ?>"><?= e($path !== '' ? $truncateUrl($path, 40) : '—') ?></span>
+                                    <?php if (in_array($status, ['complete', 'failed', 'skipped'], true)): ?>
+                                        <form method="post" action="/history_hide.php" class="d-inline">
+                                            <?= Csrf::field() ?>
+                                            <input type="hidden" name="kind" value="cloud">
+                                            <input type="hidden" name="id" value="<?= (int) $job['id'] ?>">
+                                            <button type="submit" class="btn btn-link btn-sm text-muted p-0 align-baseline">Remove</button>
+                                        </form>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
                         </tr>
                     <?php endif; ?>
                 <?php endforeach; ?>
