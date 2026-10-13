@@ -125,25 +125,33 @@ final class CloudJobRepository
 
     /**
      * Unlinked cloud jobs for admin history (includes soft-hidden rows).
+     * When $userId is set, scopes to that user.
      *
      * @return list<array<string, mixed>>
      */
-    public function recentUnlinkedAll(int $limit = 200): array
+    public function recentUnlinkedAll(?int $userId = null, int $limit = 200): array
     {
         $limit = max(1, min(500, $limit));
-        $stmt = $this->db->query(
-            'SELECT cj.*, u.username AS owner_username
+        $sql = 'SELECT cj.*, u.username AS owner_username
              FROM cloud_jobs cj
              JOIN users u ON u.id = cj.user_id
              WHERE NOT EXISTS (
                     SELECT 1 FROM download_jobs d
                     WHERE d.cloud_job_id = cj.id
-               )
-             ORDER BY cj.id DESC
-             LIMIT ' . $limit
-        );
-        if ($stmt === false) {
-            return [];
+               )';
+        if ($userId !== null) {
+            $sql .= ' AND cj.user_id = :uid';
+        }
+        $sql .= ' ORDER BY cj.id DESC LIMIT ' . $limit;
+
+        if ($userId !== null) {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([':uid' => $userId]);
+        } else {
+            $stmt = $this->db->query($sql);
+            if ($stmt === false) {
+                return [];
+            }
         }
 
         return $stmt->fetchAll();

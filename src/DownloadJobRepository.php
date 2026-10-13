@@ -240,15 +240,15 @@ final class DownloadJobRepository
     }
 
     /**
-     * All finished download jobs for admin (includes soft-hidden rows).
+     * Finished download jobs for admin (includes soft-hidden rows).
+     * When $userId is set, scopes to that user.
      *
      * @return list<array<string, mixed>>
      */
-    public function historyAll(int $limit = 200): array
+    public function historyAll(?int $userId = null, int $limit = 200): array
     {
         $limit = max(1, min(500, $limit));
-        $stmt = $this->db->query(
-            "SELECT d.*,
+        $sql = "SELECT d.*,
                     u.username AS owner_username,
                     cj.status AS cloud_status,
                     cj.provider AS cloud_provider,
@@ -260,12 +260,20 @@ final class DownloadJobRepository
              FROM download_jobs d
              JOIN users u ON u.id = d.user_id
              LEFT JOIN cloud_jobs cj ON cj.id = d.cloud_job_id
-             WHERE d.status IN ('complete', 'failed')
-             ORDER BY d.id DESC
-             LIMIT " . $limit
-        );
-        if ($stmt === false) {
-            return [];
+             WHERE d.status IN ('complete', 'failed')";
+        if ($userId !== null) {
+            $sql .= ' AND d.user_id = :uid';
+        }
+        $sql .= ' ORDER BY d.id DESC LIMIT ' . $limit;
+
+        if ($userId !== null) {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([':uid' => $userId]);
+        } else {
+            $stmt = $this->db->query($sql);
+            if ($stmt === false) {
+                return [];
+            }
         }
 
         return $stmt->fetchAll();

@@ -12,8 +12,7 @@ $user = Auth::requireLogin();
 Csrf::requireValid();
 
 $id = (int) ($_POST['id'] ?? 0);
-$redirect = (string) ($_POST['redirect'] ?? '/files.php');
-$redirect = $redirect === '/admin/files.php' ? '/admin/files.php' : '/files.php';
+$redirect = sanitize_files_redirect(isset($_POST['redirect']) ? (string) $_POST['redirect'] : null);
 
 $repo = new FileRepository();
 $file = $repo->findById($id);
@@ -38,4 +37,4 @@ if ($path !== null && is_file($path)) {
 $repo->delete($id);
 
 flash('success', 'File deleted.');
-redirect($isAdmin && !$isOwner ? '/admin/files.php' : $redirect);
+redirect($redirect);

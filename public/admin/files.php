@@ -6,9 +6,20 @@ require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
 use App\Auth;
 use App\FileRepository;
+use App\UserRepository;
 use App\View;
 
 $admin = Auth::requireAdmin();
+
+$filterUserId = isset($_GET['user_id']) ? (int) $_GET['user_id'] : 0;
+$filterUser = null;
+if ($filterUserId > 0) {
+    $filterUser = (new UserRepository())->findById($filterUserId);
+    if ($filterUser === null) {
+        flash('error', 'User not found.');
+        redirect('/admin/users.php');
+    }
+}
 
 $sortInfo = FileRepository::normalizeSort(
     isset($_GET['sort']) ? (string) $_GET['sort'] : null,
@@ -18,32 +29,58 @@ $sortInfo = FileRepository::normalizeSort(
 $sort = $sortInfo['sort'];
 $dir = $sortInfo['dir'];
 
-$files = (new FileRepository())->allWithOwner($sort, $dir);
+$fileRepo = new FileRepository();
+if ($filterUser !== null) {
+    $files = $fileRepo->forUserWithOwner($filterUserId, $sort, $dir);
+    $redirect = '/admin/files.php?user_id=' . $filterUserId;
+    $panelTitle = 'Files · ' . (string) $filterUser['username'];
+    $pageTitle = 'User files';
+} else {
+    $files = $fileRepo->allWithOwner($sort, $dir);
+    $redirect = '/admin/files.php';
+    $panelTitle = 'All files';
+    $pageTitle = 'Admin Files';
+}
 
 $mode = 'admin';
-$redirect = '/admin/files.php';
 $cloudConnected = false;
 $prefs = ['folder' => '', 'conflict' => 'rename'];
 
 ob_start();
 ?>
-<a class="breadcrumb-dash" href="/admin/">&larr; Admin</a>
+<?php if ($filterUser !== null): ?>
+    <a class="breadcrumb-dash" href="/admin/users.php">&larr; Users</a>
+<?php else: ?>
+    <a class="breadcrumb-dash" href="/admin/">&larr; Admin</a>
+<?php endif; ?>
 <div class="page-header">
-    <p class="page-lede">Every file on the host, with owner and public-link controls.</p>
+    <?php if ($filterUser !== null): ?>
+        <p class="page-lede">
+            Host files for <strong><?= e((string) $filterUser['username']) ?></strong>.
+            <a href="/admin/history.php?user_id=<?= $filterUserId ?>">History</a>
+            ·
+            <a href="/admin/files.php">All files</a>
+        </p>
+    <?php else: ?>
+        <p class="page-lede">Every file on the host, with owner and public-link controls.</p>
+    <?php endif; ?>
 </div>
 
 <div class="panel panel-flush">
     <?php if (!$files): ?>
         <div class="panel-head d-flex justify-content-between align-items-center">
-            <h2 class="panel-title mb-0">All files</h2>
+            <h2 class="panel-title mb-0"><?= e($panelTitle) ?></h2>
         </div>
         <div class="empty-state">
             <strong>No files stored</strong>
-            Nothing has been downloaded yet.
+            <?php if ($filterUser !== null): ?>
+                This user has nothing on the host yet.
+            <?php else: ?>
+                Nothing has been downloaded yet.
+            <?php endif; ?>
         </div>
     <?php else: ?>
         <?php
-        $panelTitle = 'All files';
         include dirname(__DIR__, 2) . '/templates/partials/files_table.php';
         ?>
     <?php endif; ?>
@@ -54,4 +91,4 @@ if ($files) {
     include dirname(__DIR__, 2) . '/templates/partials/files_modals.php';
     include dirname(__DIR__, 2) . '/templates/partials/files_js.php';
 }
-View::render('Admin Files', ob_get_clean(), $admin);
+View::render($pageTitle, ob_get_clean(), $admin);

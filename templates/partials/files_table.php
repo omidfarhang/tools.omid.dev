@@ -23,7 +23,16 @@ $sortUrl = static function (string $col) use ($redirect, $sort, $dir): string {
     if ($sort !== $col) {
         $nextDir = $col === 'date' ? 'DESC' : 'ASC';
     }
-    return $redirect . '?sort=' . rawurlencode($col) . '&dir=' . rawurlencode(strtolower($nextDir));
+    $parts = parse_url($redirect);
+    $path = is_array($parts) && isset($parts['path']) ? (string) $parts['path'] : $redirect;
+    $query = [];
+    if (is_array($parts) && !empty($parts['query'])) {
+        parse_str((string) $parts['query'], $query);
+    }
+    $query['sort'] = $col;
+    $query['dir'] = strtolower($nextDir);
+
+    return $path . '?' . http_build_query($query);
 };
 
 $sortMark = static function (string $col) use ($sort, $dir): string {

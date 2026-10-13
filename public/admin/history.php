@@ -7,12 +7,24 @@ require dirname(__DIR__, 2) . '/src/bootstrap.php';
 use App\Auth;
 use App\Cloud\CloudJobRepository;
 use App\DownloadJobRepository;
+use App\UserRepository;
 use App\View;
 
 $admin = Auth::requireAdmin();
 
-$downloadJobs = (new DownloadJobRepository())->historyAll();
-$standaloneCloud = (new CloudJobRepository())->recentUnlinkedAll();
+$filterUserId = isset($_GET['user_id']) ? (int) $_GET['user_id'] : 0;
+$filterUser = null;
+if ($filterUserId > 0) {
+    $filterUser = (new UserRepository())->findById($filterUserId);
+    if ($filterUser === null) {
+        flash('error', 'User not found.');
+        redirect('/admin/users.php');
+    }
+}
+
+$scopeUserId = $filterUser !== null ? $filterUserId : null;
+$downloadJobs = (new DownloadJobRepository())->historyAll($scopeUserId);
+$standaloneCloud = (new CloudJobRepository())->recentUnlinkedAll($scopeUserId);
 
 $entries = [];
 foreach ($downloadJobs as $job) {
@@ -69,27 +81,49 @@ foreach ($entries as $entry) {
     }
 }
 
+$pageTitle = $filterUser !== null ? 'User history' : 'Admin History';
+$panelTitle = $filterUser !== null
+    ? 'History · ' . (string) $filterUser['username']
+    : 'All history';
+
 ob_start();
 ?>
-<a class="breadcrumb-dash" href="/admin/">&larr; Admin</a>
+<?php if ($filterUser !== null): ?>
+    <a class="breadcrumb-dash" href="/admin/users.php">&larr; Users</a>
+<?php else: ?>
+    <a class="breadcrumb-dash" href="/admin/">&larr; Admin</a>
+<?php endif; ?>
 <div class="page-header">
-    <p class="page-lede">Finished download and cloud jobs across all users. Soft-removed rows stay visible here.</p>
+    <?php if ($filterUser !== null): ?>
+        <p class="page-lede">
+            Finished jobs for <strong><?= e((string) $filterUser['username']) ?></strong>, including soft-removed rows.
+            <a href="/admin/files.php?user_id=<?= $filterUserId ?>">Files</a>
+            ·
+            <a href="/admin/history.php">All history</a>
+        </p>
+    <?php else: ?>
+        <p class="page-lede">Finished download and cloud jobs across all users. Soft-removed rows stay visible here.</p>
+    <?php endif; ?>
 </div>
 
 <div class="panel panel-flush">
     <div class="panel-head d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <h2 class="panel-title mb-0">All history</h2>
+        <h2 class="panel-title mb-0"><?= e($panelTitle) ?></h2>
         <span class="text-muted small">
             <?= count($entries) ?> shown
             <?php if ($hiddenCount > 0): ?>
-                · <?= $hiddenCount ?> hidden by users
+                · <?= $hiddenCount ?> hidden by user<?= $filterUser !== null ? '' : 's' ?>
             <?php endif; ?>
         </span>
     </div>
     <?php if (!$entries): ?>
         <div class="empty-state">
             <strong>No history yet</strong>
-            Nothing has been downloaded or sent to cloud.
+            <?php if ($filterUser !== null): ?>
+                This user has no finished download or cloud jobs.
+            <?php else: ?>
+                Nothing has been downloaded or sent to cloud.
+            <?php endif; ?>
         </div>
     <?php else: ?>
         <div class="table-responsive">
@@ -97,7 +131,9 @@ ob_start();
                 <thead>
                 <tr>
                     <th>When</th>
-                    <th>User</th>
+                    <?php if ($filterUser === null): ?>
+                        <th>User</th>
+                    <?php endif; ?>
                     <th>Source</th>
                     <th>Name</th>
                     <th>Destination</th>
@@ -111,6 +147,7 @@ ob_start();
                     $job = $entry['job'];
                     $isHidden = !empty($job['hidden_at']);
                     $owner = (string) ($job['owner_username'] ?? '');
+                    $colSpan = $filterUser !== null ? 6 : 7;
                     ?>
                     <?php if ($entry['kind'] === 'download'): ?>
                         <?php
@@ -125,7 +162,9 @@ ob_start();
                         <tr class="<?= $isHidden ? 'table-secondary' : '' ?> <?= $hasCloud ? 'history-row-toggle' : '' ?>"
                             <?= $hasCloud ? 'data-bs-toggle="collapse" data-bs-target="#' . e($rowId) . '" role="button" aria-expanded="false"' : '' ?>>
                             <td class="small text-muted"><?= e((string) ($job['updated_at'] ?? $job['created_at'])) ?></td>
-                            <td class="small"><?= e($owner !== '' ? $owner : '—') ?></td>
+                            <?php if ($filterUser === null): ?>
+                                <td class="small"><?= e($owner !== '' ? $owner : '—') ?></td>
+                            <?php endif; ?>
                             <td class="mono small" title="<?= e($sourceUrl) ?>"><?= e($truncateUrl($sourceUrl)) ?></td>
                             <td class="mono"><?= e($name !== '' ? $name : '—') ?></td>
                             <td><?= e($destinationLabel((string) ($job['behavior'] ?? ''))) ?></td>
@@ -144,7 +183,7 @@ ob_start();
                         </tr>
                         <?php if ($hasCloud): ?>
                             <tr class="collapse" id="<?= e($rowId) ?>">
-                                <td colspan="7" class="bg-white">
+                                <td colspan="<?= $colSpan ?>" class="bg-white">
                                     <div class="p-3 small">
                                         <div class="fw-semibold mb-2">Cloud job</div>
                                         <dl class="row mb-0">
@@ -175,7 +214,9 @@ ob_start();
                         ?>
                         <tr class="<?= $isHidden ? 'table-secondary' : '' ?>">
                             <td class="small text-muted"><?= e((string) ($job['updated_at'] ?? $job['created_at'])) ?></td>
-                            <td class="small"><?= e($owner !== '' ? $owner : '—') ?></td>
+                            <?php if ($filterUser === null): ?>
+                                <td class="small"><?= e($owner !== '' ? $owner : '—') ?></td>
+                            <?php endif; ?>
                             <td class="small text-muted">Cloud send</td>
                             <td class="mono"><?= e($name !== '' ? $name : '—') ?></td>
                             <td>Cloud</td>
@@ -198,4 +239,4 @@ ob_start();
     <?php endif; ?>
 </div>
 <?php
-View::render('Admin History', ob_get_clean(), $admin);
+View::render($pageTitle, ob_get_clean(), $admin);

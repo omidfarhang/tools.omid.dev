@@ -35,6 +35,22 @@ function redirect(string $path): never
     exit;
 }
 
+/**
+ * Allowlist redirect targets for file mutate endpoints (delete / rename / share / bulk).
+ */
+function sanitize_files_redirect(?string $redirect): string
+{
+    $redirect = (string) ($redirect ?? '/files.php');
+    if ($redirect === '/admin/files.php') {
+        return '/admin/files.php';
+    }
+    if (preg_match('#^/admin/files\.php\?user_id=(\d+)$#', $redirect, $m) === 1) {
+        return '/admin/files.php?user_id=' . (int) $m[1];
+    }
+
+    return '/files.php';
+}
+
 function flash(string $type, string $message): void
 {
     $_SESSION['_flash'][] = ['type' => $type, 'message' => $message];

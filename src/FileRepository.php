@@ -97,6 +97,23 @@ final class FileRepository
     }
 
     /** @return list<array<string, mixed>> */
+    public function forUserWithOwner(int $userId, string $sort = 'date', string $dir = 'DESC'): array
+    {
+        $order = $this->orderClause($sort, $dir);
+        $stmt = $this->db->prepare(
+            "SELECT f.*, u.username AS owner_username,
+                (SELECT s.token FROM shares s WHERE s.file_id = f.id AND s.revoked_at IS NULL ORDER BY s.id DESC LIMIT 1) AS share_token
+             FROM files f
+             JOIN users u ON u.id = f.user_id
+             WHERE f.user_id = :uid
+             ORDER BY {$order}"
+        );
+        $stmt->execute([':uid' => $userId]);
+
+        return $stmt->fetchAll();
+    }
+
+    /** @return list<array<string, mixed>> */
     public function allWithOwner(string $sort = 'date', string $dir = 'DESC'): array
     {
         $order = $this->orderClause($sort, $dir);

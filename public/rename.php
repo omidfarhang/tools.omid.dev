@@ -14,8 +14,7 @@ Csrf::requireValid();
 
 $id = (int) ($_POST['id'] ?? 0);
 $name = trim((string) ($_POST['original_name'] ?? ''));
-$redirect = (string) ($_POST['redirect'] ?? '/files.php');
-$redirect = $redirect === '/admin/files.php' ? '/admin/files.php' : '/files.php';
+$redirect = sanitize_files_redirect(isset($_POST['redirect']) ? (string) $_POST['redirect'] : null);
 
 $repo = new FileRepository();
 $file = $repo->findById($id);

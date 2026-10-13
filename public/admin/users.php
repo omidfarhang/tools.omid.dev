@@ -144,7 +144,9 @@ ob_start();
                         <?php endif; ?>
                     </td>
                     <td>
-                        <div class="d-flex flex-wrap gap-1">
+                        <div class="d-flex flex-wrap gap-1 align-items-center">
+                            <a class="btn btn-sm btn-outline-secondary" href="/admin/files.php?user_id=<?= (int) $u['id'] ?>">Files</a>
+                            <a class="btn btn-sm btn-outline-secondary" href="/admin/history.php?user_id=<?= (int) $u['id'] ?>">History</a>
                             <form method="post">
                                 <?= Csrf::field() ?>
                                 <input type="hidden" name="action" value="toggle">

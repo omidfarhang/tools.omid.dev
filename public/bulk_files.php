@@ -13,8 +13,7 @@ $user = Auth::requireLogin();
 Csrf::requireValid();
 
 $action = (string) ($_POST['action'] ?? '');
-$redirect = (string) ($_POST['redirect'] ?? '/files.php');
-$redirect = $redirect === '/admin/files.php' ? '/admin/files.php' : '/files.php';
+$redirect = sanitize_files_redirect(isset($_POST['redirect']) ? (string) $_POST['redirect'] : null);
 $rawIds = $_POST['ids'] ?? [];
 if (!is_array($rawIds)) {
     $rawIds = [];
