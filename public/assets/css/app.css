@@ -21,6 +21,21 @@
     --topbar-height: 64px;
     --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+    /* Bridge Bootstrap 5 tokens → app design tokens */
+    --bs-font-sans-serif: var(--font);
+    --bs-font-monospace: var(--mono);
+    --bs-body-font-family: var(--font);
+    --bs-body-color: var(--text);
+    --bs-body-bg: var(--bg);
+    --bs-border-color: var(--border);
+    --bs-border-radius: var(--radius-sm);
+    --bs-border-radius-sm: var(--radius-sm);
+    --bs-border-radius-lg: var(--radius);
+    --bs-primary: var(--accent);
+    --bs-primary-rgb: 15, 118, 110;
+    --bs-link-color: var(--accent);
+    --bs-link-hover-color: var(--accent-hover);
 }
 
 *,
@@ -427,6 +442,11 @@ code,
 }
 
 /* —— Bootstrap overrides —— */
+.btn {
+    font-family: var(--font);
+    font-weight: 500;
+}
+
 .btn-primary {
     --bs-btn-bg: var(--accent);
     --bs-btn-border-color: var(--accent);
@@ -436,7 +456,6 @@ code,
     --bs-btn-active-border-color: #0f766e;
     --bs-btn-disabled-bg: var(--accent);
     --bs-btn-disabled-border-color: var(--accent);
-    font-weight: 500;
 }
 
 .btn-outline-primary {
@@ -446,18 +465,20 @@ code,
     --bs-btn-hover-border-color: var(--accent);
     --bs-btn-active-bg: var(--accent);
     --bs-btn-active-border-color: var(--accent);
-    font-weight: 500;
 }
 
-.btn-outline-secondary,
-.btn-outline-danger,
-.btn-outline-warning,
-.btn-success {
-    font-weight: 500;
+.badge {
+    font-family: var(--font);
+    font-weight: 600;
+    font-size: 0.75rem;
+    letter-spacing: 0.01em;
+    padding: 0.35em 0.55em;
+    border-radius: var(--radius-sm);
 }
 
 .form-control,
 .form-select {
+    font-family: var(--font);
     border-color: var(--border);
     border-radius: var(--radius-sm);
     padding: 0.6rem 0.85rem;

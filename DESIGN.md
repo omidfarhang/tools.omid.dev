@@ -128,6 +128,7 @@ Auth screens use soft radial teal + slate washes over a cool gradient — not fl
 - **Technical:** Platform monospace (`ui-monospace`, SF Mono, Menlo, Consolas) for filenames, code, and table links.
 - No webfonts — rely on the OS UI face so the app reads as a plain operator dashboard.
 - Uppercase micro-labels (nav sections, table heads, stat labels) with modest letter-spacing — sparingly. Avoid tight negative tracking on titles.
+- **Bootstrap bridge:** Stock Bootstrap 5 CSS is kept; theme it by mapping `--bs-font-sans-serif`, `--bs-font-monospace`, `--bs-body-*`, `--bs-border-*`, and `--bs-primary*` to app tokens in `app.css` `:root`. Badges/buttons/forms also set `font-family: var(--font)` so Bootstrap component rules cannot drift.
 
 ## Layout
 
@@ -160,6 +161,7 @@ Keep corners consistent within a view; do not mix sharp and pill shapes on the s
 - **Confirm / rename / cloud modals:** Bootstrap modals with panel radius and border tokens; delete confirms with mono filename; no native `confirm()`.
 - **Forms:** Bootstrap controls restyled — border, 8px radius, teal focus ring. Multi-step tool forms (home download) use `.form-section` + uppercase `.form-section-title` dividers, optional `.source-options-block` for nested extractor options, and `.choice-tile` grids for exclusive destinations.
 - **Buttons:** Primary = accent teal; outline secondary for Logout and secondary actions; keep font-weight 500.
+- **Badges:** Dashboard weight 600 (not Bootstrap’s default 700), `0.75rem`, small radius — status chips and share Public/Private.
 - **Alerts / status-callout:** Bootstrap alerts for flashes; warning callout for Dropbox/setup hints.
 - **Empty state:** Centered muted copy with a strong first line.
 
@@ -169,6 +171,7 @@ Reuse these before inventing new card/tile variants.
 
 - Do keep the teal accent reserved for primary actions, links, and active indicators
 - Do use the system UI + platform mono stacks as defined in `app.css` (no Bunny/Google font loads)
+- Do theme Bootstrap via `--bs-*` bridges in `app.css` rather than forking or Sass-compiling Bootstrap for typography/color tweaks
 - Do preserve the sidebar + topbar shell for authenticated pages and the centered auth panel for guests
 - Don’t introduce purple/indigo gradients, cream-and-terracotta themes, or dark-mode-by-default
 - Don’t add glassmorphism stacks, emoji ornamentation, or floating badge clutter
