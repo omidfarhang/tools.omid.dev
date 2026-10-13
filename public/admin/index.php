@@ -18,9 +18,7 @@ $pending = $users->countPending();
 
 ob_start();
 ?>
-<div class="page-header mb-3">
-    <div class="text-secondary">System overview and shortcuts for user and file management.</div>
-</div>
+<p class="text-secondary mb-3">System overview and shortcuts for user and file management.</p>
 
 <?php if ($pending > 0): ?>
     <div class="alert alert-warning" role="alert">
@@ -65,24 +63,32 @@ ob_start();
 </div>
 
 <div class="row row-cards">
-    <div class="col-md-6">
-        <a class="card-link" href="/admin/users.php">
+    <div class="col-md-6 col-lg-4">
+        <a class="card card-link" href="/admin/users.php">
             <div class="card-body">
                 <h3 class="card-title">Manage users</h3>
                 <div class="text-secondary">Create accounts, approve registrations, reset passwords, and set roles.</div>
             </div>
         </a>
     </div>
-    <div class="col-md-6">
-        <a class="card-link" href="/admin/files.php">
+    <div class="col-md-6 col-lg-4">
+        <a class="card card-link" href="/admin/files.php">
             <div class="card-body">
                 <h3 class="card-title">All files</h3>
                 <div class="text-secondary">Browse every stored file, revoke public links, and delete as needed.</div>
             </div>
         </a>
     </div>
-    <div class="col-md-6">
-        <a class="card-link" href="/admin/settings/">
+    <div class="col-md-6 col-lg-4">
+        <a class="card card-link" href="/admin/history.php">
+            <div class="card-body">
+                <h3 class="card-title">All history</h3>
+                <div class="text-secondary">Finished download and cloud jobs across all users.</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-6 col-lg-4">
+        <a class="card card-link" href="/admin/settings/">
             <div class="card-body">
                 <h3 class="card-title">Settings</h3>
                 <div class="text-secondary">yt-dlp cookies and options, Dropbox app credentials, and other site config.</div>

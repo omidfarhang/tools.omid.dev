@@ -158,9 +158,7 @@ $truncateUrl = static function (string $url, int $max = 56): string {
 
 ob_start();
 ?>
-<div class="page-header">
-    <p class="text-secondary">Paste a URL to pull onto this host, or send it to your connected cloud.</p>
-</div>
+<p class="text-secondary mb-3">Paste a URL to pull onto this host, or send it to your connected cloud.</p>
 
 <?php if (!$cloudConnected): ?>
     <div class="alert alert-warning">
@@ -342,7 +340,7 @@ ob_start();
             <p class="empty-subtitle text-secondary">Queue a URL above. Recent and in-progress jobs show up here.</p>
         </div>
         <div class="table-responsive d-none" id="active-jobs-table-wrap">
-            <table class="table table-striped align-middle mb-0">
+            <table class="table card-table table-striped align-middle mb-0">
                 <thead>
                 <tr>
                     <th>Source</th>
@@ -360,7 +358,7 @@ ob_start();
             <p class="empty-subtitle text-secondary">Queue a URL above. Recent and in-progress jobs show up here.</p>
         </div>
         <div class="table-responsive" id="active-jobs-table-wrap">
-            <table class="table table-striped align-middle mb-0">
+            <table class="table card-table table-striped align-middle mb-0">
                 <thead>
                 <tr>
                     <th>Source</th>

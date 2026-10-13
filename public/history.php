@@ -68,9 +68,7 @@ $truncateUrl = static function (string $url, int $max = 64): string {
 
 ob_start();
 ?>
-<div class="page-header">
-    <p class="text-secondary">Recent URL pulls and standalone cloud uploads for this account.</p>
-</div>
+<p class="text-secondary mb-3">Recent URL pulls and standalone cloud uploads for this account.</p>
 
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
@@ -84,7 +82,7 @@ ob_start();
         </div>
     <?php else: ?>
         <div class="table-responsive">
-            <table class="table table-striped align-middle mb-0" id="history-table">
+            <table class="table card-table table-striped align-middle mb-0" id="history-table">
                 <thead>
                 <tr>
                     <th>When</th>

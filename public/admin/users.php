@@ -66,9 +66,7 @@ $all = $repo->all();
 ob_start();
 ?>
 <a class="d-inline-block mb-3" href="/admin/">&larr; Admin</a>
-<div class="page-header">
-    <p class="text-secondary">Create accounts and manage roles, approvals, and passwords.</p>
-</div>
+<p class="text-secondary mb-3">Create accounts and manage roles, approvals, and passwords.</p>
 
 <div class="card mb-3">
     <div class="card-body">
@@ -104,7 +102,7 @@ ob_start();
         <span class="text-muted small"><?= count($all) ?> total</span>
     </div>
     <div class="table-responsive">
-        <table class="table table-sm align-middle mb-0">
+        <table class="table card-table table-sm align-middle mb-0">
             <thead>
             <tr>
                 <th>ID</th>

@@ -63,9 +63,7 @@ $redirectUri = $oauth->redirectUri();
 ob_start();
 ?>
 <a class="d-inline-block mb-3" href="/admin/settings/">&larr; Settings</a>
-<div class="page-header">
-    <p class="text-secondary">Cloud provider app credentials. Users still connect their own accounts via OAuth.</p>
-</div>
+<p class="text-secondary mb-3">Cloud provider app credentials. Users still connect their own accounts via OAuth.</p>
 
 <div class="card mb-3">
     <div class="card-body">

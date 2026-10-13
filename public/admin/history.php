@@ -93,18 +93,17 @@ ob_start();
 <?php else: ?>
     <a class="d-inline-block mb-3" href="/admin/">&larr; Admin</a>
 <?php endif; ?>
-<div class="page-header">
-    <?php if ($filterUser !== null): ?>
-        <p class="text-secondary">
-            Finished jobs for <strong><?= e((string) $filterUser['username']) ?></strong>, including soft-removed rows.
-            <a href="/admin/files.php?user_id=<?= $filterUserId ?>">Files</a>
-            ·
-            <a href="/admin/history.php">All history</a>
-        </p>
-    <?php else: ?>
-        <p class="text-secondary">Finished download and cloud jobs across all users. Soft-removed rows stay visible here.</p>
-    <?php endif; ?>
-</div>
+<?php if ($filterUser !== null): ?>
+    <p class="text-secondary mb-3">
+        Finished jobs for <strong><?= e((string) $filterUser['username']) ?></strong>, including soft-removed rows.
+        <a href="/admin/files.php?user_id=<?= $filterUserId ?>">Files</a>
+        ·
+        <a href="/admin/history.php">All history</a>
+    </p>
+<?php else: ?>
+    <p class="text-secondary mb-3">Finished download and cloud jobs across all users. Soft-removed rows stay visible here.</p>
+<?php endif; ?>
+
 
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -127,7 +126,7 @@ ob_start();
         </div>
     <?php else: ?>
         <div class="table-responsive">
-            <table class="table table-striped align-middle mb-0">
+            <table class="table card-table table-striped align-middle mb-0">
                 <thead>
                 <tr>
                     <th>When</th>

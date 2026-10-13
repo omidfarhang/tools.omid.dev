@@ -60,7 +60,7 @@ $sortMark = static function (string $col) use ($sort, $dir): string {
 </div>
 
 <div class="files-table-scroll">
-    <table class="table table-striped align-middle mb-0 files-table" data-files-table>
+    <table class="table card-table table-striped align-middle mb-0 files-table" data-files-table>
         <thead>
         <tr>
             <th class="files-col-check">

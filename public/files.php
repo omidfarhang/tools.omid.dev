@@ -42,9 +42,7 @@ $redirect = '/files.php';
 
 ob_start();
 ?>
-<div class="page-header">
-    <p class="text-secondary">Download files from the host or toggle a public link to share without login.</p>
-</div>
+<p class="text-secondary mb-3">Download files from the host or toggle a public link to share without login.</p>
 
 <div id="cloud-status" class="alert d-none" role="alert">
     <div id="cloud-message"></div>

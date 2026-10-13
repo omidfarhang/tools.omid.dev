@@ -45,7 +45,7 @@ Canonical theme tokens live in `public/assets/css/app.css`. Keep this file in sy
 
 - **App:** `.page` → `.navbar.navbar-vertical.navbar-expand-lg` + `.page-wrapper` → `.page-header` / `.page-body` / `.footer` inside `.container-xl`.
 - **Auth:** `.page.page-center` → `.container.container-tight` → brand (`.navbar-brand.navbar-brand-autodark`) → page-owned `.card.card-md` → secondary text link below the card (Sign up / Sign in). Forms use `.form-footer` + `.btn.btn-primary.w-100`.
-- **Page titles:** layout renders `.page-title`; content uses `.text-secondary` for ledes.
+- **Page titles:** layout owns `.page-header` / `.page-title`; page content uses a plain `.text-secondary` lede (do not nest another `.page-header`).
 
 ## Components (prefer Tabler)
 

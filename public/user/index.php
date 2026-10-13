@@ -53,13 +53,11 @@ $prefs = UserRepository::cloudPrefs($user);
 
 ob_start();
 ?>
-<div class="page-header">
-    <p class="text-secondary">Profile and cloud connections for this account.</p>
-</div>
+<p class="text-secondary mb-3">Profile and cloud connections for this account.</p>
 
-<div class="row g-3">
+<div class="row row-cards">
     <div class="col-lg-5">
-        <div class="card h-100">
+        <div class="card">
             <div class="card-body">
             <h2 class="card-title">Profile</h2>
             <dl class="mb-0">
@@ -89,7 +87,7 @@ ob_start();
         </div>
     </div>
     <div class="col-lg-7">
-        <div class="card h-100">
+        <div class="card">
             <div class="card-body">
             <h2 class="card-title">Dropbox</h2>
             <?php if (!$oauth->isConfigured()): ?>

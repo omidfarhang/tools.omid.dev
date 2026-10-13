@@ -79,9 +79,7 @@ $extraArgs = (string) Config::get(ManagedSettings::YTDLP_EXTRA_ARGS, '');
 ob_start();
 ?>
 <a class="d-inline-block mb-3" href="/admin/settings/">&larr; Settings</a>
-<div class="page-header">
-    <p class="text-secondary">Site-wide yt-dlp options for YouTube and other extractors.</p>
-</div>
+<p class="text-secondary mb-3">Site-wide yt-dlp options for YouTube and other extractors.</p>
 
 <div class="card mb-3">
     <div class="card-body">

@@ -53,18 +53,17 @@ ob_start();
 <?php else: ?>
     <a class="d-inline-block mb-3" href="/admin/">&larr; Admin</a>
 <?php endif; ?>
-<div class="page-header">
-    <?php if ($filterUser !== null): ?>
-        <p class="text-secondary">
-            Host files for <strong><?= e((string) $filterUser['username']) ?></strong>.
-            <a href="/admin/history.php?user_id=<?= $filterUserId ?>">History</a>
-            ·
-            <a href="/admin/files.php">All files</a>
-        </p>
-    <?php else: ?>
-        <p class="text-secondary">Every file on the host, with owner and public-link controls.</p>
-    <?php endif; ?>
-</div>
+<?php if ($filterUser !== null): ?>
+    <p class="text-secondary mb-3">
+        Host files for <strong><?= e((string) $filterUser['username']) ?></strong>.
+        <a href="/admin/history.php?user_id=<?= $filterUserId ?>">History</a>
+        ·
+        <a href="/admin/files.php">All files</a>
+    </p>
+<?php else: ?>
+    <p class="text-secondary mb-3">Every file on the host, with owner and public-link controls.</p>
+<?php endif; ?>
+
 
 <div class="card">
     <?php if (!$files): ?>
