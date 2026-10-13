@@ -65,40 +65,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $all = $repo->all();
 ob_start();
 ?>
-<a class="breadcrumb-dash" href="/admin/">&larr; Admin</a>
+<a class="d-inline-block mb-3" href="/admin/">&larr; Admin</a>
 <div class="page-header">
-    <p class="page-lede">Create accounts and manage roles, approvals, and passwords.</p>
+    <p class="text-secondary">Create accounts and manage roles, approvals, and passwords.</p>
 </div>
 
-<div class="panel">
-    <h2 class="panel-title">Create user</h2>
-    <form method="post" class="row g-3 align-items-end">
-        <?= Csrf::field() ?>
-        <input type="hidden" name="action" value="create">
-        <div class="col-md-3">
-            <label class="form-label">Username</label>
-            <input class="form-control" name="username" required>
-        </div>
-        <div class="col-md-3">
-            <label class="form-label">Password</label>
-            <input class="form-control" type="password" name="password" required>
-        </div>
-        <div class="col-md-2">
-            <label class="form-label">Role</label>
-            <select class="form-select" name="role">
-                <option value="user">user</option>
-                <option value="admin">admin</option>
-            </select>
-        </div>
-        <div class="col-md-2">
-            <button class="btn btn-primary" type="submit">Create</button>
-        </div>
-    </form>
+<div class="card mb-3">
+    <div class="card-body">
+        <h2 class="card-title">Create user</h2>
+        <form method="post" class="row g-3 align-items-end">
+            <?= Csrf::field() ?>
+            <input type="hidden" name="action" value="create">
+            <div class="col-md-3">
+                <label class="form-label">Username</label>
+                <input class="form-control" name="username" required>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Password</label>
+                <input class="form-control" type="password" name="password" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Role</label>
+                <select class="form-select" name="role">
+                    <option value="user">user</option>
+                    <option value="admin">admin</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary" type="submit">Create</button>
+            </div>
+        </form>
+    </div>
 </div>
 
-<div class="panel panel-flush">
-    <div class="panel-head d-flex justify-content-between align-items-center">
-        <h2 class="panel-title mb-0">All users</h2>
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h2 class="card-title mb-0">All users</h2>
         <span class="text-muted small"><?= count($all) ?> total</span>
     </div>
     <div class="table-responsive">

@@ -159,22 +159,23 @@ $truncateUrl = static function (string $url, int $max = 56): string {
 ob_start();
 ?>
 <div class="page-header">
-    <p class="page-lede">Paste a URL to pull onto this host, or send it to your connected cloud.</p>
+    <p class="text-secondary">Paste a URL to pull onto this host, or send it to your connected cloud.</p>
 </div>
 
 <?php if (!$cloudConnected): ?>
-    <div class="status-callout">
+    <div class="alert alert-warning">
         No cloud account connected. You can still save to disk.
         <a href="/user/">Connect Dropbox</a>
     </div>
 <?php endif; ?>
 
-<div class="panel download-panel">
-    <form action="" method="post" id="download-form" class="download-form">
+<div class="card">
+    <div class="card-body">
+    <form action="" method="post" id="download-form">
         <?= Csrf::field() ?>
 
-        <section class="form-section">
-            <h2 class="form-section-title">Source</h2>
+        <section class="mb-4">
+            <h2 class="subheader">Source</h2>
             <div class="mb-0">
                 <label for="DLURL" class="form-label">URL</label>
                 <input name="DLURL" type="url" class="form-control" id="DLURL" placeholder="https://..." required autocomplete="off" spellcheck="false">
@@ -240,8 +241,8 @@ ob_start();
             </div>
         </section>
 
-        <section class="form-section">
-            <h2 class="form-section-title">Save to</h2>
+        <section class="mb-4">
+            <h2 class="subheader">Save to</h2>
             <fieldset class="choice-fieldset">
                 <legend class="visually-hidden">Save destination</legend>
                 <div class="choice-grid">
@@ -307,22 +308,23 @@ ob_start();
             <?php endif; ?>
         </section>
 
-        <section class="form-section">
-            <h2 class="form-section-title">Filename</h2>
+        <section class="mb-4">
+            <h2 class="subheader">Filename</h2>
             <label for="DLFILENAME" class="form-label visually-hidden">Filename</label>
             <input name="DLFILENAME" type="text" class="form-control mono" id="DLFILENAME" placeholder="Auto from URL, can be changed" autocomplete="off" spellcheck="false">
             <div class="form-text d-none" id="filename-ytdlp-hint">yt-dlp sets the name from the media title.</div>
         </section>
 
-        <div class="form-actions">
+        <div class="mt-4 pt-3 border-top">
             <button class="btn btn-primary" type="submit">Start download</button>
         </div>
     </form>
+    </div>
 </div>
 
-<div class="panel panel-flush mt-3" id="active-jobs-panel">
-    <div class="panel-head d-flex justify-content-between align-items-center">
-        <h2 class="panel-title mb-0">Jobs</h2>
+<div class="card mt-3" id="active-jobs-panel">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h2 class="card-title mb-0">Jobs</h2>
         <span class="text-muted small" id="active-jobs-count">
             <?php if ($activeJobCount > 0): ?>
                 <?= $activeJobCount ?> active
@@ -335,9 +337,9 @@ ob_start();
         </span>
     </div>
     <?php if (!$homeJobs): ?>
-        <div class="empty-state" id="active-jobs-empty">
-            <strong>No jobs yet</strong>
-            Queue a URL above. Recent and in-progress jobs show up here.
+        <div class="empty" id="active-jobs-empty">
+            <p class="empty-title">No jobs yet</p>
+            <p class="empty-subtitle text-secondary">Queue a URL above. Recent and in-progress jobs show up here.</p>
         </div>
         <div class="table-responsive d-none" id="active-jobs-table-wrap">
             <table class="table table-striped align-middle mb-0">
@@ -353,9 +355,9 @@ ob_start();
             </table>
         </div>
     <?php else: ?>
-        <div class="empty-state d-none" id="active-jobs-empty">
-            <strong>No jobs yet</strong>
-            Queue a URL above. Recent and in-progress jobs show up here.
+        <div class="empty d-none" id="active-jobs-empty">
+            <p class="empty-title">No jobs yet</p>
+            <p class="empty-subtitle text-secondary">Queue a URL above. Recent and in-progress jobs show up here.</p>
         </div>
         <div class="table-responsive" id="active-jobs-table-wrap">
             <table class="table table-striped align-middle mb-0">

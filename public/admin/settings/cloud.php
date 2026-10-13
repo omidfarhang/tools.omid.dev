@@ -62,13 +62,14 @@ $redirectUri = $oauth->redirectUri();
 
 ob_start();
 ?>
-<a class="breadcrumb-dash" href="/admin/settings/">&larr; Settings</a>
+<a class="d-inline-block mb-3" href="/admin/settings/">&larr; Settings</a>
 <div class="page-header">
-    <p class="page-lede">Cloud provider app credentials. Users still connect their own accounts via OAuth.</p>
+    <p class="text-secondary">Cloud provider app credentials. Users still connect their own accounts via OAuth.</p>
 </div>
 
-<div class="panel mb-3">
-    <h2 class="panel-title">Dropbox</h2>
+<div class="card mb-3">
+    <div class="card-body">
+    <h2 class="card-title">Dropbox</h2>
     <?php if ($configured): ?>
         <p class="mb-3">App credentials are configured. Users can connect Dropbox from Account.</p>
     <?php else: ?>
@@ -110,6 +111,7 @@ ob_start();
             <button type="submit" class="btn btn-outline-danger">Clear credentials</button>
         </form>
     <?php endif; ?>
+    </div>
 </div>
 <?php
 View::render('Admin · Cloud', ob_get_clean(), $admin);

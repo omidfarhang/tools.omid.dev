@@ -28,8 +28,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 ob_start();
 ?>
-<h1>Sign in</h1>
-<p class="page-lede">Access your downloads and cloud tools.</p>
+<h2 class="card-title">Sign in</h2>
+<p class="text-secondary">Access your downloads and cloud tools.</p>
 <?php if ($error): ?>
     <div class="alert alert-danger"><?= e($error) ?></div>
 <?php endif; ?>

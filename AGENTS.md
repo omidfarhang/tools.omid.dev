@@ -6,7 +6,7 @@ Before UI or product-facing copy changes, read [PRODUCT.md](PRODUCT.md) and [DES
 
 ## Project overview
 
-PHP app: multi-user download-to-host toolkit. Users pull remote URLs via pluggable download sources (HTTP + curated yt-dlp sites + optional generic yt-dlp), manage files, optional public share links (`/s/{token}`), and per-user cloud OAuth (Dropbox is the first provider). Docker + Apache; SQLite; Tabler (`@tabler/core`) + custom CSS.
+PHP app: multi-user download-to-host toolkit. Users pull remote URLs via pluggable download sources (HTTP + curated yt-dlp sites + optional generic yt-dlp), manage files, optional public share links (`/s/{token}`), and per-user cloud OAuth (Dropbox is the first provider). Docker + Apache; SQLite; Tabler (`@tabler/core`) with thin `app.css` theming.
 
 ## Layout
 
@@ -38,7 +38,7 @@ cp .env.example .env
 # Point vhost document root at public/
 ```
 
-Asset pipeline: `@tabler/core` via npm, then `npm run build:assets` (copies Tabler CSS/JS + `tabler-theme.min.js` into `public/assets`). App styles live in `public/assets/css/app.css` (light tokens in `:root`, dark in `[data-bs-theme="dark"]`). Theme preference is `localStorage['tabler-theme']` (`auto`|`light`|`dark`) via `theme-switch.js`. Keep `DESIGN.md` tokens in sync when you change those variables. Do not also load standalone Bootstrap — Tabler already bundles it.
+Asset pipeline: `@tabler/core` via npm, then `npm run build:assets` (copies Tabler CSS/JS + `tabler-theme.min.js` into `public/assets`). Prefer Tabler components in PHP templates; keep `public/assets/css/app.css` thin (accent bridge, theme switcher, files/choice helpers). Theme preference is `localStorage['tabler-theme']` (`auto`|`light`|`dark`). Do not load standalone Bootstrap — Tabler already bundles it.
 
 ## Code conventions
 
@@ -63,9 +63,9 @@ Asset pipeline: `@tabler/core` via npm, then `npm run build:assets` (copies Tabl
 ## UI work
 
 1. Read `DESIGN.md` (tokens are normative)
-2. Reuse classes in `app.css` / Tabler overrides (`.panel`, `.stat-card`, `.action-tile`, sidebar, auth-panel)
-3. Ask before inventing new radii, accent colors, font families, or layout shells
-4. After approved visual changes, update CSS variables in `app.css` and the front matter in `DESIGN.md`
+2. Prefer Tabler classes (`.card`, `.page-header`, `.navbar-vertical`, `.empty`, `.alert`) over new custom CSS
+3. Ask before inventing new layout shells or growing `app.css`
+4. After approved visual/token changes, update `app.css` and `DESIGN.md` together
 
 ## Security notes
 

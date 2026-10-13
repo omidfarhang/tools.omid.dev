@@ -69,18 +69,18 @@ $truncateUrl = static function (string $url, int $max = 64): string {
 ob_start();
 ?>
 <div class="page-header">
-    <p class="page-lede">Recent URL pulls and standalone cloud uploads for this account.</p>
+    <p class="text-secondary">Recent URL pulls and standalone cloud uploads for this account.</p>
 </div>
 
-<div class="panel panel-flush">
-    <div class="panel-head d-flex justify-content-between align-items-center">
-        <h2 class="panel-title mb-0">History</h2>
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h2 class="card-title mb-0">History</h2>
         <span class="text-muted small"><?= count($entries) ?> recent</span>
     </div>
     <?php if (!$entries): ?>
-        <div class="empty-state">
-            <strong>No downloads yet</strong>
-            Start a pull from the <a href="/">Download</a> page.
+        <div class="empty">
+            <p class="empty-title">No downloads yet</p>
+            <p class="empty-subtitle text-secondary">Start a pull from the <a href="/">Download</a> page.</p>
         </div>
     <?php else: ?>
         <div class="table-responsive">

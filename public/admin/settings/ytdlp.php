@@ -78,13 +78,14 @@ $extraArgs = (string) Config::get(ManagedSettings::YTDLP_EXTRA_ARGS, '');
 
 ob_start();
 ?>
-<a class="breadcrumb-dash" href="/admin/settings/">&larr; Settings</a>
+<a class="d-inline-block mb-3" href="/admin/settings/">&larr; Settings</a>
 <div class="page-header">
-    <p class="page-lede">Site-wide yt-dlp options for YouTube and other extractors.</p>
+    <p class="text-secondary">Site-wide yt-dlp options for YouTube and other extractors.</p>
 </div>
 
-<div class="panel mb-3">
-    <h2 class="panel-title">Cookies</h2>
+<div class="card mb-3">
+    <div class="card-body">
+    <h2 class="card-title">Cookies</h2>
     <?php if ($configured): ?>
         <p class="mb-1">Configured<?= $updatedAt !== null ? ' · updated ' . e($updatedAt) . ' UTC' : '' ?>.</p>
         <p class="text-muted mb-3"><span class="font-monospace"><?= (int) $size ?></span> bytes stored. Contents are not shown after save.</p>
@@ -122,29 +123,32 @@ ob_start();
             <button type="submit" class="btn btn-outline-danger">Clear cookies</button>
         </form>
     <?php endif; ?>
+    </div>
 </div>
 
-<div class="panel">
-    <h2 class="panel-title">Extra arguments</h2>
-    <p class="form-text mb-3">
-        Optional space-separated yt-dlp flags applied to every download (for example
-        <code>--retries 3</code> or <code>--extractor-args youtube:player_client=android</code>).
-        No shell metacharacters. Leave blank for defaults.
-    </p>
-    <form method="post" class="vstack gap-3">
-        <?= Csrf::field() ?>
-        <input type="hidden" name="action" value="save_options">
-        <div>
-            <label class="form-label" for="ytdlp_extra_args">Extra args</label>
-            <input class="form-control font-monospace" type="text" name="ytdlp_extra_args" id="ytdlp_extra_args"
-                   value="<?= e($extraArgs) ?>"
-                   placeholder="--geo-bypass --retries 3"
-                   autocomplete="off" spellcheck="false">
-        </div>
-        <div>
-            <button type="submit" class="btn btn-primary">Save options</button>
-        </div>
-    </form>
+<div class="card">
+    <div class="card-body">
+        <h2 class="card-title">Extra arguments</h2>
+        <p class="form-text mb-3">
+            Optional space-separated yt-dlp flags applied to every download (for example
+            <code>--retries 3</code> or <code>--extractor-args youtube:player_client=android</code>).
+            No shell metacharacters. Leave blank for defaults.
+        </p>
+        <form method="post" class="vstack gap-3">
+            <?= Csrf::field() ?>
+            <input type="hidden" name="action" value="save_options">
+            <div>
+                <label class="form-label" for="ytdlp_extra_args">Extra args</label>
+                <input class="form-control font-monospace" type="text" name="ytdlp_extra_args" id="ytdlp_extra_args"
+                       value="<?= e($extraArgs) ?>"
+                       placeholder="--geo-bypass --retries 3"
+                       autocomplete="off" spellcheck="false">
+            </div>
+            <div>
+                <button type="submit" class="btn btn-primary">Save options</button>
+            </div>
+        </form>
+    </div>
 </div>
 <?php
 View::render('Admin · yt-dlp', ob_get_clean(), $admin);

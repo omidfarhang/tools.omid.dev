@@ -49,35 +49,35 @@ $prefs = ['folder' => '', 'conflict' => 'rename'];
 ob_start();
 ?>
 <?php if ($filterUser !== null): ?>
-    <a class="breadcrumb-dash" href="/admin/users.php">&larr; Users</a>
+    <a class="d-inline-block mb-3" href="/admin/users.php">&larr; Users</a>
 <?php else: ?>
-    <a class="breadcrumb-dash" href="/admin/">&larr; Admin</a>
+    <a class="d-inline-block mb-3" href="/admin/">&larr; Admin</a>
 <?php endif; ?>
 <div class="page-header">
     <?php if ($filterUser !== null): ?>
-        <p class="page-lede">
+        <p class="text-secondary">
             Host files for <strong><?= e((string) $filterUser['username']) ?></strong>.
             <a href="/admin/history.php?user_id=<?= $filterUserId ?>">History</a>
             ·
             <a href="/admin/files.php">All files</a>
         </p>
     <?php else: ?>
-        <p class="page-lede">Every file on the host, with owner and public-link controls.</p>
+        <p class="text-secondary">Every file on the host, with owner and public-link controls.</p>
     <?php endif; ?>
 </div>
 
-<div class="panel panel-flush">
+<div class="card">
     <?php if (!$files): ?>
-        <div class="panel-head d-flex justify-content-between align-items-center">
-            <h2 class="panel-title mb-0"><?= e($panelTitle) ?></h2>
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h2 class="card-title mb-0"><?= e($panelTitle) ?></h2>
         </div>
-        <div class="empty-state">
-            <strong>No files stored</strong>
-            <?php if ($filterUser !== null): ?>
+        <div class="empty">
+            <p class="empty-title">No files stored</p>
+            <p class="empty-subtitle text-secondary"><?php if ($filterUser !== null): ?>
                 This user has nothing on the host yet.
             <?php else: ?>
                 Nothing has been downloaded yet.
-            <?php endif; ?>
+            <?php endif; ?></p>
         </div>
     <?php else: ?>
         <?php

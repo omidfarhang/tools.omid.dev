@@ -42,8 +42,8 @@ $sortMark = static function (string $col) use ($sort, $dir): string {
     return $dir === 'ASC' ? ' ↑' : ' ↓';
 };
 ?>
-<div class="panel-head files-panel-head">
-    <h2 class="panel-title mb-0"><?= e($panelTitle) ?></h2>
+<div class="card-header files-card-header">
+    <h2 class="card-title mb-0"><?= e($panelTitle) ?></h2>
     <div class="files-panel-tools">
         <label class="visually-hidden" for="files-search">Filter files</label>
         <input type="search" id="files-search" class="form-control form-control-sm files-search"
@@ -109,9 +109,9 @@ $sortMark = static function (string $col) use ($sort, $dir): string {
                 <td class="files-col-date mono"><?= e((string) $file['created_at']) ?></td>
                 <td class="files-col-share">
                     <?php if ($shareUrl): ?>
-                        <span class="badge files-share-badge files-share-public">Public</span>
+                        <span class="badge bg-teal-lt text-teal">Public</span>
                     <?php else: ?>
-                        <span class="badge files-share-badge files-share-private">Private</span>
+                        <span class="badge bg-secondary-lt">Private</span>
                     <?php endif; ?>
                 </td>
                 <td class="files-col-actions text-end">

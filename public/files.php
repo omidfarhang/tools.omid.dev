@@ -43,7 +43,7 @@ $redirect = '/files.php';
 ob_start();
 ?>
 <div class="page-header">
-    <p class="page-lede">Download files from the host or toggle a public link to share without login.</p>
+    <p class="text-secondary">Download files from the host or toggle a public link to share without login.</p>
 </div>
 
 <div id="cloud-status" class="alert d-none" role="alert">
@@ -54,19 +54,19 @@ ob_start();
 </div>
 
 <?php if (!$cloudConnected): ?>
-    <div class="status-callout">
+    <div class="alert alert-warning">
         Tip: <a href="/user/">Connect Dropbox</a> to send files to your cloud.
     </div>
 <?php endif; ?>
 
-<div class="panel panel-flush">
+<div class="card">
     <?php if (!$files): ?>
-        <div class="panel-head d-flex justify-content-between align-items-center">
-            <h2 class="panel-title mb-0">Your files</h2>
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h2 class="card-title mb-0">Your files</h2>
         </div>
-        <div class="empty-state">
-            <strong>No files yet</strong>
-            Pull a URL from the <a href="/">Download</a> page to get started.
+        <div class="empty">
+            <p class="empty-title">No files yet</p>
+            <p class="empty-subtitle text-secondary">Pull a URL from the <a href="/">Download</a> page to get started.</p>
         </div>
     <?php else: ?>
         <?php

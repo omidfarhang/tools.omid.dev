@@ -54,18 +54,19 @@ $prefs = UserRepository::cloudPrefs($user);
 ob_start();
 ?>
 <div class="page-header">
-    <p class="page-lede">Profile and cloud connections for this account.</p>
+    <p class="text-secondary">Profile and cloud connections for this account.</p>
 </div>
 
 <div class="row g-3">
     <div class="col-lg-5">
-        <div class="panel h-100">
-            <h2 class="panel-title">Profile</h2>
+        <div class="card h-100">
+            <div class="card-body">
+            <h2 class="card-title">Profile</h2>
             <dl class="mb-0">
-                <dt class="text-muted small">Username</dt>
-                <dd class="mb-3 fw-semibold"><?= e($user['username']) ?></dd>
-                <dt class="text-muted small">Role</dt>
-                <dd class="mb-0"><span class="user-chip"><span class="user-chip-dot" aria-hidden="true"></span><?= e($user['role']) ?></span></dd>
+                <dt class="text-secondary">Username</dt>
+                <dd class="mb-3"><?= e($user['username']) ?></dd>
+                <dt class="text-secondary">Role</dt>
+                <dd class="mb-0"><span class="badge bg-azure-lt text-azure"><?= e($user['role']) ?></span></dd>
             </dl>
 
             <form method="post" class="mt-4">
@@ -84,11 +85,13 @@ ob_start();
             </form>
 
             <p class="mt-4 mb-0"><a href="/files.php">Manage my files &amp; public links</a></p>
+            </div>
         </div>
     </div>
     <div class="col-lg-7">
-        <div class="panel h-100">
-            <h2 class="panel-title">Dropbox</h2>
+        <div class="card h-100">
+            <div class="card-body">
+            <h2 class="card-title">Dropbox</h2>
             <?php if (!$oauth->isConfigured()): ?>
                 <div class="alert alert-warning mb-0">Dropbox app credentials are not configured. An admin must set them under Settings → Cloud.</div>
             <?php elseif ($connected): ?>
@@ -139,9 +142,10 @@ ob_start();
                 </div>
                 <p class="form-text mt-2 mb-0">Use Reconnect after the app’s Dropbox permissions change, or to refresh the linked account.</p>
             <?php else: ?>
-                <p class="page-lede mb-3">Connect your own Dropbox to use “Save To Cloud”.</p>
+                <p class="text-secondary mb-3">Connect your own Dropbox to use “Save To Cloud”.</p>
                 <a class="btn btn-primary" href="/oauth/dropbox/start.php">Connect Dropbox</a>
             <?php endif; ?>
+            </div>
         </div>
     </div>
 </div>

@@ -89,26 +89,26 @@ $panelTitle = $filterUser !== null
 ob_start();
 ?>
 <?php if ($filterUser !== null): ?>
-    <a class="breadcrumb-dash" href="/admin/users.php">&larr; Users</a>
+    <a class="d-inline-block mb-3" href="/admin/users.php">&larr; Users</a>
 <?php else: ?>
-    <a class="breadcrumb-dash" href="/admin/">&larr; Admin</a>
+    <a class="d-inline-block mb-3" href="/admin/">&larr; Admin</a>
 <?php endif; ?>
 <div class="page-header">
     <?php if ($filterUser !== null): ?>
-        <p class="page-lede">
+        <p class="text-secondary">
             Finished jobs for <strong><?= e((string) $filterUser['username']) ?></strong>, including soft-removed rows.
             <a href="/admin/files.php?user_id=<?= $filterUserId ?>">Files</a>
             ·
             <a href="/admin/history.php">All history</a>
         </p>
     <?php else: ?>
-        <p class="page-lede">Finished download and cloud jobs across all users. Soft-removed rows stay visible here.</p>
+        <p class="text-secondary">Finished download and cloud jobs across all users. Soft-removed rows stay visible here.</p>
     <?php endif; ?>
 </div>
 
-<div class="panel panel-flush">
-    <div class="panel-head d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <h2 class="panel-title mb-0"><?= e($panelTitle) ?></h2>
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h2 class="card-title mb-0"><?= e($panelTitle) ?></h2>
         <span class="text-muted small">
             <?= count($entries) ?> shown
             <?php if ($hiddenCount > 0): ?>
@@ -117,13 +117,13 @@ ob_start();
         </span>
     </div>
     <?php if (!$entries): ?>
-        <div class="empty-state">
-            <strong>No history yet</strong>
-            <?php if ($filterUser !== null): ?>
+        <div class="empty">
+            <p class="empty-title">No history yet</p>
+            <p class="empty-subtitle text-secondary"><?php if ($filterUser !== null): ?>
                 This user has no finished download or cloud jobs.
             <?php else: ?>
                 Nothing has been downloaded or sent to cloud.
-            <?php endif; ?>
+            <?php endif; ?></p>
         </div>
     <?php else: ?>
         <div class="table-responsive">

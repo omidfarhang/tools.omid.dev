@@ -17,29 +17,35 @@ $extraArgs = trim((string) Config::get('ytdlp_extra_args', ''));
 
 ob_start();
 ?>
-<a class="breadcrumb-dash" href="/admin/">&larr; Admin</a>
-<div class="page-header">
-    <p class="page-lede">Site-wide configuration previously kept in <span class="font-monospace">.env</span> — edit by section.</p>
+<div class="mb-3">
+    <a href="/admin/">&larr; Admin</a>
+</div>
+<div class="page-header mb-3">
+    <div class="text-secondary">Site-wide configuration previously kept in <span class="font-monospace">.env</span> — edit by section.</div>
 </div>
 
-<div class="row g-3">
+<div class="row row-cards">
     <div class="col-md-6">
-        <a class="action-tile" href="/admin/settings/ytdlp.php">
-            <div class="action-tile-title">yt-dlp</div>
-            <p class="action-tile-desc mb-2">Cookies and extra extractor flags for YouTube and other sites.</p>
-            <p class="mb-0 small text-muted">
-                Cookies: <?= $cookies->has() ? 'configured' : 'not set' ?>
-                · Extra args: <?= $extraArgs !== '' ? 'set' : 'none' ?>
-            </p>
+        <a class="card-link" href="/admin/settings/ytdlp.php">
+            <div class="card-body">
+                <h3 class="card-title">yt-dlp</h3>
+                <div class="text-secondary mb-2">Cookies and extra extractor flags for YouTube and other sites.</div>
+                <div class="text-secondary small">
+                    Cookies: <?= $cookies->has() ? 'configured' : 'not set' ?>
+                    · Extra args: <?= $extraArgs !== '' ? 'set' : 'none' ?>
+                </div>
+            </div>
         </a>
     </div>
     <div class="col-md-6">
-        <a class="action-tile" href="/admin/settings/cloud.php">
-            <div class="action-tile-title">Cloud</div>
-            <p class="action-tile-desc mb-2">Dropbox app key and secret for per-user OAuth.</p>
-            <p class="mb-0 small text-muted">
-                Dropbox app: <?= $dropboxConfigured ? 'configured' : 'not set' ?>
-            </p>
+        <a class="card-link" href="/admin/settings/cloud.php">
+            <div class="card-body">
+                <h3 class="card-title">Cloud</h3>
+                <div class="text-secondary mb-2">Dropbox app key and secret for per-user OAuth.</div>
+                <div class="text-secondary small">
+                    Dropbox app: <?= $dropboxConfigured ? 'configured' : 'not set' ?>
+                </div>
+            </div>
         </a>
     </div>
 </div>

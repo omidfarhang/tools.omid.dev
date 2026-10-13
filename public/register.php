@@ -40,8 +40,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 ob_start();
 ?>
-<h1>Create account</h1>
-<p class="page-lede">Accounts stay inactive until an admin approves them.</p>
+<h2 class="card-title">Create account</h2>
+<p class="text-secondary">Accounts stay inactive until an admin approves them.</p>
 <?php if ($error): ?>
     <div class="alert alert-danger"><?= e($error) ?></div>
 <?php endif; ?>

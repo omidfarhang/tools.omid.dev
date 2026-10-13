@@ -6,9 +6,9 @@ if (empty($cloudJobs)) {
     return;
 }
 ?>
-<div class="panel panel-flush mt-3" id="cloud-jobs-panel">
-    <div class="panel-head d-flex justify-content-between align-items-center">
-        <h2 class="panel-title mb-0">Recent cloud uploads</h2>
+<div class="card mt-3" id="cloud-jobs-panel">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h2 class="card-title mb-0">Recent cloud uploads</h2>
         <span class="text-muted small"><?= count($cloudJobs) ?> recent</span>
     </div>
     <div class="table-responsive">
