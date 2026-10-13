@@ -159,26 +159,22 @@ $renderThemeSwitch = static function (string $extraClass = ''): void {
 <?php else: ?>
     <div class="page page-center">
         <div class="container container-tight py-4">
-            <div class="text-center mb-3">
-                <?php $renderThemeSwitch('d-inline-flex'); ?>
-            </div>
             <div class="text-center mb-4">
-                <a href="/login.php" class="navbar-brand">
+                <div class="mb-3">
+                    <?php $renderThemeSwitch('d-inline-flex'); ?>
+                </div>
+                <a href="/login.php" class="navbar-brand navbar-brand-autodark">
                     <span class="avatar bg-teal-lt text-teal me-2"><?= e($brandInitial) ?></span>
                     <?= e($appName) ?>
                 </a>
             </div>
-            <div class="card-md">
-                <div class="card-body">
-                    <?php foreach ($flashes as $flash): ?>
-                        <div class="alert alert-<?= e($flash['type'] === 'error' ? 'danger' : $flash['type']) ?>" role="alert">
-                            <?= e($flash['message']) ?>
-                        </div>
-                    <?php endforeach; ?>
-                    <?= $content ?>
+            <?php foreach ($flashes as $flash): ?>
+                <div class="alert alert-<?= e($flash['type'] === 'error' ? 'danger' : $flash['type']) ?>" role="alert">
+                    <?= e($flash['message']) ?>
                 </div>
-            </div>
-            <div class="text-center text-secondary mt-3">
+            <?php endforeach; ?>
+            <?= $content ?>
+            <div class="text-center text-secondary mt-4">
                 All Rights Reserved <?= date('Y') ?> | Omid Farhang
             </div>
         </div>

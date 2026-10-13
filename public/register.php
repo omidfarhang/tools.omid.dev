@@ -40,32 +40,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 ob_start();
 ?>
-<h2 class="card-title">Create account</h2>
-<p class="text-secondary">Accounts stay inactive until an admin approves them.</p>
-<?php if ($error): ?>
-    <div class="alert alert-danger"><?= e($error) ?></div>
-<?php endif; ?>
-<form method="post">
-    <?= Csrf::field() ?>
-    <div class="mb-3">
-        <label class="form-label" for="username">Username</label>
-        <input class="form-control" id="username" name="username" required autocomplete="username"
-               pattern="[a-zA-Z0-9._-]{3,32}" value="<?= e($_POST['username'] ?? '') ?>">
+<div class="card card-md">
+    <div class="card-body">
+        <h2 class="h2 text-center mb-4">Create new account</h2>
+        <p class="text-secondary text-center mb-4">Accounts stay inactive until an admin approves them.</p>
+        <?php if ($error): ?>
+            <div class="alert alert-danger" role="alert"><?= e($error) ?></div>
+        <?php endif; ?>
+        <form method="post" autocomplete="off">
+            <?= Csrf::field() ?>
+            <div class="mb-3">
+                <label class="form-label" for="username">Username</label>
+                <input class="form-control" id="username" name="username" placeholder="Enter username"
+                       required autocomplete="username" pattern="[a-zA-Z0-9._-]{3,32}"
+                       value="<?= e($_POST['username'] ?? '') ?>">
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="password">Password</label>
+                <input class="form-control" type="password" id="password" name="password"
+                       placeholder="Password" required autocomplete="new-password" minlength="8">
+            </div>
+            <div class="mb-2">
+                <label class="form-label" for="password_confirm">Confirm password</label>
+                <input class="form-control" type="password" id="password_confirm" name="password_confirm"
+                       placeholder="Confirm password" required autocomplete="new-password" minlength="8">
+            </div>
+            <div class="form-footer">
+                <button class="btn btn-primary w-100" type="submit">Create new account</button>
+            </div>
+        </form>
     </div>
-    <div class="mb-3">
-        <label class="form-label" for="password">Password</label>
-        <input class="form-control" type="password" id="password" name="password" required
-               autocomplete="new-password" minlength="8">
-    </div>
-    <div class="mb-3">
-        <label class="form-label" for="password_confirm">Confirm password</label>
-        <input class="form-control" type="password" id="password_confirm" name="password_confirm" required
-               autocomplete="new-password" minlength="8">
-    </div>
-    <div class="d-grid gap-2">
-        <button class="btn btn-primary" type="submit">Create account</button>
-        <a class="btn btn-outline-secondary" href="/login.php">Already have an account?</a>
-    </div>
-</form>
+</div>
+<div class="text-center text-secondary mt-3">
+    Already have an account? <a href="/login.php" tabindex="-1">Sign in</a>
+</div>
 <?php
 View::render('Register', ob_get_clean(), null);
