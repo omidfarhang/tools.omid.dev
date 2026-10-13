@@ -11,6 +11,7 @@ fs.mkdirSync(outJs, { recursive: true });
 const copies = [
   ['node_modules/@tabler/core/dist/css/tabler.min.css', 'public/assets/css/tabler.min.css'],
   ['node_modules/@tabler/core/dist/js/tabler.min.js', 'public/assets/js/tabler.min.js'],
+  ['node_modules/@tabler/core/dist/js/tabler-theme.min.js', 'public/assets/js/tabler-theme.min.js'],
 ];
 
 const remove = [

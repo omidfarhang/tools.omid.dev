@@ -58,6 +58,23 @@ $renderNav = static function () use ($user, $isActive, $navIcon): void {
     </nav>
     <?php
 };
+
+$renderThemeSwitch = static function (string $extraClass = ''): void {
+    $class = trim('theme-switch ' . $extraClass);
+    ?>
+    <div class="<?= e($class) ?>" data-theme-switch role="group" aria-label="Color theme">
+        <button type="button" class="theme-switch-btn" data-theme-value="light" aria-pressed="false" title="Light" aria-label="Light theme">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+        </button>
+        <button type="button" class="theme-switch-btn" data-theme-value="auto" aria-pressed="false" title="System" aria-label="System theme">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
+        </button>
+        <button type="button" class="theme-switch-btn" data-theme-value="dark" aria-pressed="false" title="Dark" aria-label="Dark theme">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4 7 7 0 1 0 20 14.5Z"/></svg>
+        </button>
+    </div>
+    <?php
+};
 ?><!DOCTYPE html>
 <html lang="en">
 <head>
@@ -65,6 +82,7 @@ $renderNav = static function () use ($user, $isActive, $navIcon): void {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/png" sizes="32x32" href="https://omid.dev/logo/favicon-32x32.png">
     <title><?= e($title) ?> · <?= e($appName) ?></title>
+    <script src="/assets/js/tabler-theme.min.js"></script>
     <link href="/assets/css/tabler.min.css" rel="stylesheet">
     <link href="/assets/css/app.css" rel="stylesheet">
 </head>
@@ -97,6 +115,7 @@ $renderNav = static function () use ($user, $isActive, $navIcon): void {
                 <h1 class="topbar-title"><?= e($title) ?></h1>
             </div>
             <div class="topbar-actions">
+                <?php $renderThemeSwitch(); ?>
                 <span class="user-chip"><span class="user-chip-dot" aria-hidden="true"></span><?= e($user['username']) ?></span>
                 <a class="btn btn-sm btn-outline-secondary" href="/logout.php">Logout</a>
             </div>
@@ -116,6 +135,7 @@ $renderNav = static function () use ($user, $isActive, $navIcon): void {
         </footer>
     </div>
 <?php else: ?>
+    <?php $renderThemeSwitch('theme-switch-auth'); ?>
     <div class="auth-wrap">
         <div class="auth-panel">
             <a class="auth-brand" href="/login.php">
@@ -135,5 +155,6 @@ $renderNav = static function () use ($user, $isActive, $navIcon): void {
     </footer>
 <?php endif; ?>
 <script src="/assets/js/tabler.min.js"></script>
+<script src="/assets/js/theme-switch.js"></script>
 </body>
 </html>

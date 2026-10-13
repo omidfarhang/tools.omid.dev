@@ -38,7 +38,7 @@ cp .env.example .env
 # Point vhost document root at public/
 ```
 
-Asset pipeline: `@tabler/core` via npm, then `npm run build:assets` (copies Tabler CSS/JS into `public/assets`). App styles live in `public/assets/css/app.css` (and CSS variables at the top of that file). Keep `DESIGN.md` tokens in sync when you change those variables. Do not also load standalone Bootstrap — Tabler already bundles it.
+Asset pipeline: `@tabler/core` via npm, then `npm run build:assets` (copies Tabler CSS/JS + `tabler-theme.min.js` into `public/assets`). App styles live in `public/assets/css/app.css` (light tokens in `:root`, dark in `[data-bs-theme="dark"]`). Theme preference is `localStorage['tabler-theme']` (`auto`|`light`|`dark`) via `theme-switch.js`. Keep `DESIGN.md` tokens in sync when you change those variables. Do not also load standalone Bootstrap — Tabler already bundles it.
 
 ## Code conventions
 

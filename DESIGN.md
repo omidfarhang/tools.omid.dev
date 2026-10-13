@@ -1,10 +1,12 @@
 ---
 version: alpha
 name: Tools Center
-description: Operator toolkit UI — cool neutrals, teal accent, system UI fonts
+description: Operator toolkit UI — cool neutrals, teal accent, system UI fonts, light/dark/auto
 colors:
   bg: "#eef2f6"
   surface: "#ffffff"
+  surface-muted: "#f8fafc"
+  topbar-bg: "rgba(255, 255, 255, 0.82)"
   sidebar: "#0b1220"
   sidebar-muted: "#8b97a8"
   sidebar-hover: "rgba(255, 255, 255, 0.06)"
@@ -13,6 +15,7 @@ colors:
   primary-hover: "#0d9488"
   primary-soft: "#ccfbf1"
   border: "#d8e0ea"
+  border-strong: "#b8c4d4"
   text: "#0f172a"
   muted: "#64748b"
   danger: "#b91c1c"
@@ -20,6 +23,22 @@ colors:
   warning-border: "#fdba74"
   on-sidebar: "#ffffff"
   on-sidebar-nav: "#cbd5e1"
+colors-dark:
+  bg: "#0f1419"
+  surface: "#1a222d"
+  surface-muted: "#151c26"
+  topbar-bg: "rgba(26, 34, 45, 0.88)"
+  sidebar: "#080c14"
+  primary: "#2dd4bf"
+  primary-hover: "#5eead4"
+  primary-soft: "rgba(45, 212, 191, 0.14)"
+  border: "#2a3544"
+  border-strong: "#3d4d61"
+  text: "#e8eef5"
+  muted: "#94a3b8"
+  danger: "#f87171"
+  warning-bg: "rgba(251, 146, 60, 0.12)"
+  warning-border: "#c2410c"
 typography:
   brand:
     fontFamily: system-ui
@@ -110,17 +129,25 @@ components:
 
 Cool, compact operator UI: slate sidebar, light gray workspace, white panels, teal accent. Feels like a private control room — calm, dense enough for tables and forms, never playful or promotional. Brand mark is a small teal gradient square with the product initial; product name sits beside it in the system UI stack.
 
-Canonical CSS variables live in `public/assets/css/app.css` (`:root`). Tokens above mirror those values; if they diverge, update both.
+Canonical CSS variables live in `public/assets/css/app.css` (`:root` + `[data-bs-theme="dark"]`). Tokens above mirror those values; if they diverge, update both.
+
+## Color modes
+
+- **Modes:** `light` | `dark` | `auto` (follows `prefers-color-scheme`). Default preference is **auto**.
+- **Mechanism:** Tabler’s `tabler-theme.min.js` (early in `<head>`) + `theme-switch.js`. Preference stored as `localStorage['tabler-theme']`. Resolved theme sets `data-bs-theme="dark"` on `<html>` (light = attribute removed).
+- **Control:** Compact three-button switcher in the topbar (and auth corner): Light / System / Dark.
+- Do not force dark as the product default; auto respects the OS.
 
 ## Colors
 
-- **Primary / accent (`#0f766e` → hover `#0d9488`):** Actions, links, active nav bar, focus rings, progress. Soft mint (`#ccfbf1`) for subtle fills only.
-- **Sidebar (`#0b1220`):** Fixed dark navy chrome; nav text slate, active state teal wash.
-- **Surfaces:** Page `#eef2f6`, cards/panels `#ffffff`, hairline borders `#d8e0ea`.
-- **Text:** Ink `#0f172a` for body; muted `#64748b` for ledes, labels, footer.
-- **Semantic:** Danger `#b91c1c`; warning callouts use orange wash (`#fff7ed` / `#fdba74`).
+- **Primary / accent (light `#0f766e` → dark `#2dd4bf`):** Actions, links, active nav bar, focus rings, progress. Soft mint / translucent teal for subtle fills.
+- **Sidebar:** Near-black navy chrome in both modes; nav text slate, active state teal wash.
+- **Surfaces (light):** Page `#eef2f6`, panels `#ffffff`, muted `#f8fafc`, borders `#d8e0ea`.
+- **Surfaces (dark):** Page `#0f1419`, panels `#1a222d`, muted `#151c26`, borders `#2a3544`.
+- **Text:** Light ink `#0f172a` / muted `#64748b`; dark ink `#e8eef5` / muted `#94a3b8`.
+- **Semantic:** Danger and warning tokens have light and dark variants in `app.css`.
 
-Auth screens use soft radial teal + slate washes over a cool gradient — not flat white, not dark mode.
+Auth screens use `--auth-wash` (teal + slate radial washes) that swaps with the color mode.
 
 ## Typography
 
@@ -164,6 +191,7 @@ Keep corners consistent within a view; do not mix sharp and pill shapes on the s
 - **Badges:** Dashboard weight 600, `0.75rem`, small radius — status chips and share Public/Private.
 - **Alerts / status-callout:** Alerts for flashes; warning callout for Dropbox/setup hints.
 - **Empty state:** Centered muted copy with a strong first line.
+- **Theme switch:** `.theme-switch` segment control; do not replace with a floating FAB or marketing-style toggle.
 
 Reuse these before inventing new card/tile variants.
 
@@ -173,7 +201,7 @@ Reuse these before inventing new card/tile variants.
 - Do use the system UI + platform mono stacks as defined in `app.css` (no Bunny/Google font loads)
 - Do theme Tabler via `--tblr-*` bridges in `app.css`; do not load a separate Bootstrap package alongside Tabler
 - Do preserve the custom sidebar + topbar shell for authenticated pages and the centered auth panel for guests (avoid Tabler demo layouts)
-- Don’t introduce purple/indigo gradients, cream-and-terracotta themes, or dark-mode-by-default
+- Don’t introduce purple/indigo gradients or cream-and-terracotta themes; don’t force dark as the default mode (prefer auto)
 - Don’t add glassmorphism stacks, emoji ornamentation, or floating badge clutter
 - Don’t put marketing heroes, stat strips, or multi-CTA landings on tool screens
 - Don’t invent new CSS variable names when an existing `:root` token already fits — extend `app.css` and this file together
