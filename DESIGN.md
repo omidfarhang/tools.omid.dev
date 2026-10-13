@@ -1,7 +1,7 @@
 ---
 version: alpha
 name: Tools Center
-description: Operator toolkit UI — cool neutrals, teal accent, Outfit + IBM Plex Mono
+description: Operator toolkit UI — cool neutrals, teal accent, system UI fonts
 colors:
   bg: "#eef2f6"
   surface: "#ffffff"
@@ -22,46 +22,43 @@ colors:
   on-sidebar-nav: "#cbd5e1"
 typography:
   brand:
-    fontFamily: Outfit
+    fontFamily: system-ui
     fontSize: 16.8px
-    fontWeight: 650
+    fontWeight: 600
     lineHeight: 1.2
-    letterSpacing: -0.02em
   page-title:
-    fontFamily: Outfit
+    fontFamily: system-ui
     fontSize: 24px
-    fontWeight: 700
+    fontWeight: 600
     lineHeight: 1.2
-    letterSpacing: -0.03em
   topbar-title:
-    fontFamily: Outfit
+    fontFamily: system-ui
     fontSize: 18.4px
-    fontWeight: 650
+    fontWeight: 600
     lineHeight: 1.2
-    letterSpacing: -0.02em
   body:
-    fontFamily: Outfit
+    fontFamily: system-ui
     fontSize: 16px
     fontWeight: 400
     lineHeight: 1.5
   label:
-    fontFamily: Outfit
+    fontFamily: system-ui
     fontSize: 14px
-    fontWeight: 550
+    fontWeight: 500
     lineHeight: 1.3
   nav-section:
-    fontFamily: Outfit
+    fontFamily: system-ui
     fontSize: 11.2px
     fontWeight: 600
     lineHeight: 1
     letterSpacing: 0.08em
   mono:
-    fontFamily: "IBM Plex Mono"
+    fontFamily: ui-monospace
     fontSize: 14px
     fontWeight: 400
     lineHeight: 1.4
   table-head:
-    fontFamily: Outfit
+    fontFamily: system-ui
     fontSize: 12px
     fontWeight: 600
     lineHeight: 1.2
@@ -111,7 +108,7 @@ components:
 
 ## Overview
 
-Cool, compact operator UI: slate sidebar, light gray workspace, white panels, teal accent. Feels like a private control room — calm, dense enough for tables and forms, never playful or promotional. Brand mark is a small teal gradient square with the product initial; product name sits beside it in Outfit.
+Cool, compact operator UI: slate sidebar, light gray workspace, white panels, teal accent. Feels like a private control room — calm, dense enough for tables and forms, never playful or promotional. Brand mark is a small teal gradient square with the product initial; product name sits beside it in the system UI stack.
 
 Canonical CSS variables live in `public/assets/css/app.css` (`:root`). Tokens above mirror those values; if they diverge, update both.
 
@@ -127,10 +124,10 @@ Auth screens use soft radial teal + slate washes over a cool gradient — not fl
 
 ## Typography
 
-- **UI / brand:** [Outfit](https://fonts.bunny.net) 400–700. Slightly tight tracking on titles.
-- **Technical:** [IBM Plex Mono](https://fonts.bunny.net) for filenames, code, and table links.
-- Avoid Inter, Roboto, Arial, or system-ui as the primary face (system-ui is fallback only).
-- Uppercase micro-labels (nav sections, table heads, stat labels) with modest letter-spacing — sparingly.
+- **UI / brand:** System UI stack (`system-ui`, Segoe UI, Roboto, Helvetica Neue, Arial). Standard dashboard weights only: 400 / 500 / 600 / 700.
+- **Technical:** Platform monospace (`ui-monospace`, SF Mono, Menlo, Consolas) for filenames, code, and table links.
+- No webfonts — rely on the OS UI face so the app reads as a plain operator dashboard.
+- Uppercase micro-labels (nav sections, table heads, stat labels) with modest letter-spacing — sparingly. Avoid tight negative tracking on titles.
 
 ## Layout
 
@@ -162,7 +159,7 @@ Keep corners consistent within a view; do not mix sharp and pill shapes on the s
 - **Files table / toolbar:** Checkbox + truncated mono name + size/date + Public/Private badge + single Actions dropdown. Compact filter + count sit in the panel head; a fixed-height selection strip stays reserved with bulk actions disabled until rows are checked. Sort via column header links.
 - **Confirm / rename / cloud modals:** Bootstrap modals with panel radius and border tokens; delete confirms with mono filename; no native `confirm()`.
 - **Forms:** Bootstrap controls restyled — border, 8px radius, teal focus ring. Multi-step tool forms (home download) use `.form-section` + uppercase `.form-section-title` dividers, optional `.source-options-block` for nested extractor options, and `.choice-tile` grids for exclusive destinations.
-- **Buttons:** Primary = accent teal; outline secondary for Logout and secondary actions; keep font-weight ~550.
+- **Buttons:** Primary = accent teal; outline secondary for Logout and secondary actions; keep font-weight 500.
 - **Alerts / status-callout:** Bootstrap alerts for flashes; warning callout for Dropbox/setup hints.
 - **Empty state:** Centered muted copy with a strong first line.
 
@@ -171,9 +168,10 @@ Reuse these before inventing new card/tile variants.
 ## Do's and Don'ts
 
 - Do keep the teal accent reserved for primary actions, links, and active indicators
-- Do use Outfit + IBM Plex Mono as defined; load from Bunny as in `templates/layout.php`
+- Do use the system UI + platform mono stacks as defined in `app.css` (no Bunny/Google font loads)
 - Do preserve the sidebar + topbar shell for authenticated pages and the centered auth panel for guests
 - Don’t introduce purple/indigo gradients, cream-and-terracotta themes, or dark-mode-by-default
 - Don’t add glassmorphism stacks, emoji ornamentation, or floating badge clutter
 - Don’t put marketing heroes, stat strips, or multi-CTA landings on tool screens
 - Don’t invent new CSS variable names when an existing `:root` token already fits — extend `app.css` and this file together
+- Don’t use non-standard font weights (550, 650) or expressive display faces
