@@ -174,6 +174,17 @@ $truncateUrl = static function (string $url, int $max = 56): string {
     return substr($url, 0, $max - 1) . '…';
 };
 
+$failReasonButton = static function (string $error, string $status): string {
+    if ($error === '' || !in_array($status, ['failed', 'skipped'], true)) {
+        return '';
+    }
+
+    return '<button type="button" class="btn btn-link btn-sm text-danger p-0 align-baseline ms-1"'
+        . ' data-bs-toggle="modal" data-bs-target="#jobs-fail-modal"'
+        . ' data-fail-reason="' . e($error) . '">'
+        . 'Reason</button>';
+};
+
 ob_start();
 ?>
 <p class="text-secondary mb-3">Paste a URL to pull onto this host, or send it to your connected cloud.</p>
@@ -451,6 +462,8 @@ ob_start();
                     $fileId = isset($job['file_id']) && $job['file_id'] !== null ? (int) $job['file_id'] : null;
                     $canCancel = DownloadJobRepository::canCancel($job);
                     $canRetry = DownloadJobRepository::canRetry($job);
+                    $canHide = DownloadJobRepository::canHide($job);
+                    $error = (string) ($job['error'] ?? '');
                     ?>
                     <tr data-job-id="<?= (int) $job['id'] ?>" class="<?= $isActive ? '' : 'text-muted' ?>">
                         <td class="mono small" title="<?= e((string) $job['source_url']) ?>"><?= e($truncateUrl((string) $job['source_url'])) ?></td>
@@ -466,28 +479,37 @@ ob_start();
                             <span class="badge text-bg-<?= e($statusBadge($badgeStatus)) ?> job-status-badge">
                                 <?= e($displayStatus) ?>
                             </span>
-                            <?php if (!empty($job['error'])): ?>
-                                <div class="text-muted small mt-1 job-error"><?= e((string) $job['error']) ?></div>
-                            <?php endif; ?>
+                            <?= $failReasonButton($error, $status) ?>
                         </td>
                         <td class="text-end text-nowrap">
-                            <?php if ($canCancel): ?>
-                                <form method="post" action="/job_action.php" class="d-inline">
-                                    <?= Csrf::field() ?>
-                                    <input type="hidden" name="action" value="cancel">
-                                    <input type="hidden" name="id" value="<?= (int) $job['id'] ?>">
-                                    <input type="hidden" name="return" value="/">
-                                    <button type="submit" class="btn btn-link btn-sm text-muted p-0">Cancel</button>
-                                </form>
-                            <?php elseif ($canRetry): ?>
-                                <form method="post" action="/job_action.php" class="d-inline">
-                                    <?= Csrf::field() ?>
-                                    <input type="hidden" name="action" value="retry">
-                                    <input type="hidden" name="id" value="<?= (int) $job['id'] ?>">
-                                    <input type="hidden" name="return" value="/">
-                                    <button type="submit" class="btn btn-link btn-sm p-0">Retry</button>
-                                </form>
-                            <?php endif; ?>
+                            <div class="d-inline-flex align-items-center gap-2">
+                                <?php if ($canCancel): ?>
+                                    <form method="post" action="/job_action.php" class="d-inline">
+                                        <?= Csrf::field() ?>
+                                        <input type="hidden" name="action" value="cancel">
+                                        <input type="hidden" name="id" value="<?= (int) $job['id'] ?>">
+                                        <input type="hidden" name="return" value="/">
+                                        <button type="submit" class="btn btn-link btn-sm text-muted p-0">Cancel</button>
+                                    </form>
+                                <?php elseif ($canRetry): ?>
+                                    <form method="post" action="/job_action.php" class="d-inline">
+                                        <?= Csrf::field() ?>
+                                        <input type="hidden" name="action" value="retry">
+                                        <input type="hidden" name="id" value="<?= (int) $job['id'] ?>">
+                                        <input type="hidden" name="return" value="/">
+                                        <button type="submit" class="btn btn-link btn-sm p-0">Retry</button>
+                                    </form>
+                                <?php endif; ?>
+                                <?php if ($canHide): ?>
+                                    <form method="post" action="/history_hide.php" class="d-inline">
+                                        <?= Csrf::field() ?>
+                                        <input type="hidden" name="kind" value="download">
+                                        <input type="hidden" name="id" value="<?= (int) $job['id'] ?>">
+                                        <input type="hidden" name="return" value="/">
+                                        <button type="submit" class="btn btn-link btn-sm text-muted p-0">Remove</button>
+                                    </form>
+                                <?php endif; ?>
+                            </div>
                         </td>
                     </tr>
                 <?php endforeach; ?>
@@ -495,6 +517,23 @@ ob_start();
             </table>
         </div>
     <?php endif; ?>
+</div>
+
+<div class="modal fade" id="jobs-fail-modal" tabindex="-1" aria-labelledby="jobs-fail-modal-label" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title h5" id="jobs-fail-modal-label">Fail reason</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <pre class="mb-0 small text-wrap" id="jobs-fail-modal-body" style="white-space: pre-wrap; word-break: break-word;"></pre>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -720,26 +759,47 @@ ob_start();
         return job.status || 'pending';
     }
 
+    function failReasonButton(error, status) {
+        if (!error || (status !== 'failed' && status !== 'skipped')) {
+            return '';
+        }
+        return '<button type="button" class="btn btn-link btn-sm text-danger p-0 align-baseline ms-1"'
+            + ' data-bs-toggle="modal" data-bs-target="#jobs-fail-modal"'
+            + ' data-fail-reason="' + escapeAttr(error) + '">Reason</button>';
+    }
+
     function jobActionHtml(job) {
+        const parts = [];
         if (job.can_cancel) {
-            return '<form method="post" action="/job_action.php" class="d-inline">'
+            parts.push('<form method="post" action="/job_action.php" class="d-inline">'
                 + '<input type="hidden" name="_csrf" value="' + escapeAttr(csrf) + '">'
                 + '<input type="hidden" name="action" value="cancel">'
                 + '<input type="hidden" name="id" value="' + job.id + '">'
                 + '<input type="hidden" name="return" value="/">'
                 + '<button type="submit" class="btn btn-link btn-sm text-muted p-0">Cancel</button>'
-                + '</form>';
-        }
-        if (job.can_retry) {
-            return '<form method="post" action="/job_action.php" class="d-inline">'
+                + '</form>');
+        } else if (job.can_retry) {
+            parts.push('<form method="post" action="/job_action.php" class="d-inline">'
                 + '<input type="hidden" name="_csrf" value="' + escapeAttr(csrf) + '">'
                 + '<input type="hidden" name="action" value="retry">'
                 + '<input type="hidden" name="id" value="' + job.id + '">'
                 + '<input type="hidden" name="return" value="/">'
                 + '<button type="submit" class="btn btn-link btn-sm p-0">Retry</button>'
-                + '</form>';
+                + '</form>');
         }
-        return '';
+        if (job.can_hide) {
+            parts.push('<form method="post" action="/history_hide.php" class="d-inline">'
+                + '<input type="hidden" name="_csrf" value="' + escapeAttr(csrf) + '">'
+                + '<input type="hidden" name="kind" value="download">'
+                + '<input type="hidden" name="id" value="' + job.id + '">'
+                + '<input type="hidden" name="return" value="/">'
+                + '<button type="submit" class="btn btn-link btn-sm text-muted p-0">Remove</button>'
+                + '</form>');
+        }
+        if (!parts.length) {
+            return '';
+        }
+        return '<div class="d-inline-flex align-items-center gap-2">' + parts.join('') + '</div>';
     }
 
     function renderJobs(jobs, activeCount) {
@@ -771,7 +831,7 @@ ob_start();
                 + '<td class="mono">' + nameHtml + '</td>'
                 + '<td>' + escapeHtml(destinationLabel(job.behavior)) + '</td>'
                 + '<td><span class="' + statusBadgeClass(badgeStatus) + '">' + escapeHtml(label) + '</span>'
-                + (job.error ? '<div class="text-muted small mt-1">' + escapeHtml(job.error) + '</div>' : '')
+                + failReasonButton(job.error, job.status)
                 + '</td>'
                 + '<td class="text-end text-nowrap">' + jobActionHtml(job) + '</td></tr>';
         }).join('');
@@ -819,6 +879,18 @@ ob_start();
     } else {
         // Refresh once so a job that finished during redirect appears without reload.
         setTimeout(pollActiveJobs, 1200);
+    }
+
+    var failModal = document.getElementById('jobs-fail-modal');
+    if (failModal) {
+        failModal.addEventListener('show.bs.modal', function (event) {
+            var btn = event.relatedTarget;
+            var modalBody = document.getElementById('jobs-fail-modal-body');
+            if (!modalBody) return;
+            modalBody.textContent = btn && btn.getAttribute('data-fail-reason')
+                ? btn.getAttribute('data-fail-reason')
+                : '';
+        });
     }
 })();
 </script>

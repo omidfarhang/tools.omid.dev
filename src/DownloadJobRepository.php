@@ -230,6 +230,11 @@ final class DownloadJobRepository
         return (string) ($job['status'] ?? '') === 'failed';
     }
 
+    public static function canHide(array $job): bool
+    {
+        return in_array((string) ($job['status'] ?? ''), ['complete', 'failed', 'cancelled'], true);
+    }
+
     private function jobSelectSql(): string
     {
         return 'SELECT d.*,

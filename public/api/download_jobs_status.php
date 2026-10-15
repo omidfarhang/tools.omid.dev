@@ -72,6 +72,7 @@ json_response([
             'active' => DownloadJobRepository::isActiveRow($job),
             'can_cancel' => DownloadJobRepository::canCancel($job),
             'can_retry' => DownloadJobRepository::canRetry($job),
+            'can_hide' => DownloadJobRepository::canHide($job),
         ];
     }, $jobs),
 ]);

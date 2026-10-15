@@ -15,6 +15,10 @@ Csrf::requireValid();
 $kind = (string) ($_POST['kind'] ?? '');
 $id = (int) ($_POST['id'] ?? 0);
 $userId = (int) $user['id'];
+$return = (string) ($_POST['return'] ?? '/history.php');
+if ($return === '' || !str_starts_with($return, '/') || str_starts_with($return, '//')) {
+    $return = '/history.php';
+}
 
 $ok = false;
 if ($id > 0 && $kind === 'download') {
@@ -29,4 +33,4 @@ if ($ok) {
     flash('error', 'Could not remove that history entry.');
 }
 
-redirect('/history.php');
+redirect($return);
