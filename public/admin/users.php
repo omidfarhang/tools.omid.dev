@@ -192,19 +192,14 @@ ob_start();
                     </td>
                     <td>
                         <?php if ($mfaOn): ?>
-                            <span class="badge bg-green-lt">On</span>
-                            <span class="text-secondary small d-block">
-                                <?php
-                                $bits = [];
-                                if ($totpOn) {
-                                    $bits[] = 'TOTP';
-                                }
-                                if ($passkeyCount > 0) {
-                                    $bits[] = $passkeyCount === 1 ? '1 passkey' : "{$passkeyCount} passkeys";
-                                }
-                                echo e(implode(' · ', $bits));
-                                ?>
-                            </span>
+                            <div class="d-flex flex-wrap gap-1">
+                                <?php if ($totpOn): ?>
+                                    <span class="badge bg-green-lt">TOTP</span>
+                                <?php endif; ?>
+                                <?php if ($passkeyCount > 0): ?>
+                                    <span class="badge bg-green-lt"><?= $passkeyCount === 1 ? '1 passkey' : "{$passkeyCount} passkeys" ?></span>
+                                <?php endif; ?>
+                            </div>
                         <?php else: ?>
                             <span class="text-secondary">Off</span>
                         <?php endif; ?>
