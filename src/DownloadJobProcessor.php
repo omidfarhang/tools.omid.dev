@@ -116,7 +116,7 @@ final class DownloadJobProcessor
 
             if ($needsCloud) {
                 if ($source->requiresLocalFile() || $behavior === 'save_to_both') {
-                    $token = $this->shares->enable((int) $fileId, (int) $user['id']);
+                    $token = $this->shares->enable((int) $fileId, (int) $user['id'], purpose: 'cloud_fetch');
                     $fetchUrl = ShareService::publicUrl($token);
                     $cloudFilename = $downloadResult['original_name'] ?? 'video.mp4';
                     $localFileId = (int) $fileId;

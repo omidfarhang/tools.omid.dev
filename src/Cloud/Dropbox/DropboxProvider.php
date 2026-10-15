@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Cloud\Dropbox;
 
+use App\Cloud\CloudJobFinalizer;
 use App\Cloud\CloudJobRepository;
 use App\Cloud\CloudProvider;
 use App\DropboxOAuth;
-use App\FileRepository;
 use App\UserRepository;
 
 final class DropboxProvider implements CloudProvider
@@ -16,12 +16,12 @@ final class DropboxProvider implements CloudProvider
         private ?UserRepository $users = null,
         private ?DropboxOAuth $oauth = null,
         private ?CloudJobRepository $jobs = null,
-        private ?FileRepository $files = null,
+        private ?CloudJobFinalizer $finalizer = null,
     ) {
         $this->users = $users ?? new UserRepository();
         $this->oauth = $oauth ?? new DropboxOAuth();
         $this->jobs = $jobs ?? new CloudJobRepository();
-        $this->files = $files ?? new FileRepository();
+        $this->finalizer = $finalizer ?? new CloudJobFinalizer(jobs: $this->jobs);
     }
 
     public function id(): string
@@ -205,10 +205,7 @@ final class DropboxProvider implements CloudProvider
                 }
                 if (($job['status'] ?? '') !== 'complete') {
                     $this->jobs->markComplete((int) $job['id'], $resultPath);
-                    if (!empty($job['delete_after']) && !empty($job['file_id'])) {
-                        $deletedLocal = $this->deleteLocalFile((int) $job['file_id'], (int) $job['user_id']);
-                        $this->jobs->clearFileId((int) $job['id']);
-                    }
+                    $deletedLocal = $this->finalizer->onComplete($job);
                 }
                 $job = $this->jobs->findById((int) $job['id']);
             } elseif ($status === 'failed') {
@@ -404,22 +401,6 @@ final class DropboxProvider implements CloudProvider
             'error' => $result['error'] ?? 'Unknown error',
             'message' => 'Failed to start Dropbox upload',
         ];
-    }
-
-    private function deleteLocalFile(int $fileId, int $userId): bool
-    {
-        $file = $this->files->findById($fileId);
-        if ($file === null || (int) $file['user_id'] !== $userId) {
-            return false;
-        }
-
-        $path = FileRepository::absolutePath((string) $file['stored_name']);
-        if ($path !== null && is_file($path)) {
-            unlink($path);
-        }
-        $this->files->delete($fileId);
-
-        return true;
     }
 
     /** @return array{ok:bool, data?:array, error?:string} */

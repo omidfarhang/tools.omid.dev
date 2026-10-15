@@ -41,7 +41,7 @@ $fileId = $files->create(
 );
 
 $shares = new ShareService();
-$token = $shares->enable($fileId, (int) $user['id']);
+$token = $shares->enable($fileId, (int) $user['id'], purpose: 'cloud_fetch');
 $publicUrl = ShareService::publicUrl($token);
 
 $cloud = CloudSendService::create();

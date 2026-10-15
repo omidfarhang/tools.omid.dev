@@ -70,7 +70,7 @@ final class CloudSendService
         string $providerId = 'dropbox',
     ): array {
         $shares = new ShareService();
-        $token = $shares->enable((int) $file['id'], (int) $user['id']);
+        $token = $shares->enable((int) $file['id'], (int) $user['id'], purpose: 'cloud_fetch');
         $fetchUrl = ShareService::publicUrl($token);
 
         return $this->startForUser(

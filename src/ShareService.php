@@ -83,6 +83,19 @@ final class ShareService
         $stmt->execute([':fid' => $fileId]);
     }
 
+    /**
+     * Revoke ephemeral shares created only so a cloud provider can fetch the file.
+     * User-enabled shares (purpose=user) are left alone.
+     */
+    public function revokeCloudFetchForFile(int $fileId): void
+    {
+        $stmt = $this->db->prepare(
+            'UPDATE shares SET revoked_at = datetime(\'now\')
+             WHERE file_id = :fid AND revoked_at IS NULL AND purpose = \'cloud_fetch\''
+        );
+        $stmt->execute([':fid' => $fileId]);
+    }
+
     public function findActiveByToken(string $token): ?array
     {
         $stmt = $this->db->prepare(
