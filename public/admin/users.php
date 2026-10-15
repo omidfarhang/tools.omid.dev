@@ -116,44 +116,15 @@ ob_start();
 <a class="d-inline-block mb-3" href="/admin/">&larr; Admin</a>
 <p class="text-secondary mb-3">Create accounts and manage roles, approvals, quotas, and passwords.</p>
 
-<div class="card mb-3">
-    <div class="card-body">
-        <h2 class="card-title">Create user</h2>
-        <form method="post" class="row g-3 align-items-end">
-            <?= Csrf::field() ?>
-            <input type="hidden" name="action" value="create">
-            <div class="col-md-2">
-                <label class="form-label">Username</label>
-                <input class="form-control" name="username" required>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Password</label>
-                <input class="form-control" type="password" name="password" required>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Role</label>
-                <select class="form-select" name="role">
-                    <option value="user">user</option>
-                    <option value="admin">admin</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Quota (MiB)</label>
-                <input class="form-control mono" type="text" inputmode="numeric" pattern="[0-9]*"
-                       name="quota_mib" placeholder="Default" autocomplete="off">
-                <div class="form-text">Blank = site default (<?= e(UserRepository::formatQuotaLabel($defaultQuota)) ?>); 0 = unlimited. <a href="/admin/settings/storage.php">Edit default</a></div>
-            </div>
-            <div class="col-md-2">
-                <button class="btn btn-primary" type="submit">Create</button>
-            </div>
-        </form>
-    </div>
-</div>
-
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h2 class="card-title mb-0">All users</h2>
-        <span class="text-muted small"><?= count($all) ?> total</span>
+        <div class="d-flex align-items-center gap-2">
+            <h2 class="card-title mb-0">All users</h2>
+            <span class="text-muted small"><?= count($all) ?> total</span>
+        </div>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createUserModal">
+            Create user
+        </button>
     </div>
     <div class="table-responsive">
         <table class="table card-table table-sm align-middle mb-0" data-users-table>
@@ -303,6 +274,53 @@ ob_start();
     </div>
 </div>
 
+<div class="modal fade" id="createUserModal" tabindex="-1" aria-labelledby="createUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" autocomplete="off">
+                <?= Csrf::field() ?>
+                <input type="hidden" name="action" value="create">
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="createUserModalLabel">Create user</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label" for="createUsername">Username</label>
+                        <input class="form-control" type="text" name="username" id="createUsername"
+                               required autocomplete="off">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="createPassword">Password</label>
+                        <input class="form-control" type="password" name="password" id="createPassword"
+                               required autocomplete="new-password">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="createRole">Role</label>
+                        <select class="form-select" name="role" id="createRole">
+                            <option value="user">user</option>
+                            <option value="admin">admin</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label" for="createQuota">Quota (MiB)</label>
+                        <input class="form-control mono" type="text" inputmode="numeric" pattern="[0-9]*"
+                               name="quota_mib" id="createQuota" placeholder="Default" autocomplete="off">
+                        <div class="form-text">
+                            Blank = site default (<?= e(UserRepository::formatQuotaLabel($defaultQuota)) ?>); 0 = unlimited.
+                            <a href="/admin/settings/storage.php">Edit default</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create user</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="setQuotaModal" tabindex="-1" aria-labelledby="setQuotaModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -389,6 +407,18 @@ document.addEventListener('DOMContentLoaded', function () {
                     return Object.assign({}, defaultConfig, { strategy: 'fixed' });
                 }
             });
+        });
+    }
+
+    var createModal = document.getElementById('createUserModal');
+    if (createModal) {
+        createModal.addEventListener('shown.bs.modal', function () {
+            var input = document.getElementById('createUsername');
+            if (input) input.focus();
+        });
+        createModal.addEventListener('hidden.bs.modal', function () {
+            var form = createModal.querySelector('form');
+            if (form) form.reset();
         });
     }
 
