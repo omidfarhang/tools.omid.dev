@@ -6,11 +6,13 @@ require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
 use App\Auth;
 use App\Csrf;
+use App\FileRepository;
 use App\UserRepository;
 use App\View;
 
 $admin = Auth::requireAdmin();
 $repo = new UserRepository();
+$files = new FileRepository();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     Csrf::requireValid();
@@ -57,6 +59,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $repo->setRole($id, $role);
             flash('success', 'Role updated.');
+        }
+    } elseif ($action === 'delete') {
+        $id = (int) ($_POST['user_id'] ?? 0);
+        if ($id === (int) $admin['id']) {
+            flash('error', 'You cannot delete yourself.');
+        } else {
+            $target = $repo->findById($id);
+            if ($target === null) {
+                flash('error', 'User not found.');
+            } elseif ((int) $target['is_active'] === 1) {
+                flash('error', 'Deactivate the user before deleting.');
+            } else {
+                foreach ($files->forUser($id) as $file) {
+                    $path = FileRepository::absolutePath((string) $file['stored_name']);
+                    if ($path !== null && is_file($path)) {
+                        unlink($path);
+                    }
+                }
+                if ($repo->deleteInactive($id)) {
+                    flash('success', 'User deleted.');
+                } else {
+                    flash('error', 'Could not delete user.');
+                }
+            }
         }
     }
     redirect('/admin/users.php');
@@ -215,6 +241,19 @@ ob_start();
                                         Reset password…
                                     </button>
                                 </li>
+                                <?php if (!$isSelf && !$active): ?>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <button type="button" class="dropdown-item text-danger"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#deleteUserModal"
+                                                data-user-id="<?= $userId ?>"
+                                                data-username="<?= e($u['username']) ?>"
+                                                data-file-count="<?= $fileCount ?>">
+                                            Delete user…
+                                        </button>
+                                    </li>
+                                <?php endif; ?>
                             </ul>
                         </div>
                     </td>
@@ -249,6 +288,31 @@ ob_start();
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="deleteUserModal" tabindex="-1" aria-labelledby="deleteUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post">
+                <?= Csrf::field() ?>
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="user_id" value="" id="deleteUserId">
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="deleteUserModalLabel">Delete user</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-2">Delete <span class="fw-semibold" id="deleteUserUsername"></span>?</p>
+                    <p class="text-secondary small mb-0" id="deleteUserFilesNote"></p>
+                    <p class="text-muted small mb-0 mt-2">This cannot be undone. History, shares, and cloud jobs for this account are removed too.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Delete user</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     var table = document.querySelector('[data-users-table]');
@@ -262,16 +326,34 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    var modal = document.getElementById('resetPasswordModal');
-    if (!modal) return;
-    modal.addEventListener('show.bs.modal', function (event) {
-        var btn = event.relatedTarget;
-        if (!btn) return;
-        document.getElementById('resetPasswordUserId').value = btn.getAttribute('data-user-id') || '';
-        document.getElementById('resetPasswordUsername').textContent = btn.getAttribute('data-username') || '';
-        var input = document.getElementById('resetPasswordInput');
-        if (input) input.value = '';
-    });
+    var resetModal = document.getElementById('resetPasswordModal');
+    if (resetModal) {
+        resetModal.addEventListener('show.bs.modal', function (event) {
+            var btn = event.relatedTarget;
+            if (!btn) return;
+            document.getElementById('resetPasswordUserId').value = btn.getAttribute('data-user-id') || '';
+            document.getElementById('resetPasswordUsername').textContent = btn.getAttribute('data-username') || '';
+            var input = document.getElementById('resetPasswordInput');
+            if (input) input.value = '';
+        });
+    }
+
+    var deleteModal = document.getElementById('deleteUserModal');
+    if (deleteModal) {
+        deleteModal.addEventListener('show.bs.modal', function (event) {
+            var btn = event.relatedTarget;
+            if (!btn) return;
+            document.getElementById('deleteUserId').value = btn.getAttribute('data-user-id') || '';
+            document.getElementById('deleteUserUsername').textContent = btn.getAttribute('data-username') || '';
+            var n = parseInt(btn.getAttribute('data-file-count') || '0', 10);
+            var note = document.getElementById('deleteUserFilesNote');
+            if (note) {
+                note.textContent = n > 0
+                    ? (n === 1 ? 'Their 1 stored file will be removed from disk.' : 'Their ' + n + ' stored files will be removed from disk.')
+                    : 'They have no stored files on disk.';
+            }
+        });
+    }
 });
 </script>
 <?php

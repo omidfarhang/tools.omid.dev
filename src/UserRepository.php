@@ -95,6 +95,15 @@ final class UserRepository
         $stmt->execute([':a' => $active ? 1 : 0, ':id' => $id]);
     }
 
+    /** Deletes an inactive user. Related DB rows cascade; caller should remove disk files first. */
+    public function deleteInactive(int $id): bool
+    {
+        $stmt = $this->db->prepare('DELETE FROM users WHERE id = :id AND is_active = 0');
+        $stmt->execute([':id' => $id]);
+
+        return $stmt->rowCount() > 0;
+    }
+
     public function setPassword(int $id, string $password): void
     {
         $stmt = $this->db->prepare('UPDATE users SET password_hash = :p WHERE id = :id');
