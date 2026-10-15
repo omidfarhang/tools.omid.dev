@@ -2,11 +2,10 @@
 
 declare(strict_types=1);
 
-/** @var string $active One of: overview, profile, security, cloud */
+/** @var string $active One of: overview, security, cloud */
 $active = $active ?? 'overview';
 $items = [
     'overview' => ['label' => 'Overview', 'href' => '/user/'],
-    'profile' => ['label' => 'Profile', 'href' => '/user/profile.php'],
     'security' => ['label' => 'Security', 'href' => '/user/security.php'],
     'cloud' => ['label' => 'Cloud', 'href' => '/user/cloud.php'],
 ];

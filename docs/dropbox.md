@@ -38,7 +38,7 @@ CLI script and endpoint names (`scripts/ytdl.sh`, `/api/cli_register_and_dropbox
 
 1. Sign in → **Account** → **Cloud** → **Connect Dropbox**.
 2. Approve access in Dropbox.
-3. Optionally set Dropbox **defaults** on Account → Cloud: destination folder (blank = root) and conflict policy. Preferred destinations (Local and/or connected clouds) live under Account → Profile.
+3. Optionally set Dropbox **defaults** on Account → Cloud: destination folder (blank = root) and conflict policy. Preferred destinations (Local and/or connected clouds) live under Account → Overview.
 4. Use **Save to** → Cloud or Disk + Cloud on the home page, **Send to cloud** on My Files, or CLI (`scripts/ytdl.sh`) after the CLI user has connected Dropbox.
 
 ## Features after connect
