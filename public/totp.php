@@ -91,20 +91,6 @@ ob_start();
                 Confirm with a passkey<?= $totpEnabled ? ', or enter an authenticator code' : '' ?>.
             </p>
             <div id="passkey-mfa-error" class="alert alert-danger d-none" role="alert"></div>
-            <div class="mb-3">
-                <label class="form-check">
-                    <input class="form-check-input" type="checkbox" id="remember_device_passkey" value="1">
-                    <span class="form-check-label">
-                        Remember this device for <?= (int) TrustedDeviceRepository::TTL_DAYS ?> days
-                    </span>
-                </label>
-            </div>
-            <button type="button" class="btn btn-primary w-100 mb-3" id="passkey-assert-btn">
-                Use a passkey
-            </button>
-            <?php if ($totpEnabled): ?>
-                <div class="hr-text mb-3">or</div>
-            <?php endif; ?>
         <?php elseif ($totpEnabled): ?>
             <p class="text-secondary text-center mb-4">
                 Enter the 6-digit code from your authenticator app, or a recovery code.
@@ -117,16 +103,26 @@ ob_start();
         <?php if ($error): ?>
             <div class="alert alert-danger" role="alert"><?= e($error) ?></div>
         <?php endif; ?>
-        <?php if ($totpEnabled): ?>
-            <form method="post" autocomplete="off">
+        <?php if ($hasPasskeys || $totpEnabled): ?>
+            <form method="post" autocomplete="off" id="mfa-form">
                 <?= Csrf::field() ?>
-                <div class="mb-3">
-                    <label class="form-label" for="code">Authentication code</label>
-                    <input class="form-control form-control-lg text-center font-monospace" id="code" name="code"
-                           inputmode="text" autocomplete="one-time-code" required
-                           <?= $hasPasskeys ? '' : 'autofocus' ?>
-                           placeholder="000000">
-                </div>
+                <?php if ($hasPasskeys): ?>
+                    <button type="button" class="btn btn-primary w-100 mb-3" id="passkey-assert-btn">
+                        Use a passkey
+                    </button>
+                    <?php if ($totpEnabled): ?>
+                        <div class="hr-text mb-3">or</div>
+                    <?php endif; ?>
+                <?php endif; ?>
+                <?php if ($totpEnabled): ?>
+                    <div class="mb-3">
+                        <label class="form-label" for="code">Authentication code</label>
+                        <input class="form-control form-control-lg text-center font-monospace" id="code" name="code"
+                               inputmode="text" autocomplete="one-time-code" required
+                               <?= $hasPasskeys ? '' : 'autofocus' ?>
+                               placeholder="000000">
+                    </div>
+                <?php endif; ?>
                 <div class="mb-3">
                     <label class="form-check">
                         <input class="form-check-input" type="checkbox" name="remember_device" value="1" id="remember_device">
@@ -135,9 +131,11 @@ ob_start();
                         </span>
                     </label>
                 </div>
-                <div class="form-footer">
-                    <button class="btn <?= $hasPasskeys ? 'btn-outline-primary' : 'btn-primary' ?> w-100" type="submit">Verify</button>
-                </div>
+                <?php if ($totpEnabled): ?>
+                    <div class="form-footer">
+                        <button class="btn <?= $hasPasskeys ? 'btn-outline-primary' : 'btn-primary' ?> w-100" type="submit">Verify</button>
+                    </div>
+                <?php endif; ?>
             </form>
         <?php endif; ?>
     </div>
@@ -151,7 +149,7 @@ ob_start();
 (function () {
     var btn = document.getElementById('passkey-assert-btn');
     var err = document.getElementById('passkey-mfa-error');
-    var remember = document.getElementById('remember_device_passkey');
+    var remember = document.getElementById('remember_device');
     if (!btn || !window.ToolsWebAuthn) return;
     var csrf = <?= json_encode(Csrf::token(), JSON_THROW_ON_ERROR) ?>;
     btn.addEventListener('click', function () {
