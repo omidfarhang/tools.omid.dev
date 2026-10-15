@@ -88,6 +88,14 @@ ob_start();
         </a>
     </div>
     <div class="col-md-6 col-lg-4">
+        <a class="card card-link" href="/admin/disk.php">
+            <div class="card-body">
+                <h3 class="card-title">Disk overview</h3>
+                <div class="text-secondary">Per-user usage, orphan temp files, and failed job counts.</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-6 col-lg-4">
         <a class="card card-link" href="/admin/settings/">
             <div class="card-body">
                 <h3 class="card-title">Settings</h3>

@@ -32,6 +32,7 @@ $navIcon = static function (string $name): string {
         'ytdlp' => '<svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"/><path d="M7 11l5 5l5 -5"/><path d="M12 4l0 12"/></svg>',
         'cloud' => '<svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.657 18c-2.572 0 -4.657 -2.007 -4.657 -4.483c0 -2.475 2.085 -4.482 4.657 -4.482c.393 -1.762 1.794 -3.2 3.675 -3.773c1.88 -.572 3.956 -.193 5.444 1c1.488 1.19 2.162 3.007 1.77 4.769h.99c1.913 0 3.464 1.56 3.464 3.486c0 1.927 -1.551 3.487 -3.465 3.487h-12.878"/></svg>',
         'storage' => '<svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12a2 2 0 0 1 2 2v2a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-2a2 2 0 0 1 2 -2z"/><path d="M6 12h12a2 2 0 0 1 2 2v2a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-2a2 2 0 0 1 2 -2z"/><path d="M6 14h.01"/><path d="M6 6h.01"/></svg>',
+        'disk' => '<svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M7 12a5 5 0 0 1 5 -5"/><path d="M12 17a5 5 0 0 0 5 -5"/></svg>',
     ];
     return $icons[$name] ?? '';
 };
@@ -59,11 +60,12 @@ $renderNav = static function () use ($user, $isActive, $navLink): void {
             '/admin/',
             'Overview',
             'admin',
-            $isActive('/admin') && !$isActive('/admin/users.php', '/admin/files.php', '/admin/history.php', '/admin/settings', '/admin/cookies.php')
+            $isActive('/admin') && !$isActive('/admin/users.php', '/admin/files.php', '/admin/history.php', '/admin/disk.php', '/admin/settings', '/admin/cookies.php')
         );
         echo $navLink('/admin/users.php', 'Users', 'users', $isActive('/admin/users.php'));
         echo $navLink('/admin/files.php', 'All files', 'files', $isActive('/admin/files.php'));
         echo $navLink('/admin/history.php', 'All history', 'history', $isActive('/admin/history.php'));
+        echo $navLink('/admin/disk.php', 'Disk', 'disk', $isActive('/admin/disk.php'));
         echo '<li class="nav-section-title">Settings</li>';
         echo $navLink('/admin/settings/ytdlp.php', 'yt-dlp', 'ytdlp', $isActive('/admin/settings/ytdlp.php'));
         echo $navLink('/admin/settings/cloud.php', 'Cloud', 'cloud', $isActive('/admin/settings/cloud.php'));
