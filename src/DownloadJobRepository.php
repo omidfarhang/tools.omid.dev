@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App;
 
+use App\Cloud\CloudJobRepository;
 use PDO;
 
 final class DownloadJobRepository
@@ -86,7 +87,7 @@ final class DownloadJobRepository
                 cloud_job_id = :cjid,
                 error = NULL,
                 updated_at = datetime('now')
-             WHERE id = :id"
+             WHERE id = :id AND status = 'in_progress'"
         );
         $stmt->execute([
             ':res' => $resultFilename,
@@ -106,7 +107,7 @@ final class DownloadJobRepository
                 file_id = COALESCE(:fid, file_id),
                 cloud_job_id = COALESCE(:cjid, cloud_job_id),
                 updated_at = datetime('now')
-             WHERE id = :id"
+             WHERE id = :id AND status = 'in_progress'"
         );
         $stmt->execute([
             ':err' => $error,
@@ -115,6 +116,106 @@ final class DownloadJobRepository
             ':cjid' => $cloudJobId,
             ':id' => $id,
         ]);
+    }
+
+    public function isCancelled(int $id): bool
+    {
+        $job = $this->findById($id);
+
+        return $job !== null && (string) ($job['status'] ?? '') === 'cancelled';
+    }
+
+    /**
+     * Cancel a pending/in-progress download, or an active linked cloud upload.
+     * Soft-cancel for in_progress: status flips to cancelled; the processor stops between steps.
+     */
+    public function cancel(int $id, int $userId): bool
+    {
+        $stmt = $this->db->prepare(
+            $this->jobSelectSql() . '
+             WHERE d.id = :id AND d.user_id = :uid'
+        );
+        $stmt->execute([':id' => $id, ':uid' => $userId]);
+        $job = $stmt->fetch();
+        if ($job === false) {
+            return false;
+        }
+
+        $status = (string) ($job['status'] ?? '');
+        $cloudStatus = (string) ($job['cloud_status'] ?? '');
+        $cloudJobId = isset($job['cloud_job_id']) && $job['cloud_job_id'] !== null
+            ? (int) $job['cloud_job_id']
+            : null;
+
+        if (in_array($status, ['pending', 'in_progress'], true)) {
+            $upd = $this->db->prepare(
+                "UPDATE download_jobs SET
+                    status = 'cancelled',
+                    error = 'Cancelled by user.',
+                    updated_at = datetime('now')
+                 WHERE id = :id
+                   AND user_id = :uid
+                   AND status IN ('pending', 'in_progress')"
+            );
+            $upd->execute([':id' => $id, ':uid' => $userId]);
+            if ($upd->rowCount() < 1) {
+                return false;
+            }
+            if ($cloudJobId !== null) {
+                (new CloudJobRepository($this->db))->cancel($cloudJobId, $userId);
+            }
+
+            return true;
+        }
+
+        if (
+            $status === 'complete'
+            && $cloudJobId !== null
+            && in_array($cloudStatus, ['pending', 'in_progress'], true)
+        ) {
+            return (new CloudJobRepository($this->db))->cancel($cloudJobId, $userId);
+        }
+
+        return false;
+    }
+
+    /**
+     * Reset a failed job to pending for another attempt.
+     */
+    public function retry(int $id, int $userId): bool
+    {
+        $stmt = $this->db->prepare(
+            "UPDATE download_jobs SET
+                status = 'pending',
+                error = NULL,
+                result_filename = NULL,
+                file_id = NULL,
+                cloud_job_id = NULL,
+                hidden_at = NULL,
+                updated_at = datetime('now')
+             WHERE id = :id
+               AND user_id = :uid
+               AND status = 'failed'"
+        );
+        $stmt->execute([':id' => $id, ':uid' => $userId]);
+
+        return $stmt->rowCount() > 0;
+    }
+
+    public static function canCancel(array $job): bool
+    {
+        $status = (string) ($job['status'] ?? '');
+        if (in_array($status, ['pending', 'in_progress'], true)) {
+            return true;
+        }
+        $cloudStatus = (string) ($job['cloud_status'] ?? '');
+
+        return $status === 'complete' && in_array($cloudStatus, ['pending', 'in_progress'], true);
+    }
+
+    public static function canRetry(array $job): bool
+    {
+        return (string) ($job['status'] ?? '') === 'failed';
     }
 
     private function jobSelectSql(): string
@@ -210,7 +311,7 @@ final class DownloadJobRepository
              FROM download_jobs d
              LEFT JOIN cloud_jobs cj ON cj.id = d.cloud_job_id
              WHERE d.user_id = :uid
-               AND d.status IN ('complete', 'failed')
+               AND d.status IN ('complete', 'failed', 'cancelled')
                AND d.hidden_at IS NULL
              ORDER BY d.id DESC
              LIMIT " . $limit
@@ -232,7 +333,7 @@ final class DownloadJobRepository
              WHERE id = :id
                AND user_id = :uid
                AND hidden_at IS NULL
-               AND status IN ('complete', 'failed')"
+               AND status IN ('complete', 'failed', 'cancelled')"
         );
         $stmt->execute([':id' => $id, ':uid' => $userId]);
 
@@ -260,7 +361,7 @@ final class DownloadJobRepository
              FROM download_jobs d
              JOIN users u ON u.id = d.user_id
              LEFT JOIN cloud_jobs cj ON cj.id = d.cloud_job_id
-             WHERE d.status IN ('complete', 'failed')";
+             WHERE d.status IN ('complete', 'failed', 'cancelled')";
         if ($userId !== null) {
             $sql .= ' AND d.user_id = :uid';
         }

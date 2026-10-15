@@ -70,6 +70,7 @@ $statusBadge = static function (string $status): string {
     return match ($status) {
         'complete', 'success' => 'success',
         'failed' => 'danger',
+        'cancelled' => 'secondary',
         'skipped' => 'warning',
         'in_progress' => 'info',
         'pending' => 'secondary',

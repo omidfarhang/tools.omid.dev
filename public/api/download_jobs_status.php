@@ -70,6 +70,8 @@ json_response([
             'cloud_error' => $job['cloud_error'] ?? null,
             'updated_at' => (string) ($job['updated_at'] ?? $job['created_at'] ?? ''),
             'active' => DownloadJobRepository::isActiveRow($job),
+            'can_cancel' => DownloadJobRepository::canCancel($job),
+            'can_retry' => DownloadJobRepository::canRetry($job),
         ];
     }, $jobs),
 ]);

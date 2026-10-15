@@ -29,6 +29,7 @@ if (empty($cloudJobs)) {
                 $badge = match ($status) {
                     'complete' => 'success',
                     'failed' => 'danger',
+                    'cancelled' => 'secondary',
                     'skipped' => 'warning',
                     'in_progress' => 'info',
                     default => 'secondary',
@@ -45,7 +46,7 @@ if (empty($cloudJobs)) {
                     <td class="mono small"><?= e($path) ?></td>
                     <td>
                         <span class="badge text-bg-<?= $badge ?> job-status-badge"><?= e($status) ?></span>
-                        <?php if (!empty($job['error']) && in_array($status, ['failed', 'skipped'], true)): ?>
+                        <?php if (!empty($job['error']) && in_array($status, ['failed', 'skipped', 'cancelled'], true)): ?>
                             <div class="text-muted small mt-1"><?= e((string) $job['error']) ?></div>
                         <?php endif; ?>
                     </td>

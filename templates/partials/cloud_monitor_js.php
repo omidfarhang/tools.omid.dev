@@ -9,6 +9,7 @@ function cloudStatusBadgeClass(status) {
     if (status === 'complete') return 'badge text-bg-success job-status-badge';
     if (status === 'failed') return 'badge text-bg-danger job-status-badge';
     if (status === 'skipped') return 'badge text-bg-warning job-status-badge';
+    if (status === 'cancelled') return 'badge text-bg-secondary job-status-badge';
     if (status === 'in_progress') return 'badge text-bg-info job-status-badge';
     return 'badge text-bg-secondary job-status-badge';
 }

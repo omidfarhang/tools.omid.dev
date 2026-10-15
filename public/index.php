@@ -142,6 +142,7 @@ $statusBadge = static function (string $status): string {
     return match ($status) {
         'complete' => 'success',
         'failed' => 'danger',
+        'cancelled' => 'secondary',
         'in_progress' => 'info',
         'pending' => 'secondary',
         default => 'secondary',
@@ -347,6 +348,7 @@ ob_start();
                     <th>Name</th>
                     <th>Destination</th>
                     <th>Status</th>
+                    <th class="w-1"></th>
                 </tr>
                 </thead>
                 <tbody id="active-jobs-body"></tbody>
@@ -365,6 +367,7 @@ ob_start();
                     <th>Name</th>
                     <th>Destination</th>
                     <th>Status</th>
+                    <th class="w-1"></th>
                 </tr>
                 </thead>
                 <tbody id="active-jobs-body">
@@ -377,9 +380,16 @@ ob_start();
                     $displayStatus = $status;
                     if ($status === 'complete' && in_array($cloudStatus, ['pending', 'in_progress'], true)) {
                         $displayStatus = 'cloud upload';
+                    } elseif ($status === 'complete' && $cloudStatus === 'cancelled') {
+                        $displayStatus = 'cloud cancelled';
                     }
-                    $badgeStatus = $displayStatus === 'cloud upload' ? 'in_progress' : $status;
+                    $badgeStatus = in_array($displayStatus, ['cloud upload'], true) ? 'in_progress' : $status;
+                    if ($displayStatus === 'cloud cancelled') {
+                        $badgeStatus = 'cancelled';
+                    }
                     $fileId = isset($job['file_id']) && $job['file_id'] !== null ? (int) $job['file_id'] : null;
+                    $canCancel = DownloadJobRepository::canCancel($job);
+                    $canRetry = DownloadJobRepository::canRetry($job);
                     ?>
                     <tr data-job-id="<?= (int) $job['id'] ?>" class="<?= $isActive ? '' : 'text-muted' ?>">
                         <td class="mono small" title="<?= e((string) $job['source_url']) ?>"><?= e($truncateUrl((string) $job['source_url'])) ?></td>
@@ -397,6 +407,25 @@ ob_start();
                             </span>
                             <?php if (!empty($job['error'])): ?>
                                 <div class="text-muted small mt-1 job-error"><?= e((string) $job['error']) ?></div>
+                            <?php endif; ?>
+                        </td>
+                        <td class="text-end text-nowrap">
+                            <?php if ($canCancel): ?>
+                                <form method="post" action="/job_action.php" class="d-inline">
+                                    <?= Csrf::field() ?>
+                                    <input type="hidden" name="action" value="cancel">
+                                    <input type="hidden" name="id" value="<?= (int) $job['id'] ?>">
+                                    <input type="hidden" name="return" value="/">
+                                    <button type="submit" class="btn btn-link btn-sm text-muted p-0">Cancel</button>
+                                </form>
+                            <?php elseif ($canRetry): ?>
+                                <form method="post" action="/job_action.php" class="d-inline">
+                                    <?= Csrf::field() ?>
+                                    <input type="hidden" name="action" value="retry">
+                                    <input type="hidden" name="id" value="<?= (int) $job['id'] ?>">
+                                    <input type="hidden" name="return" value="/">
+                                    <button type="submit" class="btn btn-link btn-sm p-0">Retry</button>
+                                </form>
                             <?php endif; ?>
                         </td>
                     </tr>
@@ -576,7 +605,32 @@ ob_start();
         if (job.status === 'complete' && (job.cloud_status === 'pending' || job.cloud_status === 'in_progress')) {
             return 'cloud upload';
         }
+        if (job.status === 'complete' && job.cloud_status === 'cancelled') {
+            return 'cloud cancelled';
+        }
         return job.status || 'pending';
+    }
+
+    function jobActionHtml(job) {
+        if (job.can_cancel) {
+            return '<form method="post" action="/job_action.php" class="d-inline">'
+                + '<input type="hidden" name="_csrf" value="' + escapeAttr(csrf) + '">'
+                + '<input type="hidden" name="action" value="cancel">'
+                + '<input type="hidden" name="id" value="' + job.id + '">'
+                + '<input type="hidden" name="return" value="/">'
+                + '<button type="submit" class="btn btn-link btn-sm text-muted p-0">Cancel</button>'
+                + '</form>';
+        }
+        if (job.can_retry) {
+            return '<form method="post" action="/job_action.php" class="d-inline">'
+                + '<input type="hidden" name="_csrf" value="' + escapeAttr(csrf) + '">'
+                + '<input type="hidden" name="action" value="retry">'
+                + '<input type="hidden" name="id" value="' + job.id + '">'
+                + '<input type="hidden" name="return" value="/">'
+                + '<button type="submit" class="btn btn-link btn-sm p-0">Retry</button>'
+                + '</form>';
+        }
+        return '';
     }
 
     function renderJobs(jobs, activeCount) {
@@ -595,7 +649,9 @@ ob_start();
         body.innerHTML = jobs.map(function (job) {
             const name = job.result_filename || job.requested_filename || '—';
             const label = displayStatus(job);
-            const badgeStatus = label === 'cloud upload' ? 'cloud_upload' : job.status;
+            let badgeStatus = job.status;
+            if (label === 'cloud upload') badgeStatus = 'cloud_upload';
+            if (label === 'cloud cancelled') badgeStatus = 'cancelled';
             const rowClass = job.active ? '' : ' class="text-muted"';
             let nameHtml = escapeHtml(name);
             if (job.file_id && job.status === 'complete') {
@@ -607,7 +663,8 @@ ob_start();
                 + '<td>' + escapeHtml(destinationLabel(job.behavior)) + '</td>'
                 + '<td><span class="' + statusBadgeClass(badgeStatus) + '">' + escapeHtml(label) + '</span>'
                 + (job.error ? '<div class="text-muted small mt-1">' + escapeHtml(job.error) + '</div>' : '')
-                + '</td></tr>';
+                + '</td>'
+                + '<td class="text-end text-nowrap">' + jobActionHtml(job) + '</td></tr>';
         }).join('');
     }
 

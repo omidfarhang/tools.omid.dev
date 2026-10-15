@@ -56,7 +56,7 @@ final class UserRepository
              LEFT JOIN (
                 SELECT user_id, COUNT(*) AS download_count
                 FROM download_jobs
-                WHERE status IN ('complete', 'failed')
+                WHERE status IN ('complete', 'failed', 'cancelled')
                 GROUP BY user_id
              ) d ON d.user_id = u.id
              ORDER BY u.is_active ASC, u.created_at DESC"

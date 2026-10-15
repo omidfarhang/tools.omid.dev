@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App;
 
+use App\Cloud\CloudJobRepository;
 use App\Cloud\CloudSendService;
 use App\Download\DownloadRegistry;
 
@@ -40,7 +41,7 @@ final class DownloadJobProcessor
         }
 
         $status = (string) ($job['status'] ?? '');
-        if ($status === 'complete' || $status === 'failed') {
+        if (in_array($status, ['complete', 'failed', 'cancelled'], true)) {
             return;
         }
 
@@ -49,7 +50,7 @@ final class DownloadJobProcessor
         }
 
         $job = $this->jobs->findById($jobId);
-        if ($job === null) {
+        if ($job === null || $this->jobs->isCancelled($jobId)) {
             return;
         }
 
@@ -92,12 +93,21 @@ final class DownloadJobProcessor
             || ($behavior === 'save_to_cloud' && $source->requiresLocalFile());
 
         try {
+            if ($this->jobs->isCancelled($jobId)) {
+                return;
+            }
+
             if ($needsDisk) {
                 $downloadResult = $this->downloads->download($url, [
                     'filename' => $filename !== '' ? $filename : null,
                     'yt_format' => $ytFormat,
                     'force_ytdlp' => $forceYtdlp,
                 ]);
+
+                if ($this->jobs->isCancelled($jobId)) {
+                    $this->discardTempDownload($downloadResult);
+                    return;
+                }
 
                 if (!$downloadResult['ok']) {
                     $this->jobs->markFailed($jobId, $downloadResult['error'] ?? 'Download failed.');
@@ -107,13 +117,7 @@ final class DownloadJobProcessor
                 $resultFilename = $downloadResult['original_name'] ?? $resultFilename;
                 $sizeBytes = (int) ($downloadResult['size'] ?? 0);
                 if ($this->users->wouldExceedQuota($user, $sizeBytes)) {
-                    $stored = (string) ($downloadResult['stored_name'] ?? '');
-                    if ($stored !== '') {
-                        $path = FileRepository::absolutePath($stored);
-                        if ($path !== null && is_file($path)) {
-                            unlink($path);
-                        }
-                    }
+                    $this->discardTempDownload($downloadResult);
                     $used = $this->users->usedBytes((int) $user['id']);
                     $quota = UserRepository::effectiveQuotaBytes($user);
                     $this->jobs->markFailed(
@@ -132,6 +136,10 @@ final class DownloadJobProcessor
                     $sizeBytes,
                     $url
                 );
+            }
+
+            if ($this->jobs->isCancelled($jobId)) {
+                return;
             }
 
             if ($needsCloud) {
@@ -153,6 +161,10 @@ final class DownloadJobProcessor
                     return;
                 }
 
+                if ($this->jobs->isCancelled($jobId)) {
+                    return;
+                }
+
                 $sent = $this->cloud->startForUser(
                     $user,
                     $fetchUrl,
@@ -171,6 +183,13 @@ final class DownloadJobProcessor
                     $resultFilename = $cloudFilename;
                 }
 
+                if ($this->jobs->isCancelled($jobId)) {
+                    if ($cloudJobId !== null) {
+                        (new CloudJobRepository())->cancel($cloudJobId, (int) $user['id']);
+                    }
+                    return;
+                }
+
                 if (!$sent['success']) {
                     $error = ($sent['message'] ?? 'Cloud upload failed')
                         . (isset($sent['error']) ? ' — ' . (string) $sent['error'] : '');
@@ -179,8 +198,15 @@ final class DownloadJobProcessor
                 }
             }
 
+            if ($this->jobs->isCancelled($jobId)) {
+                return;
+            }
+
             $this->jobs->markComplete($jobId, $resultFilename, $fileId, $cloudJobId);
         } catch (\Throwable $e) {
+            if ($this->jobs->isCancelled($jobId)) {
+                return;
+            }
             $this->jobs->markFailed(
                 $jobId,
                 $e->getMessage() !== '' ? $e->getMessage() : 'Download job failed.',
@@ -188,6 +214,24 @@ final class DownloadJobProcessor
                 $fileId,
                 $cloudJobId
             );
+        }
+    }
+
+    /**
+     * @param array<string, mixed>|null $downloadResult
+     */
+    private function discardTempDownload(?array $downloadResult): void
+    {
+        if ($downloadResult === null) {
+            return;
+        }
+        $stored = (string) ($downloadResult['stored_name'] ?? '');
+        if ($stored === '') {
+            return;
+        }
+        $path = FileRepository::absolutePath($stored);
+        if ($path !== null && is_file($path)) {
+            unlink($path);
         }
     }
 }

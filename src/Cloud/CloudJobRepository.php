@@ -112,7 +112,7 @@ final class CloudJobRepository
              WHERE id = :id
                AND user_id = :uid
                AND hidden_at IS NULL
-               AND status IN ('complete', 'failed', 'skipped')
+               AND status IN ('complete', 'failed', 'skipped', 'cancelled')
                AND NOT EXISTS (
                     SELECT 1 FROM download_jobs d
                     WHERE d.cloud_job_id = :cjid
@@ -166,7 +166,8 @@ final class CloudJobRepository
                 status = :st,
                 error = NULL,
                 updated_at = datetime(\'now\')
-             WHERE id = :id'
+             WHERE id = :id
+               AND status IN (\'pending\', \'in_progress\')'
         );
         $stmt->execute([
             ':aj' => $asyncJobId,
@@ -184,7 +185,8 @@ final class CloudJobRepository
                 status = :st,
                 error = :err,
                 updated_at = datetime(\'now\')
-             WHERE id = :id'
+             WHERE id = :id
+               AND status IN (\'pending\', \'in_progress\')'
         );
         $stmt->execute([
             ':path' => $remotePath,
@@ -201,13 +203,33 @@ final class CloudJobRepository
                 status = :st,
                 error = :err,
                 updated_at = datetime(\'now\')
-             WHERE id = :id'
+             WHERE id = :id
+               AND status IN (\'pending\', \'in_progress\')'
         );
         $stmt->execute([
             ':st' => 'failed',
             ':err' => $error,
             ':id' => $id,
         ]);
+    }
+
+    /**
+     * Local cancel only — does not abort a remote provider job.
+     */
+    public function cancel(int $id, int $userId): bool
+    {
+        $stmt = $this->db->prepare(
+            "UPDATE cloud_jobs SET
+                status = 'cancelled',
+                error = 'Cancelled by user.',
+                updated_at = datetime('now')
+             WHERE id = :id
+               AND user_id = :uid
+               AND status IN ('pending', 'in_progress')"
+        );
+        $stmt->execute([':id' => $id, ':uid' => $userId]);
+
+        return $stmt->rowCount() > 0;
     }
 
     public function markComplete(int $id, ?string $resultPath): void
@@ -218,7 +240,8 @@ final class CloudJobRepository
                 result_path = :rp,
                 error = NULL,
                 updated_at = datetime(\'now\')
-             WHERE id = :id'
+             WHERE id = :id
+               AND status IN (\'pending\', \'in_progress\')'
         );
         $stmt->execute([
             ':st' => 'complete',

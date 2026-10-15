@@ -234,7 +234,8 @@ final class DropboxProvider implements CloudProvider
                 } elseif (isset($data['path_lower']) && is_string($data['path_lower'])) {
                     $resultPath = $data['path_lower'];
                 }
-                if (($job['status'] ?? '') !== 'complete') {
+                $localStatus = (string) ($job['status'] ?? '');
+                if (in_array($localStatus, ['pending', 'in_progress'], true)) {
                     $this->jobs->markComplete((int) $job['id'], $resultPath);
                     $deletedLocal = $this->finalizer->onComplete($job);
                 }
@@ -243,7 +244,8 @@ final class DropboxProvider implements CloudProvider
                 $err = is_array($data['error'] ?? null)
                     ? (string) ($data['error']['.tag'] ?? 'failed')
                     : (string) ($data['error_summary'] ?? 'failed');
-                if (($job['status'] ?? '') !== 'failed') {
+                $localStatus = (string) ($job['status'] ?? '');
+                if (in_array($localStatus, ['pending', 'in_progress'], true)) {
                     $this->jobs->markFailed((int) $job['id'], $err);
                 }
                 $job = $this->jobs->findById((int) $job['id']);

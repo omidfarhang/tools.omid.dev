@@ -62,6 +62,7 @@ $statusBadge = static function (string $status): string {
     return match ($status) {
         'complete', 'success' => 'success',
         'failed' => 'danger',
+        'cancelled' => 'secondary',
         'skipped' => 'warning',
         'in_progress' => 'info',
         'pending' => 'secondary',
@@ -151,6 +152,15 @@ ob_start();
                                 <div class="d-inline-flex align-items-center gap-2" onclick="event.stopPropagation()">
                                     <?php if ($fileId !== null): ?>
                                         <a href="/download.php?id=<?= $fileId ?>">File</a>
+                                    <?php endif; ?>
+                                    <?php if (DownloadJobRepository::canRetry($job)): ?>
+                                        <form method="post" action="/job_action.php" class="d-inline">
+                                            <?= Csrf::field() ?>
+                                            <input type="hidden" name="action" value="retry">
+                                            <input type="hidden" name="id" value="<?= (int) $job['id'] ?>">
+                                            <input type="hidden" name="return" value="/">
+                                            <button type="submit" class="btn btn-link btn-sm p-0 align-baseline">Retry</button>
+                                        </form>
                                     <?php endif; ?>
                                     <form method="post" action="/history_hide.php" class="d-inline">
                                         <?= Csrf::field() ?>
