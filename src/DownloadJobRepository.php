@@ -308,11 +308,91 @@ final class DownloadJobRepository
     }
 
     /** @return list<array<string, mixed>> */
-    public function historyForUser(int $userId, int $limit = 50): array
+    public function historyForUser(int $userId, int $limit = 50, string $q = '', int $offset = 0): array
     {
-        $limit = max(1, min(100, $limit));
+        $page = $offset > 0 ? (int) floor($offset / max(1, $limit)) + 1 : 1;
+
+        return $this->historyForUserPaginated($userId, $q, $page, $limit)['items'];
+    }
+
+    /**
+     * @return array{items:list<array<string, mixed>>, total:int, page:int, per_page:int, total_pages:int}
+     */
+    public function historyForUserPaginated(
+        int $userId,
+        string $q = '',
+        int $page = 1,
+        int $perPage = Pager::DEFAULT_PER_PAGE
+    ): array {
+        $norm = Pager::normalize($page, $perPage);
+        $q = Pager::searchQuery($q);
+        $where = "d.user_id = :uid
+               AND d.status IN ('complete', 'failed', 'cancelled')
+               AND d.hidden_at IS NULL";
+        $params = [':uid' => $userId];
+        if ($q !== '') {
+            $where .= " AND (
+                IFNULL(d.source_url, '') LIKE :q ESCAPE '\\'
+                OR IFNULL(d.result_filename, '') LIKE :q ESCAPE '\\'
+                OR IFNULL(d.requested_filename, '') LIKE :q ESCAPE '\\'
+            )";
+            $params[':q'] = Pager::likeContains($q);
+        }
+
+        $countStmt = $this->db->prepare("SELECT COUNT(*) FROM download_jobs d WHERE {$where}");
+        $countStmt->execute($params);
+        $total = (int) $countStmt->fetchColumn();
+
+        if ($norm['page'] > 1 && $total > 0) {
+            $maxPage = (int) ceil($total / $norm['per_page']);
+            if ($norm['page'] > $maxPage) {
+                $norm = Pager::normalize($maxPage, $norm['per_page']);
+            }
+        }
+
         $stmt = $this->db->prepare(
-            "SELECT d.*,
+            $this->historySelectSql(false) . "
+             WHERE {$where}
+             ORDER BY d.id DESC
+             LIMIT {$norm['per_page']} OFFSET {$norm['offset']}"
+        );
+        $stmt->execute($params);
+
+        return Pager::result($stmt->fetchAll(), $total, $norm['page'], $norm['per_page']);
+    }
+
+    /**
+     * Hydrate finished download jobs by id (preserves cloud join columns).
+     *
+     * @param list<int> $ids
+     * @return array<int, array<string, mixed>>
+     */
+    public function findHistoryByIds(array $ids, bool $withOwner = false): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), static fn (int $id): bool => $id > 0)));
+        if ($ids === []) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $sql = $this->historySelectSql($withOwner) . "
+             WHERE d.id IN ({$placeholders})
+               AND d.status IN ('complete', 'failed', 'cancelled')";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($ids);
+        $byId = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $byId[(int) $row['id']] = $row;
+        }
+
+        return $byId;
+    }
+
+    private function historySelectSql(bool $withOwner): string
+    {
+        $ownerSelect = $withOwner ? ', u.username AS owner_username' : '';
+        $ownerJoin = $withOwner ? 'JOIN users u ON u.id = d.user_id' : '';
+
+        return "SELECT d.*{$ownerSelect},
                     cj.status AS cloud_status,
                     cj.provider AS cloud_provider,
                     cj.result_path AS cloud_result_path,
@@ -321,16 +401,8 @@ final class DownloadJobRepository
                     cj.filename AS cloud_filename,
                     cj.updated_at AS cloud_updated_at
              FROM download_jobs d
-             LEFT JOIN cloud_jobs cj ON cj.id = d.cloud_job_id
-             WHERE d.user_id = :uid
-               AND d.status IN ('complete', 'failed', 'cancelled')
-               AND d.hidden_at IS NULL
-             ORDER BY d.id DESC
-             LIMIT " . $limit
-        );
-        $stmt->execute([':uid' => $userId]);
-
-        return $stmt->fetchAll();
+             {$ownerJoin}
+             LEFT JOIN cloud_jobs cj ON cj.id = d.cloud_job_id";
     }
 
     /**
@@ -358,37 +430,61 @@ final class DownloadJobRepository
      *
      * @return list<array<string, mixed>>
      */
-    public function historyAll(?int $userId = null, int $limit = 200): array
+    public function historyAll(?int $userId = null, int $limit = 200, string $q = '', int $offset = 0): array
     {
-        $limit = max(1, min(500, $limit));
-        $sql = "SELECT d.*,
-                    u.username AS owner_username,
-                    cj.status AS cloud_status,
-                    cj.provider AS cloud_provider,
-                    cj.result_path AS cloud_result_path,
-                    cj.remote_path AS cloud_remote_path,
-                    cj.error AS cloud_error,
-                    cj.filename AS cloud_filename,
-                    cj.updated_at AS cloud_updated_at
-             FROM download_jobs d
-             JOIN users u ON u.id = d.user_id
-             LEFT JOIN cloud_jobs cj ON cj.id = d.cloud_job_id
-             WHERE d.status IN ('complete', 'failed', 'cancelled')";
-        if ($userId !== null) {
-            $sql .= ' AND d.user_id = :uid';
-        }
-        $sql .= ' ORDER BY d.id DESC LIMIT ' . $limit;
+        $page = $offset > 0 ? (int) floor($offset / max(1, $limit)) + 1 : 1;
 
+        return $this->historyAllPaginated($userId, $q, $page, $limit)['items'];
+    }
+
+    /**
+     * @return array{items:list<array<string, mixed>>, total:int, page:int, per_page:int, total_pages:int}
+     */
+    public function historyAllPaginated(
+        ?int $userId = null,
+        string $q = '',
+        int $page = 1,
+        int $perPage = Pager::DEFAULT_PER_PAGE
+    ): array {
+        $norm = Pager::normalize($page, $perPage);
+        $q = Pager::searchQuery($q);
+        $where = "d.status IN ('complete', 'failed', 'cancelled')";
+        $params = [];
         if ($userId !== null) {
-            $stmt = $this->db->prepare($sql);
-            $stmt->execute([':uid' => $userId]);
-        } else {
-            $stmt = $this->db->query($sql);
-            if ($stmt === false) {
-                return [];
+            $where .= ' AND d.user_id = :uid';
+            $params[':uid'] = $userId;
+        }
+        if ($q !== '') {
+            $where .= " AND (
+                IFNULL(d.source_url, '') LIKE :q ESCAPE '\\'
+                OR IFNULL(d.result_filename, '') LIKE :q ESCAPE '\\'
+                OR IFNULL(d.requested_filename, '') LIKE :q ESCAPE '\\'
+                OR IFNULL(u.username, '') LIKE :q ESCAPE '\\'
+            )";
+            $params[':q'] = Pager::likeContains($q);
+        }
+
+        $countStmt = $this->db->prepare(
+            "SELECT COUNT(*) FROM download_jobs d JOIN users u ON u.id = d.user_id WHERE {$where}"
+        );
+        $countStmt->execute($params);
+        $total = (int) $countStmt->fetchColumn();
+
+        if ($norm['page'] > 1 && $total > 0) {
+            $maxPage = (int) ceil($total / $norm['per_page']);
+            if ($norm['page'] > $maxPage) {
+                $norm = Pager::normalize($maxPage, $norm['per_page']);
             }
         }
 
-        return $stmt->fetchAll();
+        $stmt = $this->db->prepare(
+            $this->historySelectSql(true) . "
+             WHERE {$where}
+             ORDER BY d.id DESC
+             LIMIT {$norm['per_page']} OFFSET {$norm['offset']}"
+        );
+        $stmt->execute($params);
+
+        return Pager::result($stmt->fetchAll(), $total, $norm['page'], $norm['per_page']);
     }
 }

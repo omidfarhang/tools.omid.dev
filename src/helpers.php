@@ -37,18 +37,48 @@ function redirect(string $path): never
 
 /**
  * Allowlist redirect targets for file mutate endpoints (delete / rename / share / bulk).
+ * Preserves safe list query params (sort, dir, q, page, user_id).
  */
 function sanitize_files_redirect(?string $redirect): string
 {
     $redirect = (string) ($redirect ?? '/files.php');
-    if ($redirect === '/admin/files.php') {
-        return '/admin/files.php';
-    }
-    if (preg_match('#^/admin/files\.php\?user_id=(\d+)$#', $redirect, $m) === 1) {
-        return '/admin/files.php?user_id=' . (int) $m[1];
+    $parts = parse_url($redirect);
+    $path = is_array($parts) && isset($parts['path']) ? (string) $parts['path'] : $redirect;
+
+    if ($path !== '/files.php' && $path !== '/admin/files.php') {
+        return '/files.php';
     }
 
-    return '/files.php';
+    $query = [];
+    if (is_array($parts) && !empty($parts['query'])) {
+        parse_str((string) $parts['query'], $query);
+    }
+
+    $safe = [];
+    if ($path === '/admin/files.php' && isset($query['user_id']) && (int) $query['user_id'] > 0) {
+        $safe['user_id'] = (int) $query['user_id'];
+    }
+    if (isset($query['sort']) && is_string($query['sort']) && in_array($query['sort'], ['name', 'size', 'date', 'owner'], true)) {
+        $safe['sort'] = $query['sort'];
+    }
+    if (isset($query['dir']) && is_string($query['dir']) && in_array(strtolower($query['dir']), ['asc', 'desc'], true)) {
+        $safe['dir'] = strtolower($query['dir']);
+    }
+    if (isset($query['q']) && is_string($query['q'])) {
+        $q = \App\Pager::searchQuery($query['q']);
+        if ($q !== '') {
+            $safe['q'] = $q;
+        }
+    }
+    if (isset($query['page']) && (int) $query['page'] > 1) {
+        $safe['page'] = (int) $query['page'];
+    }
+
+    if ($safe === []) {
+        return $path;
+    }
+
+    return $path . '?' . http_build_query($safe);
 }
 
 function flash(string $type, string $message): void

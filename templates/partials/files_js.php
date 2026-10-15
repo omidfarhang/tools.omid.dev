@@ -11,8 +11,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    const searchInput = document.querySelector('[data-files-search]');
-    const countEl = document.querySelector('[data-files-count]');
     const selectAll = document.querySelector('[data-files-select-all]');
     const bulkBar = document.querySelector('[data-files-bulk]');
     const bulkCount = document.querySelector('[data-files-bulk-count]');
@@ -32,9 +30,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let pendingBulkDelete = null;
 
     function visibleRows() {
-        return Array.from(table.querySelectorAll('[data-file-row]')).filter(function (row) {
-            return !row.classList.contains('d-none');
-        });
+        return Array.from(table.querySelectorAll('[data-file-row]'));
     }
 
     function checkedBoxes() {
@@ -66,24 +62,6 @@ document.addEventListener('DOMContentLoaded', function () {
             selectAll.checked = allChecked;
             selectAll.indeterminate = n > 0 && !allChecked;
         }
-    }
-
-    function updateCount() {
-        if (countEl) {
-            countEl.textContent = String(visibleRows().length);
-        }
-    }
-
-    if (searchInput) {
-        searchInput.addEventListener('input', function () {
-            const q = searchInput.value.trim().toLowerCase();
-            table.querySelectorAll('[data-file-row]').forEach(function (row) {
-                const hay = row.getAttribute('data-search') || '';
-                row.classList.toggle('d-none', q !== '' && hay.indexOf(q) === -1);
-            });
-            updateCount();
-            updateBulkBar();
-        });
     }
 
     if (selectAll) {

@@ -6,12 +6,14 @@ require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
 use App\Auth;
 use App\FileRepository;
+use App\Pager;
 use App\UserRepository;
 use App\View;
 
 $admin = Auth::requireAdmin();
 
-$filterUserId = isset($_GET['user_id']) ? (int) $_GET['user_id'] : 0;
+$req = Pager::requestParams(true);
+$filterUserId = $req['user_id'] ?? 0;
 $filterUser = null;
 if ($filterUserId > 0) {
     $filterUser = (new UserRepository())->findById($filterUserId);
@@ -21,26 +23,40 @@ if ($filterUserId > 0) {
     }
 }
 
-$sortInfo = FileRepository::normalizeSort(
-    isset($_GET['sort']) ? (string) $_GET['sort'] : null,
-    isset($_GET['dir']) ? (string) $_GET['dir'] : null,
-    true
-);
+$sortInfo = FileRepository::normalizeSort($req['sort'], $req['dir'], true);
 $sort = $sortInfo['sort'];
 $dir = $sortInfo['dir'];
+$q = $req['q'];
 
 $fileRepo = new FileRepository();
+$pagerPath = '/admin/files.php';
 if ($filterUser !== null) {
-    $files = $fileRepo->forUserWithOwner($filterUserId, $sort, $dir);
-    $redirect = '/admin/files.php?user_id=' . $filterUserId;
+    $result = $fileRepo->forUserPaginated($filterUserId, $sort, $dir, $q, $req['page'], Pager::DEFAULT_PER_PAGE, true);
+    $pagerQuery = [
+        'user_id' => $filterUserId,
+        'sort' => $sort,
+        'dir' => strtolower($dir),
+        'q' => $q !== '' ? $q : null,
+    ];
     $panelTitle = 'Files · ' . (string) $filterUser['username'];
     $pageTitle = 'User files';
 } else {
-    $files = $fileRepo->allWithOwner($sort, $dir);
-    $redirect = '/admin/files.php';
+    $result = $fileRepo->allWithOwnerPaginated($sort, $dir, $q, $req['page']);
+    $pagerQuery = [
+        'sort' => $sort,
+        'dir' => strtolower($dir),
+        'q' => $q !== '' ? $q : null,
+    ];
     $panelTitle = 'All files';
     $pageTitle = 'Admin Files';
 }
+
+$files = $result['items'];
+$redirect = Pager::url($pagerPath, $pagerQuery, ['page' => $result['page'] > 1 ? $result['page'] : null]);
+$pagerTotal = $result['total'];
+$pagerPage = $result['page'];
+$pagerTotalPages = $result['total_pages'];
+$pagerPerPage = $result['per_page'];
 
 $mode = 'admin';
 $cloudConnected = false;
@@ -66,7 +82,7 @@ ob_start();
 
 
 <div class="card">
-    <?php if (!$files): ?>
+    <?php if ($pagerTotal === 0 && $q === ''): ?>
         <div class="card-header d-flex justify-content-between align-items-center">
             <h2 class="card-title mb-0"><?= e($panelTitle) ?></h2>
         </div>

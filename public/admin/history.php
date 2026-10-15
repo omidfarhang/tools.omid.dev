@@ -5,14 +5,15 @@ declare(strict_types=1);
 require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
 use App\Auth;
-use App\Cloud\CloudJobRepository;
-use App\DownloadJobRepository;
+use App\HistoryService;
+use App\Pager;
 use App\UserRepository;
 use App\View;
 
 $admin = Auth::requireAdmin();
 
-$filterUserId = isset($_GET['user_id']) ? (int) $_GET['user_id'] : 0;
+$req = Pager::requestParams(true);
+$filterUserId = $req['user_id'] ?? 0;
 $filterUser = null;
 if ($filterUserId > 0) {
     $filterUser = (new UserRepository())->findById($filterUserId);
@@ -23,29 +24,18 @@ if ($filterUserId > 0) {
 }
 
 $scopeUserId = $filterUser !== null ? $filterUserId : null;
-$downloadJobs = (new DownloadJobRepository())->historyAll($scopeUserId);
-$standaloneCloud = (new CloudJobRepository())->recentUnlinkedAll($scopeUserId);
-
-$entries = [];
-foreach ($downloadJobs as $job) {
-    $entries[] = [
-        'kind' => 'download',
-        'sort' => (string) ($job['updated_at'] ?? $job['created_at'] ?? ''),
-        'job' => $job,
-    ];
-}
-foreach ($standaloneCloud as $cloudJob) {
-    $entries[] = [
-        'kind' => 'cloud',
-        'sort' => (string) ($cloudJob['updated_at'] ?? $cloudJob['created_at'] ?? ''),
-        'job' => $cloudJob,
-    ];
-}
-
-usort($entries, static function (array $a, array $b): int {
-    return strcmp($b['sort'], $a['sort']);
-});
-$entries = array_slice($entries, 0, 200);
+$q = $req['q'];
+$result = (new HistoryService())->forAdmin($scopeUserId, $q, $req['page']);
+$entries = $result['items'];
+$pagerPath = '/admin/history.php';
+$pagerQuery = [
+    'user_id' => $filterUser !== null ? $filterUserId : null,
+    'q' => $q !== '' ? $q : null,
+];
+$pagerTotal = $result['total'];
+$pagerPage = $result['page'];
+$pagerTotalPages = $result['total_pages'];
+$pagerPerPage = $result['per_page'];
 
 $providerLabel = static function (string $provider): string {
     return match ($provider) {
@@ -132,14 +122,24 @@ ob_start();
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <h2 class="card-title mb-0"><?= e($panelTitle) ?></h2>
-        <span class="text-muted small">
-            <?= count($entries) ?> shown
-            <?php if ($hiddenCount > 0): ?>
-                · <?= $hiddenCount ?> hidden by user<?= $filterUser !== null ? '' : 's' ?>
-            <?php endif; ?>
-        </span>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <form method="get" action="<?= e($pagerPath) ?>" class="d-flex align-items-center gap-2">
+                <?php if ($filterUser !== null): ?>
+                    <input type="hidden" name="user_id" value="<?= $filterUserId ?>">
+                <?php endif; ?>
+                <label class="visually-hidden" for="history-search">Search history</label>
+                <input type="search" name="q" id="history-search" class="form-control form-control-sm"
+                       style="width:12rem" placeholder="Search…" value="<?= e($q) ?>" autocomplete="off">
+            </form>
+            <span class="text-muted small">
+                <?= e((string) $pagerTotal) ?> total
+                <?php if ($hiddenCount > 0): ?>
+                    · <?= $hiddenCount ?> hidden on this page
+                <?php endif; ?>
+            </span>
+        </div>
     </div>
-    <?php if (!$entries): ?>
+    <?php if ($pagerTotal === 0 && $q === ''): ?>
         <div class="empty">
             <p class="empty-title">No history yet</p>
             <p class="empty-subtitle text-secondary"><?php if ($filterUser !== null): ?>
@@ -147,6 +147,11 @@ ob_start();
             <?php else: ?>
                 Nothing has been downloaded or sent to cloud.
             <?php endif; ?></p>
+        </div>
+    <?php elseif ($pagerTotal === 0): ?>
+        <div class="empty">
+            <p class="empty-title">No matching history</p>
+            <p class="empty-subtitle text-secondary">Try a different search, or <a href="<?= e(Pager::url($pagerPath, $pagerQuery, ['q' => null, 'page' => null])) ?>">clear search</a>.</p>
         </div>
     <?php else: ?>
         <div class="table-responsive">
@@ -257,6 +262,7 @@ ob_start();
                 </tbody>
             </table>
         </div>
+        <?php include dirname(__DIR__, 2) . '/templates/partials/pager.php'; ?>
     <?php endif; ?>
 </div>
 

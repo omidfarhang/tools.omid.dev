@@ -5,9 +5,10 @@ declare(strict_types=1);
 require dirname(__DIR__) . '/src/bootstrap.php';
 
 use App\Auth;
-use App\Cloud\CloudJobRepository;
 use App\Csrf;
 use App\DownloadJobRepository;
+use App\HistoryService;
+use App\Pager;
 use App\UserRepository;
 use App\View;
 
@@ -15,29 +16,16 @@ $user = Auth::requireLogin();
 $users = new UserRepository();
 $user = $users->findById((int) $user['id']) ?? $user;
 
-$downloadJobs = (new DownloadJobRepository())->historyForUser((int) $user['id']);
-$standaloneCloud = (new CloudJobRepository())->recentUnlinkedForUser((int) $user['id']);
-
-$entries = [];
-foreach ($downloadJobs as $job) {
-    $entries[] = [
-        'kind' => 'download',
-        'sort' => (string) ($job['updated_at'] ?? $job['created_at'] ?? ''),
-        'job' => $job,
-    ];
-}
-foreach ($standaloneCloud as $cloudJob) {
-    $entries[] = [
-        'kind' => 'cloud',
-        'sort' => (string) ($cloudJob['updated_at'] ?? $cloudJob['created_at'] ?? ''),
-        'job' => $cloudJob,
-    ];
-}
-
-usort($entries, static function (array $a, array $b): int {
-    return strcmp($b['sort'], $a['sort']);
-});
-$entries = array_slice($entries, 0, 50);
+$req = Pager::requestParams();
+$q = $req['q'];
+$result = (new HistoryService())->forUser((int) $user['id'], $q, $req['page']);
+$entries = $result['items'];
+$pagerPath = '/history.php';
+$pagerQuery = ['q' => $q !== '' ? $q : null];
+$pagerTotal = $result['total'];
+$pagerPage = $result['page'];
+$pagerTotalPages = $result['total_pages'];
+$pagerPerPage = $result['per_page'];
 
 $providerLabel = static function (string $provider): string {
     return match ($provider) {
@@ -95,14 +83,26 @@ ob_start();
 <p class="text-secondary mb-3">Recent URL pulls and standalone cloud uploads for this account.</p>
 
 <div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <h2 class="card-title mb-0">History</h2>
-        <span class="text-muted small"><?= count($entries) ?> recent</span>
+        <div class="d-flex align-items-center gap-2">
+            <form method="get" action="<?= e($pagerPath) ?>" class="d-flex align-items-center gap-2">
+                <label class="visually-hidden" for="history-search">Search history</label>
+                <input type="search" name="q" id="history-search" class="form-control form-control-sm"
+                       style="width:12rem" placeholder="Search…" value="<?= e($q) ?>" autocomplete="off">
+            </form>
+            <span class="text-muted small"><?= e((string) $pagerTotal) ?> total</span>
+        </div>
     </div>
-    <?php if (!$entries): ?>
+    <?php if ($pagerTotal === 0 && $q === ''): ?>
         <div class="empty">
             <p class="empty-title">No downloads yet</p>
             <p class="empty-subtitle text-secondary">Start a pull from the <a href="/">Download</a> page.</p>
+        </div>
+    <?php elseif ($pagerTotal === 0): ?>
+        <div class="empty">
+            <p class="empty-title">No matching history</p>
+            <p class="empty-subtitle text-secondary">Try a different search, or <a href="<?= e($pagerPath) ?>">clear search</a>.</p>
         </div>
     <?php else: ?>
         <div class="table-responsive">
@@ -229,6 +229,7 @@ ob_start();
                 </tbody>
             </table>
         </div>
+        <?php include dirname(__DIR__) . '/templates/partials/pager.php'; ?>
     <?php endif; ?>
 </div>
 

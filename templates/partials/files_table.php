@@ -9,6 +9,13 @@
  * @var string $redirect
  * @var bool $cloudConnected
  * @var array{folder?:string, conflict?:string} $prefs
+ * @var string $q Search query
+ * @var int $pagerTotal
+ * @var int $pagerPage
+ * @var int $pagerTotalPages
+ * @var int $pagerPerPage
+ * @var string $pagerPath
+ * @var array<string, scalar|null> $pagerQuery
  */
 $mode = $mode ?? 'user';
 $isAdmin = $mode === 'admin';
@@ -19,22 +26,36 @@ $cloudConnected = $cloudConnected ?? false;
 $prefs = $prefs ?? ['folder' => '', 'conflict' => 'rename'];
 $sort = $sort ?? 'date';
 $dir = $dir ?? 'DESC';
+$q = $q ?? '';
+$pagerTotal = (int) ($pagerTotal ?? count($files));
+$pagerPage = (int) ($pagerPage ?? 1);
+$pagerTotalPages = (int) ($pagerTotalPages ?? 1);
+$pagerPerPage = (int) ($pagerPerPage ?? \App\Pager::DEFAULT_PER_PAGE);
+$parts = parse_url($redirect);
+$pagerPath = $pagerPath ?? (is_array($parts) && isset($parts['path']) ? (string) $parts['path'] : $redirect);
+$pagerQuery = $pagerQuery ?? [];
+if ($pagerQuery === []) {
+    if (is_array($parts) && !empty($parts['query'])) {
+        parse_str((string) $parts['query'], $pagerQuery);
+    }
+    $pagerQuery['sort'] = $sort;
+    $pagerQuery['dir'] = strtolower($dir);
+    if ($q !== '') {
+        $pagerQuery['q'] = $q;
+    }
+}
 
-$sortUrl = static function (string $col) use ($redirect, $sort, $dir): string {
+$sortUrl = static function (string $col) use ($pagerPath, $pagerQuery, $sort, $dir): string {
     $nextDir = ($sort === $col && $dir === 'ASC') ? 'DESC' : 'ASC';
     if ($sort !== $col) {
         $nextDir = $col === 'date' ? 'DESC' : 'ASC';
     }
-    $parts = parse_url($redirect);
-    $path = is_array($parts) && isset($parts['path']) ? (string) $parts['path'] : $redirect;
-    $query = [];
-    if (is_array($parts) && !empty($parts['query'])) {
-        parse_str((string) $parts['query'], $query);
-    }
-    $query['sort'] = $col;
-    $query['dir'] = strtolower($nextDir);
 
-    return $path . '?' . http_build_query($query);
+    return \App\Pager::url($pagerPath, $pagerQuery, [
+        'sort' => $col,
+        'dir' => strtolower($nextDir),
+        'page' => null,
+    ]);
 };
 
 $sortMark = static function (string $col) use ($sort, $dir): string {
@@ -52,14 +73,24 @@ $sortMark = static function (string $col) use ($sort, $dir): string {
         <?php endif; ?>
     </div>
     <div class="files-panel-tools">
-        <label class="visually-hidden" for="files-search">Filter files</label>
-        <input type="search" id="files-search" class="form-control form-control-sm files-search"
-               placeholder="Filter…"
-               data-files-search autocomplete="off">
-        <span class="files-count" data-files-count><?= count($files) ?></span>
+        <form method="get" action="<?= e($pagerPath) ?>" class="d-flex align-items-center gap-2">
+            <?php foreach ($pagerQuery as $key => $value): ?>
+                <?php if ($key === 'q' || $key === 'page' || $value === null || $value === '') {
+                    continue;
+                } ?>
+                <input type="hidden" name="<?= e((string) $key) ?>" value="<?= e((string) $value) ?>">
+            <?php endforeach; ?>
+            <label class="visually-hidden" for="files-search">Search files</label>
+            <input type="search" name="q" id="files-search" class="form-control form-control-sm files-search"
+                   placeholder="Search…"
+                   value="<?= e($q) ?>"
+                   autocomplete="off">
+        </form>
+        <span class="files-count"><?= e((string) $pagerTotal) ?></span>
     </div>
 </div>
 
+<?php if ($files !== []): ?>
 <div class="files-selection-bar" data-files-bulk>
     <span class="files-selection-label" data-files-bulk-count>0 selected</span>
     <button type="button" class="btn btn-sm btn-outline-secondary" data-bulk-revoke disabled>Disable links</button>
@@ -105,9 +136,8 @@ $sortMark = static function (string $col) use ($sort, $dir): string {
             $shareDownloadCount = (int) ($file['share_download_count'] ?? 0);
             $shareRemaining = $shareMaxDownloads !== null ? max(0, $shareMaxDownloads - $shareDownloadCount) : null;
             $owner = $isAdmin ? (string) ($file['owner_username'] ?? '') : '';
-            $searchHaystack = strtolower($name . ' ' . $owner);
             ?>
-            <tr data-file-row data-search="<?= e($searchHaystack) ?>">
+            <tr data-file-row>
                 <td class="files-col-check">
                     <input type="checkbox" class="form-check-input" name="ids[]" value="<?= $fileId ?>"
                            data-file-check aria-label="Select <?= e($name) ?>">
@@ -209,3 +239,12 @@ $sortMark = static function (string $col) use ($sort, $dir): string {
     <input type="hidden" name="redirect" value="<?= e($redirect) ?>">
     <div data-bulk-ids></div>
 </form>
+<?php elseif ($q !== ''): ?>
+    <div class="empty">
+        <p class="empty-title">No matching files</p>
+        <p class="empty-subtitle text-secondary">Try a different search, or <a href="<?= e(\App\Pager::url($pagerPath, $pagerQuery, ['q' => null, 'page' => null])) ?>">clear search</a>.</p>
+    </div>
+<?php endif; ?>
+<?php
+include __DIR__ . '/pager.php';
+?>

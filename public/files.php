@@ -7,6 +7,7 @@ require dirname(__DIR__) . '/src/bootstrap.php';
 use App\Auth;
 use App\Cloud\CloudSendService;
 use App\FileRepository;
+use App\Pager;
 use App\UserRepository;
 use App\View;
 
@@ -14,14 +15,29 @@ $user = Auth::requireLogin();
 $users = new UserRepository();
 $user = $users->findById((int) $user['id']) ?? $user;
 
-$sortInfo = FileRepository::normalizeSort(
-    isset($_GET['sort']) ? (string) $_GET['sort'] : null,
-    isset($_GET['dir']) ? (string) $_GET['dir'] : null
-);
+$req = Pager::requestParams();
+$sortInfo = FileRepository::normalizeSort($req['sort'], $req['dir']);
 $sort = $sortInfo['sort'];
 $dir = $sortInfo['dir'];
+$q = $req['q'];
 
-$files = (new FileRepository())->forUser((int) $user['id'], $sort, $dir);
+$result = (new FileRepository())->forUserPaginated(
+    (int) $user['id'],
+    $sort,
+    $dir,
+    $q,
+    $req['page']
+);
+$files = $result['items'];
+
+$pagerPath = '/files.php';
+$pagerQuery = [
+    'sort' => $sort,
+    'dir' => strtolower($dir),
+    'q' => $q !== '' ? $q : null,
+];
+$redirect = Pager::url($pagerPath, $pagerQuery, ['page' => $result['page'] > 1 ? $result['page'] : null]);
+
 $cloud = CloudSendService::create();
 $cloudConnected = $cloud->registry()->anyConnected($user);
 $prefs = UserRepository::cloudPrefs($user);
@@ -41,7 +57,10 @@ if (!empty($_SESSION['_cloud_monitor'])) {
 }
 
 $mode = 'user';
-$redirect = '/files.php';
+$pagerTotal = $result['total'];
+$pagerPage = $result['page'];
+$pagerTotalPages = $result['total_pages'];
+$pagerPerPage = $result['per_page'];
 
 ob_start();
 ?>
@@ -61,7 +80,7 @@ ob_start();
 <?php endif; ?>
 
 <div class="card">
-    <?php if (!$files): ?>
+    <?php if ($pagerTotal === 0 && $q === ''): ?>
         <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h2 class="card-title mb-0">Your files</h2>
             <span class="text-secondary small mono"><?= e($storageLabel) ?></span>

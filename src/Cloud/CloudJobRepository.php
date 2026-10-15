@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Cloud;
 
 use App\Database;
+use App\Pager;
 use PDO;
 
 final class CloudJobRepository
@@ -80,24 +81,92 @@ final class CloudJobRepository
      *
      * @return list<array<string, mixed>>
      */
-    public function recentUnlinkedForUser(int $userId, int $limit = 50): array
+    public function recentUnlinkedForUser(int $userId, int $limit = 50, string $q = '', int $offset = 0): array
     {
-        $limit = max(1, min(100, $limit));
-        $stmt = $this->db->prepare(
-            'SELECT cj.*
-             FROM cloud_jobs cj
-             WHERE cj.user_id = :uid
+        $page = $offset > 0 ? (int) floor($offset / max(1, $limit)) + 1 : 1;
+
+        return $this->recentUnlinkedForUserPaginated($userId, $q, $page, $limit)['items'];
+    }
+
+    /**
+     * @return array{items:list<array<string, mixed>>, total:int, page:int, per_page:int, total_pages:int}
+     */
+    public function recentUnlinkedForUserPaginated(
+        int $userId,
+        string $q = '',
+        int $page = 1,
+        int $perPage = Pager::DEFAULT_PER_PAGE
+    ): array {
+        $norm = Pager::normalize($page, $perPage);
+        $q = Pager::searchQuery($q);
+        $where = "cj.user_id = :uid
                AND cj.hidden_at IS NULL
                AND NOT EXISTS (
                     SELECT 1 FROM download_jobs d
                     WHERE d.cloud_job_id = cj.id
-               )
-             ORDER BY cj.id DESC
-             LIMIT ' . $limit
-        );
-        $stmt->execute([':uid' => $userId]);
+               )";
+        $params = [':uid' => $userId];
+        if ($q !== '') {
+            $where .= " AND (
+                IFNULL(cj.filename, '') LIKE :q ESCAPE '\\'
+                OR IFNULL(cj.remote_path, '') LIKE :q ESCAPE '\\'
+                OR IFNULL(cj.result_path, '') LIKE :q ESCAPE '\\'
+            )";
+            $params[':q'] = Pager::likeContains($q);
+        }
 
-        return $stmt->fetchAll();
+        $countStmt = $this->db->prepare("SELECT COUNT(*) FROM cloud_jobs cj WHERE {$where}");
+        $countStmt->execute($params);
+        $total = (int) $countStmt->fetchColumn();
+
+        if ($norm['page'] > 1 && $total > 0) {
+            $maxPage = (int) ceil($total / $norm['per_page']);
+            if ($norm['page'] > $maxPage) {
+                $norm = Pager::normalize($maxPage, $norm['per_page']);
+            }
+        }
+
+        $stmt = $this->db->prepare(
+            "SELECT cj.*
+             FROM cloud_jobs cj
+             WHERE {$where}
+             ORDER BY cj.id DESC
+             LIMIT {$norm['per_page']} OFFSET {$norm['offset']}"
+        );
+        $stmt->execute($params);
+
+        return Pager::result($stmt->fetchAll(), $total, $norm['page'], $norm['per_page']);
+    }
+
+    /**
+     * @param list<int> $ids
+     * @return array<int, array<string, mixed>>
+     */
+    public function findUnlinkedByIds(array $ids, bool $withOwner = false): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), static fn (int $id): bool => $id > 0)));
+        if ($ids === []) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $ownerSelect = $withOwner ? ', u.username AS owner_username' : '';
+        $ownerJoin = $withOwner ? 'JOIN users u ON u.id = cj.user_id' : '';
+        $sql = "SELECT cj.*{$ownerSelect}
+             FROM cloud_jobs cj
+             {$ownerJoin}
+             WHERE cj.id IN ({$placeholders})
+               AND NOT EXISTS (
+                    SELECT 1 FROM download_jobs d
+                    WHERE d.cloud_job_id = cj.id
+               )";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($ids);
+        $byId = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $byId[(int) $row['id']] = $row;
+        }
+
+        return $byId;
     }
 
     /**
@@ -129,32 +198,67 @@ final class CloudJobRepository
      *
      * @return list<array<string, mixed>>
      */
-    public function recentUnlinkedAll(?int $userId = null, int $limit = 200): array
+    public function recentUnlinkedAll(?int $userId = null, int $limit = 200, string $q = '', int $offset = 0): array
     {
-        $limit = max(1, min(500, $limit));
-        $sql = 'SELECT cj.*, u.username AS owner_username
-             FROM cloud_jobs cj
-             JOIN users u ON u.id = cj.user_id
-             WHERE NOT EXISTS (
+        $page = $offset > 0 ? (int) floor($offset / max(1, $limit)) + 1 : 1;
+
+        return $this->recentUnlinkedAllPaginated($userId, $q, $page, $limit)['items'];
+    }
+
+    /**
+     * @return array{items:list<array<string, mixed>>, total:int, page:int, per_page:int, total_pages:int}
+     */
+    public function recentUnlinkedAllPaginated(
+        ?int $userId = null,
+        string $q = '',
+        int $page = 1,
+        int $perPage = Pager::DEFAULT_PER_PAGE
+    ): array {
+        $norm = Pager::normalize($page, $perPage);
+        $q = Pager::searchQuery($q);
+        $where = 'NOT EXISTS (
                     SELECT 1 FROM download_jobs d
                     WHERE d.cloud_job_id = cj.id
                )';
+        $params = [];
         if ($userId !== null) {
-            $sql .= ' AND cj.user_id = :uid';
+            $where .= ' AND cj.user_id = :uid';
+            $params[':uid'] = $userId;
         }
-        $sql .= ' ORDER BY cj.id DESC LIMIT ' . $limit;
+        if ($q !== '') {
+            $where .= " AND (
+                IFNULL(cj.filename, '') LIKE :q ESCAPE '\\'
+                OR IFNULL(cj.remote_path, '') LIKE :q ESCAPE '\\'
+                OR IFNULL(cj.result_path, '') LIKE :q ESCAPE '\\'
+                OR IFNULL(u.username, '') LIKE :q ESCAPE '\\'
+            )";
+            $params[':q'] = Pager::likeContains($q);
+        }
 
-        if ($userId !== null) {
-            $stmt = $this->db->prepare($sql);
-            $stmt->execute([':uid' => $userId]);
-        } else {
-            $stmt = $this->db->query($sql);
-            if ($stmt === false) {
-                return [];
+        $countStmt = $this->db->prepare(
+            "SELECT COUNT(*) FROM cloud_jobs cj JOIN users u ON u.id = cj.user_id WHERE {$where}"
+        );
+        $countStmt->execute($params);
+        $total = (int) $countStmt->fetchColumn();
+
+        if ($norm['page'] > 1 && $total > 0) {
+            $maxPage = (int) ceil($total / $norm['per_page']);
+            if ($norm['page'] > $maxPage) {
+                $norm = Pager::normalize($maxPage, $norm['per_page']);
             }
         }
 
-        return $stmt->fetchAll();
+        $stmt = $this->db->prepare(
+            "SELECT cj.*, u.username AS owner_username
+             FROM cloud_jobs cj
+             JOIN users u ON u.id = cj.user_id
+             WHERE {$where}
+             ORDER BY cj.id DESC
+             LIMIT {$norm['per_page']} OFFSET {$norm['offset']}"
+        );
+        $stmt->execute($params);
+
+        return Pager::result($stmt->fetchAll(), $total, $norm['page'], $norm['per_page']);
     }
 
     public function markInProgress(int $id, string $asyncJobId, string $remotePath): void

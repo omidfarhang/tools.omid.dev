@@ -131,6 +131,108 @@ final class FileRepository
         )->fetchAll();
     }
 
+    /**
+     * @return array{items:list<array<string, mixed>>, total:int, page:int, per_page:int, total_pages:int}
+     */
+    public function forUserPaginated(
+        int $userId,
+        string $sort = 'date',
+        string $dir = 'DESC',
+        string $q = '',
+        int $page = 1,
+        int $perPage = Pager::DEFAULT_PER_PAGE,
+        bool $withOwner = false
+    ): array {
+        $norm = Pager::normalize($page, $perPage);
+        $order = $this->orderClause($sort, $dir);
+        $shareSelect = ShareService::fileListShareSelectSql();
+        $ownerSelect = $withOwner ? ', u.username AS owner_username' : '';
+        $ownerJoin = $withOwner ? 'JOIN users u ON u.id = f.user_id' : '';
+
+        $where = 'f.user_id = :uid';
+        $params = [':uid' => $userId];
+        $q = Pager::searchQuery($q);
+        if ($q !== '') {
+            $where .= ' AND (f.original_name LIKE :q ESCAPE \'\\\' OR IFNULL(f.source_url, \'\') LIKE :q ESCAPE \'\\\')';
+            $params[':q'] = Pager::likeContains($q);
+        }
+
+        $countStmt = $this->db->prepare(
+            "SELECT COUNT(*) FROM files f {$ownerJoin} WHERE {$where}"
+        );
+        $countStmt->execute($params);
+        $total = (int) $countStmt->fetchColumn();
+
+        if ($norm['page'] > 1 && $total > 0) {
+            $maxPage = (int) ceil($total / $norm['per_page']);
+            if ($norm['page'] > $maxPage) {
+                $norm = Pager::normalize($maxPage, $norm['per_page']);
+            }
+        }
+
+        $stmt = $this->db->prepare(
+            "SELECT f.*{$ownerSelect},
+                {$shareSelect}
+             FROM files f
+             {$ownerJoin}
+             WHERE {$where}
+             ORDER BY {$order}
+             LIMIT {$norm['per_page']} OFFSET {$norm['offset']}"
+        );
+        $stmt->execute($params);
+
+        return Pager::result($stmt->fetchAll(), $total, $norm['page'], $norm['per_page']);
+    }
+
+    /**
+     * @return array{items:list<array<string, mixed>>, total:int, page:int, per_page:int, total_pages:int}
+     */
+    public function allWithOwnerPaginated(
+        string $sort = 'date',
+        string $dir = 'DESC',
+        string $q = '',
+        int $page = 1,
+        int $perPage = Pager::DEFAULT_PER_PAGE
+    ): array {
+        $norm = Pager::normalize($page, $perPage);
+        $order = $this->orderClause($sort, $dir);
+        $shareSelect = ShareService::fileListShareSelectSql();
+
+        $where = '1=1';
+        $params = [];
+        $q = Pager::searchQuery($q);
+        if ($q !== '') {
+            $where = '(f.original_name LIKE :q ESCAPE \'\\\' OR IFNULL(f.source_url, \'\') LIKE :q ESCAPE \'\\\')';
+            $params[':q'] = Pager::likeContains($q);
+        }
+
+        $countStmt = $this->db->prepare(
+            "SELECT COUNT(*) FROM files f JOIN users u ON u.id = f.user_id WHERE {$where}"
+        );
+        $countStmt->execute($params);
+        $total = (int) $countStmt->fetchColumn();
+
+        if ($norm['page'] > 1 && $total > 0) {
+            $maxPage = (int) ceil($total / $norm['per_page']);
+            if ($norm['page'] > $maxPage) {
+                $norm = Pager::normalize($maxPage, $norm['per_page']);
+            }
+        }
+
+        $stmt = $this->db->prepare(
+            "SELECT f.*, u.username AS owner_username,
+                {$shareSelect}
+             FROM files f
+             JOIN users u ON u.id = f.user_id
+             WHERE {$where}
+             ORDER BY {$order}
+             LIMIT {$norm['per_page']} OFFSET {$norm['offset']}"
+        );
+        $stmt->execute($params);
+
+        return Pager::result($stmt->fetchAll(), $total, $norm['page'], $norm['per_page']);
+    }
+
     public function delete(int $id): void
     {
         $stmt = $this->db->prepare('DELETE FROM files WHERE id = :id');
