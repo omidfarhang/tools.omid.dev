@@ -103,11 +103,6 @@ $panelTitle = $filterUser !== null
 ob_start();
 ?>
 <?php if ($filterUser !== null): ?>
-    <a class="d-inline-block mb-3" href="/admin/users.php">&larr; Users</a>
-<?php else: ?>
-    <a class="d-inline-block mb-3" href="/admin/">&larr; Admin</a>
-<?php endif; ?>
-<?php if ($filterUser !== null): ?>
     <p class="text-secondary mb-3">
         Finished jobs for <strong><?= e((string) $filterUser['username']) ?></strong>, including soft-removed rows.
         <a href="/admin/files.php?user_id=<?= $filterUserId ?>">Files</a>
@@ -295,4 +290,14 @@ ob_start();
 })();
 </script>
 <?php
-View::render($pageTitle, ob_get_clean(), $admin);
+$breadcrumbs = $filterUser !== null
+    ? [
+        ['label' => 'Admin', 'href' => '/admin/'],
+        ['label' => 'Users', 'href' => '/admin/users.php'],
+        ['label' => (string) $filterUser['username'] . ' · History'],
+    ]
+    : [
+        ['label' => 'Admin', 'href' => '/admin/'],
+        ['label' => 'History'],
+    ];
+View::render($pageTitle, ob_get_clean(), $admin, $breadcrumbs);

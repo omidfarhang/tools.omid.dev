@@ -4,6 +4,7 @@
 /** @var array|null $user */
 /** @var string $appName */
 /** @var list<array{type:string,message:string}> $flashes */
+/** @var list<array{label: string, href?: string}> $breadcrumbs */
 
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 $isActive = static function (string ...$prefixes) use ($path): bool {
@@ -127,6 +128,26 @@ $renderThemeSwitch = static function (string $extraClass = ''): void {
                 <div class="container-xl">
                     <div class="row g-2 align-items-center">
                         <div class="col">
+                            <?php if ($breadcrumbs !== []): ?>
+                                <nav aria-label="Breadcrumb">
+                                    <ol class="breadcrumb">
+                                        <?php foreach ($breadcrumbs as $i => $crumb): ?>
+                                            <?php
+                                            $isLast = $i === array_key_last($breadcrumbs);
+                                            $label = (string) ($crumb['label'] ?? '');
+                                            $href = isset($crumb['href']) ? (string) $crumb['href'] : '';
+                                            ?>
+                                            <li class="breadcrumb-item<?= $isLast ? ' active' : '' ?>"<?= $isLast ? ' aria-current="page"' : '' ?>>
+                                                <?php if (!$isLast && $href !== ''): ?>
+                                                    <a href="<?= e($href) ?>"><?= e($label) ?></a>
+                                                <?php else: ?>
+                                                    <?= e($label) ?>
+                                                <?php endif; ?>
+                                            </li>
+                                        <?php endforeach; ?>
+                                    </ol>
+                                </nav>
+                            <?php endif; ?>
                             <h2 class="page-title"><?= e($title) ?></h2>
                         </div>
                         <div class="col-auto ms-auto d-print-none">

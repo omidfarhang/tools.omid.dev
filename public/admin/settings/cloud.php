@@ -62,7 +62,6 @@ $redirectUri = $oauth->redirectUri();
 
 ob_start();
 ?>
-<a class="d-inline-block mb-3" href="/admin/settings/">&larr; Settings</a>
 <p class="text-secondary mb-3">Cloud provider app credentials. Users still connect their own accounts via OAuth.</p>
 
 <div class="card mb-3">
@@ -112,4 +111,8 @@ ob_start();
     </div>
 </div>
 <?php
-View::render('Admin · Cloud', ob_get_clean(), $admin);
+View::render('Admin · Cloud', ob_get_clean(), $admin, [
+    ['label' => 'Admin', 'href' => '/admin/'],
+    ['label' => 'Settings', 'href' => '/admin/settings/'],
+    ['label' => 'Cloud'],
+]);

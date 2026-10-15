@@ -41,7 +41,6 @@ $defaultQuota = $users->defaultQuotaBytes();
 
 ob_start();
 ?>
-<a class="d-inline-block mb-3" href="/admin/settings/">&larr; Settings</a>
 <p class="text-secondary mb-3">Site-wide storage defaults. Per-user limits are edited under Users.</p>
 
 <div class="card">
@@ -73,4 +72,8 @@ ob_start();
     </div>
 </div>
 <?php
-View::render('Admin · Storage', ob_get_clean(), $admin);
+View::render('Admin · Storage', ob_get_clean(), $admin, [
+    ['label' => 'Admin', 'href' => '/admin/'],
+    ['label' => 'Settings', 'href' => '/admin/settings/'],
+    ['label' => 'Storage'],
+]);

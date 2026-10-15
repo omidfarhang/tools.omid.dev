@@ -220,4 +220,7 @@ ob_start();
     <?php endif; ?>
 </div>
 <?php
-View::render('Admin · Disk', ob_get_clean(), $admin);
+View::render('Admin · Disk', ob_get_clean(), $admin, [
+    ['label' => 'Admin', 'href' => '/admin/'],
+    ['label' => 'Disk'],
+]);

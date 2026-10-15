@@ -19,9 +19,6 @@ $defaultQuota = (new UserRepository())->defaultQuotaBytes();
 
 ob_start();
 ?>
-<div class="mb-3">
-    <a href="/admin/">&larr; Admin</a>
-</div>
 <p class="text-secondary mb-3">Site-wide configuration previously kept in <span class="font-monospace">.env</span> — edit by section.</p>
 
 <div class="row row-cards">
@@ -61,4 +58,7 @@ ob_start();
     </div>
 </div>
 <?php
-View::render('Admin · Settings', ob_get_clean(), $admin);
+View::render('Admin · Settings', ob_get_clean(), $admin, [
+    ['label' => 'Admin', 'href' => '/admin/'],
+    ['label' => 'Settings'],
+]);

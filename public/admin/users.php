@@ -113,7 +113,6 @@ $all = $repo->all();
 $defaultQuota = $repo->defaultQuotaBytes();
 ob_start();
 ?>
-<a class="d-inline-block mb-3" href="/admin/">&larr; Admin</a>
 <p class="text-secondary mb-3">Create accounts and manage roles, approvals, quotas, and passwords.</p>
 
 <div class="card">
@@ -465,4 +464,7 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 <?php
-View::render('Admin Users', ob_get_clean(), $admin);
+View::render('Admin Users', ob_get_clean(), $admin, [
+    ['label' => 'Admin', 'href' => '/admin/'],
+    ['label' => 'Users'],
+]);

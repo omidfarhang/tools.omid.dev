@@ -65,11 +65,6 @@ $prefs = ['folder' => '', 'conflict' => 'rename'];
 ob_start();
 ?>
 <?php if ($filterUser !== null): ?>
-    <a class="d-inline-block mb-3" href="/admin/users.php">&larr; Users</a>
-<?php else: ?>
-    <a class="d-inline-block mb-3" href="/admin/">&larr; Admin</a>
-<?php endif; ?>
-<?php if ($filterUser !== null): ?>
     <p class="text-secondary mb-3">
         Host files for <strong><?= e((string) $filterUser['username']) ?></strong>.
         <a href="/admin/history.php?user_id=<?= $filterUserId ?>">History</a>
@@ -106,4 +101,14 @@ if ($files) {
     include dirname(__DIR__, 2) . '/templates/partials/files_modals.php';
     include dirname(__DIR__, 2) . '/templates/partials/files_js.php';
 }
-View::render($pageTitle, ob_get_clean(), $admin);
+$breadcrumbs = $filterUser !== null
+    ? [
+        ['label' => 'Admin', 'href' => '/admin/'],
+        ['label' => 'Users', 'href' => '/admin/users.php'],
+        ['label' => (string) $filterUser['username'] . ' · Files'],
+    ]
+    : [
+        ['label' => 'Admin', 'href' => '/admin/'],
+        ['label' => 'Files'],
+    ];
+View::render($pageTitle, ob_get_clean(), $admin, $breadcrumbs);

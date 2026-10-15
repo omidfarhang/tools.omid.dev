@@ -6,7 +6,10 @@ namespace App;
 
 final class View
 {
-    public static function render(string $title, string $content, ?array $user = null): void
+    /**
+     * @param list<array{label: string, href?: string}> $breadcrumbs
+     */
+    public static function render(string $title, string $content, ?array $user = null, array $breadcrumbs = []): void
     {
         $appName = (string) Config::get('app_name');
         $flashes = consume_flashes();

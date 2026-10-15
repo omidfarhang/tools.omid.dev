@@ -45,7 +45,7 @@ Canonical theme tokens live in `public/assets/css/app.css`. Keep this file in sy
 
 - **App:** `.page` → `.navbar.navbar-vertical.navbar-expand-lg` + `.page-wrapper` → `.page-header` / `.page-body` / `.footer` inside `.container-xl`.
 - **Auth:** `.page.page-center` → `.container.container-tight` → brand (`.navbar-brand.navbar-brand-autodark`) → page-owned `.card.card-md` → secondary text link below the card (Sign up / Sign in). Forms use `.form-footer` + `.btn.btn-primary.w-100`.
-- **Page titles:** layout owns `.page-header` / `.page-title`; page content uses a plain `.text-secondary` lede (do not nest another `.page-header`).
+- **Page titles:** layout owns `.page-header` / `.page-title` (and optional Tabler `.breadcrumb`); page content uses a plain `.text-secondary` lede (do not nest another `.page-header`).
 
 ## Components (prefer Tabler)
 
@@ -59,6 +59,7 @@ Canonical theme tokens live in `public/assets/css/app.css`. Keep this file in sy
 | Warnings | `.alert.alert-warning` |
 | Status chips | `.badge` + Tabler `bg-*-lt` helpers |
 | Forms | `.form-label`, `.form-control`, `.form-select`, `.subheader` section labels |
+| Hierarchy | Tabler `.breadcrumb` in `.page-header` via `View::render(..., $breadcrumbs)` — not ad-hoc “← Back” links |
 
 App-specific leftovers in `app.css` (keep minimal): theme switcher, files table toolbar/selection bar, download destination `.choice-tile` grid.
 
