@@ -147,19 +147,31 @@ foreach ($homeJobs as $job) {
     }
 }
 
-$destinationLabel = static function (string $behavior): string {
+$providerLabel = static function (string $provider): string {
+    return match ($provider) {
+        'dropbox' => 'Dropbox',
+        default => $provider !== '' ? ucfirst($provider) : 'Cloud',
+    };
+};
+
+$destinationLabel = static function (string $behavior, ?string $provider = null) use ($providerLabel): string {
+    $cloud = $provider !== null && $provider !== ''
+        ? $providerLabel($provider)
+        : 'Cloud';
+
     return match ($behavior) {
-        'save_to_cloud', 'save_to_dropbox' => 'Cloud',
-        'save_to_both' => 'Disk + Cloud',
+        'save_to_cloud', 'save_to_dropbox' => $cloud,
+        'save_to_both' => 'Disk + ' . $cloud,
         default => 'Disk',
     };
 };
 
 $statusBadge = static function (string $status): string {
     return match ($status) {
-        'complete' => 'success',
+        'complete', 'success' => 'success',
         'failed' => 'danger',
         'cancelled' => 'secondary',
+        'skipped' => 'warning',
         'in_progress' => 'info',
         'pending' => 'secondary',
         default => 'secondary',
@@ -181,7 +193,8 @@ $failReasonButton = static function (string $error, string $status): string {
 
     return '<button type="button" class="btn btn-link btn-sm text-danger p-0 align-baseline ms-1"'
         . ' data-bs-toggle="modal" data-bs-target="#jobs-fail-modal"'
-        . ' data-fail-reason="' . e($error) . '">'
+        . ' data-fail-reason="' . e($error) . '"'
+        . ' onclick="event.stopPropagation()">'
         . 'Reason</button>';
 };
 
@@ -413,7 +426,7 @@ ob_start();
             <p class="empty-subtitle text-secondary">Queue a URL above. Recent and in-progress jobs show up here.</p>
         </div>
         <div class="table-responsive d-none" id="active-jobs-table-wrap">
-            <table class="table card-table table-striped align-middle mb-0">
+            <table class="table card-table table-striped align-middle mb-0" id="active-jobs-table">
                 <thead>
                 <tr>
                     <th>Source</th>
@@ -432,7 +445,7 @@ ob_start();
             <p class="empty-subtitle text-secondary">Queue a URL above. Recent and in-progress jobs show up here.</p>
         </div>
         <div class="table-responsive" id="active-jobs-table-wrap">
-            <table class="table card-table table-striped align-middle mb-0">
+            <table class="table card-table table-striped align-middle mb-0" id="active-jobs-table">
                 <thead>
                 <tr>
                     <th>Source</th>
@@ -447,42 +460,44 @@ ob_start();
                     <?php
                     $name = (string) ($job['result_filename'] ?? $job['requested_filename'] ?? '');
                     $status = (string) ($job['status'] ?? 'pending');
+                    $hasCloud = !empty($job['cloud_job_id']);
+                    $cloudPath = (string) ($job['cloud_result_path'] ?? $job['cloud_remote_path'] ?? '');
                     $cloudStatus = (string) ($job['cloud_status'] ?? '');
+                    $cloudProvider = (string) ($job['cloud_provider'] ?? 'dropbox');
                     $isActive = DownloadJobRepository::isActiveRow($job);
-                    $displayStatus = $status;
-                    if ($status === 'complete' && in_array($cloudStatus, ['pending', 'in_progress'], true)) {
-                        $displayStatus = 'cloud upload';
-                    } elseif ($status === 'complete' && $cloudStatus === 'cancelled') {
-                        $displayStatus = 'cloud cancelled';
-                    }
-                    $badgeStatus = in_array($displayStatus, ['cloud upload'], true) ? 'in_progress' : $status;
-                    if ($displayStatus === 'cloud cancelled') {
-                        $badgeStatus = 'cancelled';
-                    }
                     $fileId = isset($job['file_id']) && $job['file_id'] !== null ? (int) $job['file_id'] : null;
                     $canCancel = DownloadJobRepository::canCancel($job);
                     $canRetry = DownloadJobRepository::canRetry($job);
                     $canHide = DownloadJobRepository::canHide($job);
                     $error = (string) ($job['error'] ?? '');
+                    $rowId = 'job-cloud-' . (int) $job['id'];
+                    $rowClass = trim(($isActive ? '' : 'text-muted') . ($hasCloud ? ' history-row-toggle' : ''));
                     ?>
-                    <tr data-job-id="<?= (int) $job['id'] ?>" class="<?= $isActive ? '' : 'text-muted' ?>">
+                    <tr data-job-id="<?= (int) $job['id'] ?>"
+                        class="<?= e($rowClass) ?>"
+                        <?= $hasCloud ? 'data-bs-toggle="collapse" data-bs-target="#' . e($rowId) . '" role="button" aria-expanded="false"' : '' ?>>
                         <td class="mono small" title="<?= e((string) $job['source_url']) ?>"><?= e($truncateUrl((string) $job['source_url'])) ?></td>
                         <td class="mono">
                             <?php if ($fileId !== null && $status === 'complete'): ?>
-                                <a class="filename" href="/download.php?id=<?= $fileId ?>"><?= e($name !== '' ? $name : 'file') ?></a>
+                                <a class="filename" href="/download.php?id=<?= $fileId ?>" onclick="event.stopPropagation()"><?= e($name !== '' ? $name : 'file') ?></a>
                             <?php else: ?>
                                 <?= e($name !== '' ? $name : '—') ?>
                             <?php endif; ?>
                         </td>
-                        <td><?= e($destinationLabel((string) $job['behavior'])) ?></td>
                         <td>
-                            <span class="badge text-bg-<?= e($statusBadge($badgeStatus)) ?> job-status-badge">
-                                <?= e($displayStatus) ?>
+                            <?= e($destinationLabel((string) $job['behavior'], $hasCloud ? $cloudProvider : null)) ?>
+                            <?php if ($hasCloud): ?>
+                                <div class="text-muted small">Cloud details ↓</div>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <span class="badge text-bg-<?= e($statusBadge($status)) ?> job-status-badge">
+                                <?= e($status) ?>
                             </span>
                             <?= $failReasonButton($error, $status) ?>
                         </td>
                         <td class="text-end text-nowrap">
-                            <div class="d-inline-flex align-items-center gap-2">
+                            <div class="d-inline-flex align-items-center gap-2" onclick="event.stopPropagation()">
                                 <?php if ($canCancel): ?>
                                     <form method="post" action="/job_action.php" class="d-inline">
                                         <?= Csrf::field() ?>
@@ -512,6 +527,30 @@ ob_start();
                             </div>
                         </td>
                     </tr>
+                    <?php if ($hasCloud): ?>
+                        <tr class="collapse" id="<?= e($rowId) ?>">
+                            <td colspan="5" class="bg-white">
+                                <div class="p-3 small">
+                                    <div class="fw-semibold mb-2"><?= e($providerLabel($cloudProvider)) ?> job</div>
+                                    <dl class="row mb-0">
+                                        <dt class="col-sm-2 text-muted">Status</dt>
+                                        <dd class="col-sm-10">
+                                            <span class="badge text-bg-<?= e($statusBadge($cloudStatus !== '' ? $cloudStatus : 'pending')) ?>">
+                                                <?= e($cloudStatus !== '' ? $cloudStatus : '—') ?>
+                                            </span>
+                                            <?= $failReasonButton((string) ($job['cloud_error'] ?? ''), $cloudStatus !== '' ? $cloudStatus : 'pending') ?>
+                                        </dd>
+                                        <dt class="col-sm-2 text-muted">Path</dt>
+                                        <dd class="col-sm-10 mono"><?= e($cloudPath !== '' ? $cloudPath : '—') ?></dd>
+                                        <?php if (!empty($job['cloud_updated_at'])): ?>
+                                            <dt class="col-sm-2 text-muted">Updated</dt>
+                                            <dd class="col-sm-10"><?= e((string) $job['cloud_updated_at']) ?></dd>
+                                        <?php endif; ?>
+                                    </dl>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endif; ?>
                 <?php endforeach; ?>
                 </tbody>
             </table>
@@ -730,16 +769,24 @@ ob_start();
     const tableWrap = document.getElementById('active-jobs-table-wrap');
     const csrf = <?= json_encode(Csrf::token()) ?>;
 
-    function destinationLabel(behavior) {
-        if (behavior === 'save_to_cloud' || behavior === 'save_to_dropbox') return 'Cloud';
-        if (behavior === 'save_to_both') return 'Disk + Cloud';
+    function providerLabel(provider) {
+        if (provider === 'dropbox') return 'Dropbox';
+        if (provider) return provider.charAt(0).toUpperCase() + provider.slice(1);
+        return 'Cloud';
+    }
+
+    function destinationLabel(behavior, provider) {
+        const cloud = provider ? providerLabel(provider) : 'Cloud';
+        if (behavior === 'save_to_cloud' || behavior === 'save_to_dropbox') return cloud;
+        if (behavior === 'save_to_both') return 'Disk + ' + cloud;
         return 'Disk';
     }
 
     function statusBadgeClass(status) {
-        if (status === 'complete') return 'badge text-bg-success job-status-badge';
+        if (status === 'complete' || status === 'success') return 'badge text-bg-success job-status-badge';
         if (status === 'failed') return 'badge text-bg-danger job-status-badge';
-        if (status === 'in_progress' || status === 'cloud_upload') return 'badge text-bg-info job-status-badge';
+        if (status === 'skipped') return 'badge text-bg-warning job-status-badge';
+        if (status === 'in_progress') return 'badge text-bg-info job-status-badge';
         return 'badge text-bg-secondary job-status-badge';
     }
 
@@ -749,23 +796,14 @@ ob_start();
         return url.substring(0, max - 1) + '…';
     }
 
-    function displayStatus(job) {
-        if (job.status === 'complete' && (job.cloud_status === 'pending' || job.cloud_status === 'in_progress')) {
-            return 'cloud upload';
-        }
-        if (job.status === 'complete' && job.cloud_status === 'cancelled') {
-            return 'cloud cancelled';
-        }
-        return job.status || 'pending';
-    }
-
     function failReasonButton(error, status) {
         if (!error || (status !== 'failed' && status !== 'skipped')) {
             return '';
         }
         return '<button type="button" class="btn btn-link btn-sm text-danger p-0 align-baseline ms-1"'
             + ' data-bs-toggle="modal" data-bs-target="#jobs-fail-modal"'
-            + ' data-fail-reason="' + escapeAttr(error) + '">Reason</button>';
+            + ' data-fail-reason="' + escapeAttr(error) + '"'
+            + ' onclick="event.stopPropagation()">Reason</button>';
     }
 
     function jobActionHtml(job) {
@@ -799,11 +837,39 @@ ob_start();
         if (!parts.length) {
             return '';
         }
-        return '<div class="d-inline-flex align-items-center gap-2">' + parts.join('') + '</div>';
+        return '<div class="d-inline-flex align-items-center gap-2" onclick="event.stopPropagation()">' + parts.join('') + '</div>';
+    }
+
+    function cloudDetailsHtml(job) {
+        const provider = job.cloud_provider || 'dropbox';
+        const cloudStatus = job.cloud_status || '';
+        const cloudPath = job.cloud_path || '';
+        const badgeStatus = cloudStatus || 'pending';
+        let html = '<tr class="collapse" id="job-cloud-' + job.id + '">'
+            + '<td colspan="5" class="bg-white"><div class="p-3 small">'
+            + '<div class="fw-semibold mb-2">' + escapeHtml(providerLabel(provider)) + ' job</div>'
+            + '<dl class="row mb-0">'
+            + '<dt class="col-sm-2 text-muted">Status</dt>'
+            + '<dd class="col-sm-10"><span class="' + statusBadgeClass(badgeStatus) + '">'
+            + escapeHtml(cloudStatus || '—') + '</span>'
+            + failReasonButton(job.cloud_error, cloudStatus || 'pending')
+            + '</dd>'
+            + '<dt class="col-sm-2 text-muted">Path</dt>'
+            + '<dd class="col-sm-10 mono">' + escapeHtml(cloudPath || '—') + '</dd>';
+        if (job.cloud_updated_at) {
+            html += '<dt class="col-sm-2 text-muted">Updated</dt>'
+                + '<dd class="col-sm-10">' + escapeHtml(job.cloud_updated_at) + '</dd>';
+        }
+        html += '</dl></div></td></tr>';
+        return html;
     }
 
     function renderJobs(jobs, activeCount) {
         if (!body || !countEl) return;
+        const expanded = {};
+        body.querySelectorAll('tr.collapse.show').forEach(function (row) {
+            if (row.id) expanded[row.id] = true;
+        });
         if (!jobs.length) {
             if (emptyEl) emptyEl.classList.remove('d-none');
             if (tableWrap) tableWrap.classList.add('d-none');
@@ -817,23 +883,40 @@ ob_start();
         countEl.innerHTML = countLabel + ' · <a href="/history.php">History</a>';
         body.innerHTML = jobs.map(function (job) {
             const name = job.result_filename || job.requested_filename || '—';
-            const label = displayStatus(job);
-            let badgeStatus = job.status;
-            if (label === 'cloud upload') badgeStatus = 'cloud_upload';
-            if (label === 'cloud cancelled') badgeStatus = 'cancelled';
-            const rowClass = job.active ? '' : ' class="text-muted"';
+            const status = job.status || 'pending';
+            const hasCloud = !!job.cloud_job_id;
+            const rowId = 'job-cloud-' + job.id;
+            const classes = [];
+            if (!job.active) classes.push('text-muted');
+            if (hasCloud) classes.push('history-row-toggle');
+            const rowClass = classes.length ? ' class="' + classes.join(' ') + '"' : '';
+            const toggleAttrs = hasCloud
+                ? ' data-bs-toggle="collapse" data-bs-target="#' + rowId + '" role="button" aria-expanded="'
+                    + (expanded[rowId] ? 'true' : 'false') + '"'
+                : '';
             let nameHtml = escapeHtml(name);
             if (job.file_id && job.status === 'complete') {
-                nameHtml = '<a class="filename" href="/download.php?id=' + job.file_id + '">' + escapeHtml(name === '—' ? 'file' : name) + '</a>';
+                nameHtml = '<a class="filename" href="/download.php?id=' + job.file_id
+                    + '" onclick="event.stopPropagation()">'
+                    + escapeHtml(name === '—' ? 'file' : name) + '</a>';
             }
-            return '<tr data-job-id="' + job.id + '"' + rowClass + '>'
+            const destHtml = escapeHtml(destinationLabel(job.behavior, hasCloud ? (job.cloud_provider || 'dropbox') : null))
+                + (hasCloud ? '<div class="text-muted small">Cloud details ↓</div>' : '');
+            let html = '<tr data-job-id="' + job.id + '"' + rowClass + toggleAttrs + '>'
                 + '<td class="mono small" title="' + escapeAttr(job.source_url) + '">' + escapeHtml(truncateUrl(job.source_url)) + '</td>'
                 + '<td class="mono">' + nameHtml + '</td>'
-                + '<td>' + escapeHtml(destinationLabel(job.behavior)) + '</td>'
-                + '<td><span class="' + statusBadgeClass(badgeStatus) + '">' + escapeHtml(label) + '</span>'
-                + failReasonButton(job.error, job.status)
+                + '<td>' + destHtml + '</td>'
+                + '<td><span class="' + statusBadgeClass(status) + '">' + escapeHtml(status) + '</span>'
+                + failReasonButton(job.error, status)
                 + '</td>'
                 + '<td class="text-end text-nowrap">' + jobActionHtml(job) + '</td></tr>';
+            if (hasCloud) {
+                html += cloudDetailsHtml(job);
+                if (expanded[rowId]) {
+                    html = html.replace('class="collapse" id="' + rowId + '"', 'class="collapse show" id="' + rowId + '"');
+                }
+            }
+            return html;
         }).join('');
     }
 

@@ -136,7 +136,13 @@ ob_start();
                         <tr class="<?= $hasCloud ? 'history-row-toggle' : '' ?>"
                             <?= $hasCloud ? 'data-bs-toggle="collapse" data-bs-target="#' . e($rowId) . '" role="button" aria-expanded="false"' : '' ?>>
                             <td class="small text-muted text-nowrap"><?= e((string) ($job['updated_at'] ?? $job['created_at'])) ?></td>
-                            <td class="mono"><?= e($name !== '' ? $name : '—') ?></td>
+                            <td class="mono">
+                                <?php if ($fileId !== null): ?>
+                                    <a class="filename" href="/download.php?id=<?= $fileId ?>" onclick="event.stopPropagation()"><?= e($name !== '' ? $name : 'file') ?></a>
+                                <?php else: ?>
+                                    <?= e($name !== '' ? $name : '—') ?>
+                                <?php endif; ?>
+                            </td>
                             <td class="mono small" title="<?= e($sourceUrl) ?>"><?= e($truncateUrl($sourceUrl)) ?></td>
                             <td>
                                 <?= e($destinationLabel((string) ($job['behavior'] ?? ''), $hasCloud ? $cloudProvider : null)) ?>
@@ -150,9 +156,6 @@ ob_start();
                             </td>
                             <td class="text-end small">
                                 <div class="d-inline-flex align-items-center gap-2" onclick="event.stopPropagation()">
-                                    <?php if ($fileId !== null): ?>
-                                        <a href="/download.php?id=<?= $fileId ?>">File</a>
-                                    <?php endif; ?>
                                     <?php if (DownloadJobRepository::canRetry($job)): ?>
                                         <form method="post" action="/job_action.php" class="d-inline">
                                             <?= Csrf::field() ?>

@@ -68,6 +68,7 @@ json_response([
             'cloud_provider' => $job['cloud_provider'] ?? null,
             'cloud_path' => $job['cloud_result_path'] ?? $job['cloud_remote_path'] ?? null,
             'cloud_error' => $job['cloud_error'] ?? null,
+            'cloud_updated_at' => $job['cloud_updated_at'] ?? null,
             'updated_at' => (string) ($job['updated_at'] ?? $job['created_at'] ?? ''),
             'active' => DownloadJobRepository::isActiveRow($job),
             'can_cancel' => DownloadJobRepository::canCancel($job),

@@ -244,7 +244,8 @@ final class DownloadJobRepository
                     cj.result_path AS cloud_result_path,
                     cj.remote_path AS cloud_remote_path,
                     cj.error AS cloud_error,
-                    cj.filename AS cloud_filename
+                    cj.filename AS cloud_filename,
+                    cj.updated_at AS cloud_updated_at
              FROM download_jobs d
              LEFT JOIN cloud_jobs cj ON cj.id = d.cloud_job_id';
     }
