@@ -11,7 +11,7 @@ Auth::requireLogin();
 $oauth = new DropboxOAuth();
 if (!$oauth->isConfigured()) {
     flash('error', 'Dropbox app is not configured.');
-    redirect('/user/');
+    redirect('/user/cloud.php');
 }
 
 $reconnect = isset($_GET['reconnect']) && (string) $_GET['reconnect'] !== '0';

@@ -24,15 +24,15 @@ Upload jobs are stored in the generic `cloud_jobs` table with `provider = 'googl
 ### Scopes requested
 
 - `https://www.googleapis.com/auth/drive.file` — create/manage files and folders opened or created by this app
-- `userinfo.email` / `userinfo.profile` — show account name/email on Account after connect
+- `userinfo.email` / `userinfo.profile` — show account name/email on Account → Cloud after connect
 
 If the app is in testing mode on an External consent screen, add each user’s Google account as a test user.
 
 ## User flow
 
-1. Sign in → **Account** → **Connect Google Drive**.
+1. Sign in → **Account** → **Cloud** → **Connect Google Drive**.
 2. Approve access in Google.
-3. Optionally set cloud **defaults** on Account: destination folder (blank = My Drive root) and conflict policy.
+3. Optionally set cloud **defaults** on Account → Cloud: destination folder (blank = My Drive root) and conflict policy.
 4. Use **Save to** → Google Drive (or Disk + Google Drive) on the home page, **Send to cloud** on My Files (choose provider when more than one is connected), or CLI after the CLI user has connected Google Drive.
 
 ## How uploads work
@@ -43,4 +43,4 @@ Job rows live in `cloud_jobs` (`provider = google_drive`). Status is usually `co
 
 ## Disconnect
 
-Account → **Disconnect Google Drive** clears stored tokens for that user.
+Account → Cloud → **Disconnect Google Drive** clears stored tokens for that user.

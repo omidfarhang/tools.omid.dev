@@ -22,7 +22,7 @@ interface CloudProvider
     public function disconnect(int $userId): void;
 
     /**
-     * Display fields for the Account page when connected.
+     * Display fields for Account → Cloud when connected.
      *
      * @return array{display_name?:string, email?:string, account_id?:string}
      */

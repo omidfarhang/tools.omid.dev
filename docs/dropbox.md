@@ -2,7 +2,7 @@
 
 Dropbox is implemented as `App\Cloud\Dropbox\DropboxProvider` and registered in `CloudRegistry` (alongside Google Drive). Each user connects their own Dropbox account. There is no shared access token in `.env`.
 
-Upload jobs are stored in the generic `cloud_jobs` table with `provider = 'dropbox'`. Home uses Save to → per-provider cloud destinations; Account loops registered providers for connect / disconnect / prefs.
+Upload jobs are stored in the generic `cloud_jobs` table with `provider = 'dropbox'`. Home uses Save to → per-provider cloud destinations; Account → Cloud handles connect / disconnect / prefs.
 
 ## Entrypoints
 
@@ -20,7 +20,7 @@ CLI script and endpoint names (`scripts/ytdl.sh`, `/api/cli_register_and_dropbox
 1. Go to [Dropbox App Console](https://www.dropbox.com/developers/apps).
 2. Create an app with **Scoped access** and **Full Dropbox** (or App folder if you prefer).
 3. Under **Permissions**, enable at least:
-   - `account_info.read` (shows Dropbox name/email on Account after connect)
+   - `account_info.read` (shows Dropbox name/email on Account → Cloud after connect)
    - `files.content.write`
    - `files.content.read` (required for conflict checks: rename / overwrite / skip)
    - `files.metadata.read` (path existence checks)
@@ -36,9 +36,9 @@ CLI script and endpoint names (`scripts/ytdl.sh`, `/api/cli_register_and_dropbox
 
 ## User flow
 
-1. Sign in → **Account** → **Connect Dropbox**.
+1. Sign in → **Account** → **Cloud** → **Connect Dropbox**.
 2. Approve access in Dropbox.
-3. Optionally set Dropbox **defaults** on Account: destination folder (blank = root) and conflict policy. Preferred destinations (Local and/or connected clouds) live under Profile.
+3. Optionally set Dropbox **defaults** on Account → Cloud: destination folder (blank = root) and conflict policy. Preferred destinations (Local and/or connected clouds) live under Account → Profile.
 4. Use **Save to** → Cloud or Disk + Cloud on the home page, **Send to cloud** on My Files, or CLI (`scripts/ytdl.sh`) after the CLI user has connected Dropbox.
 
 ## Features after connect
@@ -58,8 +58,8 @@ CLI script and endpoint names (`scripts/ytdl.sh`, `/api/cli_register_and_dropbox
 
 ## Re-authorize after permission changes
 
-If you enable new scopes (e.g. `files.content.read` or `account_info.read`) on an existing Dropbox app, users should use Account → **Reconnect Dropbox** so Dropbox shows consent again and grants the new scopes. Disconnect is only needed to fully unlink.
+If you enable new scopes (e.g. `files.content.read` or `account_info.read`) on an existing Dropbox app, users should use Account → Cloud → **Reconnect Dropbox** so Dropbox shows consent again and grants the new scopes. Disconnect is only needed to fully unlink.
 
 ## Disconnect
 
-Account → **Disconnect Dropbox** clears stored tokens for that user.
+Account → Cloud → **Disconnect Dropbox** clears stored tokens for that user.

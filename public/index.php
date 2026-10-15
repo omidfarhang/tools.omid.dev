@@ -122,8 +122,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $provider = $cloudRegistry->get($destId);
         if ($provider === null || !$provider->isConfigured() || !$provider->isConnected($user)) {
-            flash('error', 'Connect ' . ($provider?->label() ?? $destId) . ' first (Account page).');
-            redirect('/user/');
+            flash('error', 'Connect ' . ($provider?->label() ?? $destId) . ' first (Account → Cloud).');
+            redirect('/user/cloud.php');
         }
     }
 
@@ -269,7 +269,7 @@ ob_start();
 <?php if (!$cloudConnected): ?>
     <div class="alert alert-warning">
         No cloud account connected. You can still save to disk.
-        <a href="/user/">Connect a cloud account</a>
+        <a href="/user/cloud.php">Connect a cloud account</a>
     </div>
 <?php endif; ?>
 

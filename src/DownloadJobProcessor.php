@@ -93,14 +93,14 @@ final class DownloadJobProcessor
                 if (!$cloudProvider->isConnected($user)) {
                     $this->jobs->markFailed(
                         $jobId,
-                        'Connect ' . $cloudProvider->label() . ' first (Account page).'
+                        'Connect ' . $cloudProvider->label() . ' first (Account → Cloud).'
                     );
                     return;
                 }
             } else {
                 $cloudProvider = $registry->defaultConnected($user);
                 if ($cloudProvider === null) {
-                    $this->jobs->markFailed($jobId, 'Connect a cloud account first (Account page).');
+                    $this->jobs->markFailed($jobId, 'Connect a cloud account first (Account → Cloud).');
                     return;
                 }
             }
@@ -181,7 +181,7 @@ final class DownloadJobProcessor
                 }
 
                 if ($cloudProvider === null) {
-                    $this->jobs->markFailed($jobId, 'Connect a cloud account first (Account page).', $resultFilename, $fileId);
+                    $this->jobs->markFailed($jobId, 'Connect a cloud account first (Account → Cloud).', $resultFilename, $fileId);
                     return;
                 }
 

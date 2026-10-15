@@ -18,24 +18,24 @@ unset($_SESSION['google_drive_oauth_state'], $_SESSION['google_drive_oauth_recon
 
 if ($state === '' || $expected === '' || !hash_equals($expected, $state)) {
     flash('error', 'Invalid OAuth state.');
-    redirect('/user/');
+    redirect('/user/cloud.php');
 }
 
 if (!empty($_GET['error'])) {
     flash('error', $reconnect ? 'Google Drive reconnection denied.' : 'Google Drive authorization denied.');
-    redirect('/user/');
+    redirect('/user/cloud.php');
 }
 
 $code = (string) ($_GET['code'] ?? '');
 if ($code === '') {
     flash('error', 'Missing authorization code.');
-    redirect('/user/');
+    redirect('/user/cloud.php');
 }
 
 $result = $oauth->exchangeCode($code);
 if (!$result['ok']) {
     flash('error', ($reconnect ? 'Google Drive reconnect failed: ' : 'Google Drive connect failed: ') . ($result['error'] ?? 'unknown'));
-    redirect('/user/');
+    redirect('/user/cloud.php');
 }
 
 $expiresAt = null;
@@ -64,4 +64,4 @@ if ($account['ok']) {
 );
 
 flash('success', $reconnect ? 'Google Drive reconnected.' : 'Google Drive connected.');
-redirect('/user/');
+redirect('/user/cloud.php');

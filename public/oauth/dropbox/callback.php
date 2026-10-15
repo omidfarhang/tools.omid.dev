@@ -18,24 +18,24 @@ unset($_SESSION['dropbox_oauth_state'], $_SESSION['dropbox_oauth_reconnect']);
 
 if ($state === '' || $expected === '' || !hash_equals($expected, $state)) {
     flash('error', 'Invalid OAuth state.');
-    redirect('/user/');
+    redirect('/user/cloud.php');
 }
 
 if (!empty($_GET['error'])) {
     flash('error', $reconnect ? 'Dropbox reconnection denied.' : 'Dropbox authorization denied.');
-    redirect('/user/');
+    redirect('/user/cloud.php');
 }
 
 $code = (string) ($_GET['code'] ?? '');
 if ($code === '') {
     flash('error', 'Missing authorization code.');
-    redirect('/user/');
+    redirect('/user/cloud.php');
 }
 
 $result = $oauth->exchangeCode($code);
 if (!$result['ok']) {
     flash('error', ($reconnect ? 'Dropbox reconnect failed: ' : 'Dropbox connect failed: ') . ($result['error'] ?? 'unknown'));
-    redirect('/user/');
+    redirect('/user/cloud.php');
 }
 
 $expiresAt = null;
@@ -66,4 +66,4 @@ if ($account['ok']) {
 );
 
 flash('success', $reconnect ? 'Dropbox reconnected.' : 'Dropbox connected.');
-redirect('/user/');
+redirect('/user/cloud.php');

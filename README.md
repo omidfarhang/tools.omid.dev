@@ -4,7 +4,7 @@ Personal **Download to Host** toolkit: pull remote URLs to the server (HTTP + cu
 
 ## Features
 
-- Multi-user auth (`admin` / `user`); self-register (inactive until admin approves) or admin-created accounts; optional TOTP 2FA on Account (with remember-this-device)
+- Multi-user auth (`admin` / `user`); self-register (inactive until admin approves) or admin-created accounts; optional TOTP 2FA on Account → Security (with remember-this-device)
 - Pluggable download sources: HTTP(S); curated yt-dlp (YouTube, X/Twitter, Instagram, TikTok, Vimeo, Reddit; audio: SoundCloud, Mixcloud, Bandcamp); optional generic yt-dlp
 - Public share links (`/s/{token}`) without login
 - Pluggable cloud providers: Dropbox connect (no shared cloud token)

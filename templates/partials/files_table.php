@@ -214,7 +214,7 @@ $sortMark = static function (string $col) use ($sort, $dir): string {
                                                 data-file-id="<?= $fileId ?>"
                                                 data-file-name="<?= e($name) ?>">Send to cloud…</button>
                                     <?php else: ?>
-                                        <a class="dropdown-item" href="/user/">Connect Dropbox…</a>
+                                        <a class="dropdown-item" href="/user/cloud.php">Connect Dropbox…</a>
                                     <?php endif; ?>
                                 </li>
                             <?php endif; ?>

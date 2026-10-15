@@ -11,7 +11,7 @@ Auth::requireLogin();
 $oauth = new GoogleDriveOAuth();
 if (!$oauth->isConfigured()) {
     flash('error', 'Google Drive app is not configured.');
-    redirect('/user/');
+    redirect('/user/cloud.php');
 }
 
 $reconnect = isset($_GET['reconnect']) && (string) $_GET['reconnect'] !== '0';

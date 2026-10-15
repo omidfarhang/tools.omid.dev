@@ -37,8 +37,8 @@ if ($file === null || (int) $file['user_id'] !== (int) $user['id']) {
 $cloud = CloudSendService::create();
 $provider = $cloud->resolveProvider($user, $requestedProvider !== '' ? $requestedProvider : null);
 if ($provider === null || !$provider->isConnected($user)) {
-    flash('error', 'Connect a cloud account first (Account page).');
-    redirect('/user/');
+    flash('error', 'Connect a cloud account first (Account → Cloud).');
+    redirect('/user/cloud.php');
 }
 
 $sent = $cloud->sendLocalFile($user, $file, $folder, $conflict, $deleteAfter, $provider->id());

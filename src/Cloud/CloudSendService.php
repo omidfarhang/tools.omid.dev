@@ -69,7 +69,7 @@ final class CloudSendService
                 'success' => false,
                 'message' => $providerId !== null && $providerId !== ''
                     ? 'Unknown cloud provider.'
-                    : 'Connect a cloud account first (Account page).',
+                    : 'Connect a cloud account first (Account → Cloud).',
                 'error' => $providerId !== null && $providerId !== '' ? 'unknown_provider' : 'not_connected',
             ];
         }
