@@ -14,7 +14,7 @@ interface DownloadSource
     public function requiresLocalFile(): bool;
 
     /**
-     * @param array{filename?:?string, yt_format?:string, force_ytdlp?:bool|int|string} $options
+     * @param array{filename?:?string, yt_format?:string, yt_audio_only?:bool|int|string, yt_subs?:?string, force_ytdlp?:bool|int|string} $options
      * @return array{ok:bool, stored_name?:string, original_name?:string, size?:int, error?:string}
      */
     public function download(string $url, array $options = []): array;

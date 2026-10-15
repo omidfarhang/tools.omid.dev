@@ -31,10 +31,13 @@ final class TikTokSource implements DownloadSource
         }
 
         $ytFormat = (string) ($options['yt_format'] ?? 'best');
+        $audioOnly = !empty($options['yt_audio_only']);
+        $ytSubs = isset($options['yt_subs']) ? (string) $options['yt_subs'] : null;
 
         return YtDlpRunner::download(
             $normalized,
-            YtDlpRunner::formatArgs($ytFormat, self::ALLOWED_HEIGHTS)
+            YtDlpRunner::formatArgs($ytFormat, self::ALLOWED_HEIGHTS, $audioOnly),
+            YtDlpRunner::subtitleArgs($ytSubs)
         );
     }
 

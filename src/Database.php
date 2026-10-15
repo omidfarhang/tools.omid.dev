@@ -104,6 +104,8 @@ CREATE TABLE IF NOT EXISTS download_jobs (
     result_filename TEXT NULL,
     behavior TEXT NOT NULL,
     yt_format TEXT NOT NULL DEFAULT 'best',
+    yt_audio_only INTEGER NOT NULL DEFAULT 0,
+    yt_subs TEXT NULL,
     force_ytdlp INTEGER NOT NULL DEFAULT 0,
     cloud_folder TEXT NULL,
     cloud_conflict TEXT NULL,
@@ -134,6 +136,8 @@ SQL);
         self::ensureColumn($pdo, 'users', 'dropbox_display_name', 'dropbox_display_name TEXT NULL');
         self::ensureColumn($pdo, 'users', 'quota_bytes', 'quota_bytes INTEGER NULL');
         self::ensureColumn($pdo, 'download_jobs', 'force_ytdlp', 'force_ytdlp INTEGER NOT NULL DEFAULT 0');
+        self::ensureColumn($pdo, 'download_jobs', 'yt_audio_only', 'yt_audio_only INTEGER NOT NULL DEFAULT 0');
+        self::ensureColumn($pdo, 'download_jobs', 'yt_subs', 'yt_subs TEXT NULL');
         self::ensureColumn($pdo, 'download_jobs', 'hidden_at', 'hidden_at TEXT NULL');
         self::ensureColumn($pdo, 'cloud_jobs', 'hidden_at', 'hidden_at TEXT NULL');
         self::ensureColumn($pdo, 'shares', 'expires_at', 'expires_at TEXT NULL');

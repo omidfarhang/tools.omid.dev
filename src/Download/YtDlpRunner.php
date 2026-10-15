@@ -82,16 +82,44 @@ final class YtDlpRunner
 
     /**
      * Build -f args from a quality token (best or a pixel height).
+     * When $audioOnly, prefer bestaudio and extract to a common container.
      *
      * @param list<string> $allowedHeights
      * @return list<string>
      */
-    public static function formatArgs(string $quality, array $allowedHeights): array
+    public static function formatArgs(string $quality, array $allowedHeights, bool $audioOnly = false): array
     {
+        if ($audioOnly) {
+            return ['-f', 'ba/bestaudio/best', '-x', '--audio-format', 'm4a'];
+        }
+
         if ($quality === 'best' || !in_array($quality, $allowedHeights, true)) {
             return ['-f', 'bestvideo*+bestaudio/best'];
         }
 
         return ['-f', 'bestvideo*[height<=' . $quality . ']+bestaudio/best'];
+    }
+
+    /**
+     * Subtitle flags so embeds land in the media file when the container supports it.
+     *
+     * @return list<string>
+     */
+    public static function subtitleArgs(?string $subs): array
+    {
+        $subs = $subs !== null && $subs !== '' ? $subs : 'none';
+        if ($subs === 'none') {
+            return [];
+        }
+
+        if ($subs === 'en') {
+            return ['--write-subs', '--embed-subs', '--sub-langs', 'en'];
+        }
+
+        if ($subs === 'all') {
+            return ['--write-subs', '--embed-subs', '--sub-langs', 'all'];
+        }
+
+        return [];
     }
 }

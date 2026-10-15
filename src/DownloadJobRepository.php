@@ -23,6 +23,8 @@ final class DownloadJobRepository
      *   requested_filename?:?string,
      *   behavior:string,
      *   yt_format?:string,
+     *   yt_audio_only?:bool,
+     *   yt_subs?:?string,
      *   force_ytdlp?:bool,
      *   cloud_folder?:?string,
      *   cloud_conflict?:?string,
@@ -31,12 +33,20 @@ final class DownloadJobRepository
      */
     public function create(array $data): int
     {
+        $subs = $data['yt_subs'] ?? null;
+        if ($subs !== null && !in_array($subs, ['none', 'en', 'all'], true)) {
+            $subs = null;
+        }
+        if ($subs === 'none') {
+            $subs = null;
+        }
+
         $stmt = $this->db->prepare(
             'INSERT INTO download_jobs
-                (user_id, source_url, requested_filename, behavior, yt_format, force_ytdlp,
-                 cloud_folder, cloud_conflict, delete_after, status)
+                (user_id, source_url, requested_filename, behavior, yt_format, yt_audio_only, yt_subs,
+                 force_ytdlp, cloud_folder, cloud_conflict, delete_after, status)
              VALUES
-                (:uid, :url, :req, :beh, :yt, :fy, :folder, :conflict, :da, :st)'
+                (:uid, :url, :req, :beh, :yt, :audio, :subs, :fy, :folder, :conflict, :da, :st)'
         );
         $stmt->execute([
             ':uid' => $data['user_id'],
@@ -44,6 +54,8 @@ final class DownloadJobRepository
             ':req' => $data['requested_filename'] ?? null,
             ':beh' => $data['behavior'],
             ':yt' => $data['yt_format'] ?? 'best',
+            ':audio' => !empty($data['yt_audio_only']) ? 1 : 0,
+            ':subs' => $subs,
             ':fy' => !empty($data['force_ytdlp']) ? 1 : 0,
             ':folder' => $data['cloud_folder'] ?? null,
             ':conflict' => $data['cloud_conflict'] ?? null,

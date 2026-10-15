@@ -64,6 +64,9 @@ final class DownloadJobProcessor
         $filename = trim((string) ($job['requested_filename'] ?? ''));
         $behavior = UserRepository::normalizeBehavior((string) $job['behavior']);
         $ytFormat = (string) ($job['yt_format'] ?? 'best');
+        $ytAudioOnly = (int) ($job['yt_audio_only'] ?? 0) === 1;
+        $ytSubsRaw = $job['yt_subs'] ?? null;
+        $ytSubs = is_string($ytSubsRaw) && in_array($ytSubsRaw, ['en', 'all'], true) ? $ytSubsRaw : null;
         $forceYtdlp = (int) ($job['force_ytdlp'] ?? 0) === 1;
         $folder = UserRepository::normalizeFolder((string) ($job['cloud_folder'] ?? ''));
         $conflict = UserRepository::normalizeConflict((string) ($job['cloud_conflict'] ?? 'rename'));
@@ -101,6 +104,8 @@ final class DownloadJobProcessor
                 $downloadResult = $this->downloads->download($url, [
                     'filename' => $filename !== '' ? $filename : null,
                     'yt_format' => $ytFormat,
+                    'yt_audio_only' => $ytAudioOnly,
+                    'yt_subs' => $ytSubs,
                     'force_ytdlp' => $forceYtdlp,
                 ]);
 

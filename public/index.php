@@ -62,6 +62,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $ytFormat = 'best';
+    $ytAudioOnly = false;
+    $ytSubs = null;
     if ($isCurated) {
         $ytFormat = match ($autoSource->id()) {
             'youtube' => (string) ($_POST['yt_format'] ?? 'best'),
@@ -70,6 +72,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'tiktok' => (string) ($_POST['tiktok_format'] ?? 'best'),
             default => 'best',
         };
+        $ytAudioOnly = isset($_POST['yt_audio_only']) && (string) $_POST['yt_audio_only'] === '1';
+        $rawSubs = (string) ($_POST['yt_subs'] ?? 'none');
+        if (in_array($rawSubs, ['en', 'all'], true)) {
+            $ytSubs = $rawSubs;
+        }
     } elseif ($forceYtdlp) {
         $ytFormat = (string) ($_POST['ytdlp_format'] ?? 'best');
     }
@@ -86,6 +93,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'requested_filename' => $filename !== '' ? $filename : null,
         'behavior' => $behavior,
         'yt_format' => $ytFormat,
+        'yt_audio_only' => $ytAudioOnly,
+        'yt_subs' => $ytSubs,
         'force_ytdlp' => $forceYtdlp,
         'cloud_folder' => $needsCloud ? $folder : null,
         'cloud_conflict' => $needsCloud ? $conflict : null,
@@ -215,6 +224,20 @@ ob_start();
                     <option value="best" selected>Best</option>
                     <option value="720">720p</option>
                 </select>
+            </div>
+            <div class="source-options mt-3 d-none" id="curated-extra-options">
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" value="1" name="yt_audio_only" id="yt_audio_only">
+                    <label class="form-check-label" for="yt_audio_only">Audio only</label>
+                </div>
+                <div class="mb-0">
+                    <label for="yt_subs" class="form-label">Subtitles</label>
+                    <select class="form-select form-control-narrow" name="yt_subs" id="yt_subs">
+                        <option value="none" selected>None</option>
+                        <option value="en">English</option>
+                        <option value="all">All available</option>
+                    </select>
+                </div>
             </div>
             <div class="source-options source-options-block mt-3 d-none" id="ytdlp-options">
                 <div class="form-check mb-0">
@@ -444,6 +467,14 @@ ob_start();
     const twitterOptions = document.getElementById('twitter-options');
     const instagramOptions = document.getElementById('instagram-options');
     const tiktokOptions = document.getElementById('tiktok-options');
+    const curatedExtraOptions = document.getElementById('curated-extra-options');
+    const ytAudioOnly = document.getElementById('yt_audio_only');
+    const curatedQualitySelects = [
+        document.getElementById('yt_format'),
+        document.getElementById('twitter_format'),
+        document.getElementById('instagram_format'),
+        document.getElementById('tiktok_format'),
+    ].filter(Boolean);
     const ytdlpOptions = document.getElementById('ytdlp-options');
     const ytdlpFormatWrap = document.getElementById('ytdlp-format-wrap');
     const forceYtdlp = document.getElementById('force_ytdlp');
@@ -531,6 +562,17 @@ ob_start();
         twitterOptions.classList.toggle('d-none', source !== 'twitter');
         instagramOptions.classList.toggle('d-none', source !== 'instagram');
         tiktokOptions.classList.toggle('d-none', source !== 'tiktok');
+        if (curatedExtraOptions) {
+            curatedExtraOptions.classList.toggle('d-none', !curated);
+        }
+        const audioOnly = curated && ytAudioOnly && ytAudioOnly.checked;
+        curatedQualitySelects.forEach(function (sel) {
+            sel.disabled = audioOnly;
+            const wrap = sel.closest('.source-options');
+            if (wrap && wrap !== curatedExtraOptions) {
+                wrap.classList.toggle('opacity-50', audioOnly && !wrap.classList.contains('d-none'));
+            }
+        });
         ytdlpOptions.classList.toggle('d-none', source !== 'other');
         if (ytdlpFormatWrap) {
             ytdlpFormatWrap.classList.toggle('d-none', !useYtdlp);
@@ -567,6 +609,9 @@ ob_start();
             ytdlpTouched = true;
             syncSourceOptions();
         });
+    }
+    if (ytAudioOnly) {
+        ytAudioOnly.addEventListener('change', syncSourceOptions);
     }
 
     document.querySelectorAll('input[name="behavior"]').forEach(function (el) {
