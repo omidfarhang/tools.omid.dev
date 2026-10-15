@@ -6,7 +6,7 @@ Before UI or product-facing copy changes, read [PRODUCT.md](PRODUCT.md) and [DES
 
 ## Project overview
 
-PHP app: multi-user download-to-host toolkit. Users pull remote URLs via pluggable download sources (HTTP + curated yt-dlp sites + optional generic yt-dlp), manage files, optional public share links (`/s/{token}`), and per-user cloud OAuth (Dropbox is the first provider). Docker + Apache; SQLite; Tabler (`@tabler/core`) with thin `app.css` theming.
+PHP app: multi-user download-to-host toolkit. Users pull remote URLs via pluggable download sources (HTTP + curated yt-dlp sites + optional generic yt-dlp), manage files, optional public share links (`/s/{token}`), and per-user cloud OAuth (Dropbox and Google Drive). Docker + Apache; SQLite; Tabler (`@tabler/core`) with thin `app.css` theming.
 
 ## Layout
 
@@ -29,7 +29,7 @@ There is no front-end framework or SPA. Pages are server-rendered PHP that call 
 cp .env.example .env   # set APP_BASE_URL, ADMIN_*, APP_CLI_TOKEN
 docker compose up -d --build
 # App: http://127.0.0.1:${APP_PORT:-8080}
-# Then Admin → Settings for Dropbox app credentials and yt-dlp cookies
+# Then Admin → Settings for cloud app credentials and yt-dlp cookies
 
 # Local (non-Docker)
 composer install
@@ -49,13 +49,13 @@ Asset pipeline: `@tabler/core` via npm, then `npm run build:assets` (copies Tabl
 - Auth: `Auth::requireLogin()`, `Auth::requireAdmin()`, or `Auth::requireLoginOrCli()` for CLI/token routes
 - Prefer extending existing repositories/services over new parallel abstractions
 - Do not add frameworks, ORMs, or build tools unless explicitly requested
-- Do not commit secrets (`.env`, cookies, tokens). Per-user cloud OAuth tokens are in SQLite; site-wide Dropbox app credentials and yt-dlp cookies/options are admin-managed (`Admin → Settings`)
+- Do not commit secrets (`.env`, cookies, tokens). Per-user cloud OAuth tokens are in SQLite; site-wide cloud app credentials and yt-dlp cookies/options are admin-managed (`Admin → Settings`)
 - New download sites implement `App\Download\DownloadSource` and register in `DownloadRegistry`
 - New cloud backends implement `App\Cloud\CloudProvider` and register in `CloudRegistry`
 
 ## Product constraints agents must respect
 
-- Per-user cloud OAuth only — never introduce a shared cloud *access* token in env (Dropbox is the current provider). Dropbox *app* key/secret belong in Admin → Cloud (env is legacy fallback only)
+- Per-user cloud OAuth only — never introduce a shared cloud *access* token in env (Dropbox and Google Drive are registered providers). Cloud *app* credentials belong in Admin → Cloud only (not `.env`)
 - Self-register creates inactive users until admin approval
 - Share links are opt-in via `ShareService`; do not expose arbitrary filesystem paths
 - CLI auth is `APP_CLI_TOKEN` → `APP_CLI_USERNAME`’s cloud account; see `scripts/ytdl.sh` and `Auth::attemptCliToken()`

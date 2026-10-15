@@ -12,9 +12,11 @@ return [
     'db_path' => __DIR__ . '/../storage/app.db',
     'temp_dir' => __DIR__ . '/../storage/temp',
     'ytdlp_cookies_path' => __DIR__ . '/../storage/ytdlp-cookies.txt',
-    // Prefer Admin → Settings; these are env fallbacks only:
+    // Cloud credentials: Admin → Settings → Cloud (SQLite) only
     'dropbox_app_key' => '',
     'dropbox_app_secret' => '',
+    'google_drive_client_id' => '',
+    'google_drive_client_secret' => '',
     'ytdlp_extra_args' => '',
     'admin_username' => 'admin',
     'admin_password' => 'change-me',

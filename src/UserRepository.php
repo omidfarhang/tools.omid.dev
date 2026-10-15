@@ -273,6 +273,56 @@ final class UserRepository
         return !empty($user['dropbox_access_token']) || !empty($user['dropbox_refresh_token']);
     }
 
+    public function saveGoogleDriveTokens(
+        int $userId,
+        string $accountId,
+        string $accessToken,
+        ?string $refreshToken,
+        ?string $expiresAt,
+        ?string $email = null,
+        ?string $displayName = null,
+    ): void {
+        $stmt = $this->db->prepare(
+            'UPDATE users SET
+                google_drive_account_id = :aid,
+                google_drive_access_token = :at,
+                google_drive_refresh_token = COALESCE(:rt, google_drive_refresh_token),
+                google_drive_token_expires_at = :exp,
+                google_drive_email = COALESCE(:email, google_drive_email),
+                google_drive_display_name = COALESCE(:dn, google_drive_display_name)
+             WHERE id = :id'
+        );
+        $stmt->execute([
+            ':aid' => $accountId,
+            ':at' => $accessToken,
+            ':rt' => $refreshToken,
+            ':exp' => $expiresAt,
+            ':email' => $email !== null && $email !== '' ? $email : null,
+            ':dn' => $displayName !== null && $displayName !== '' ? $displayName : null,
+            ':id' => $userId,
+        ]);
+    }
+
+    public function clearGoogleDrive(int $userId): void
+    {
+        $stmt = $this->db->prepare(
+            'UPDATE users SET
+                google_drive_account_id = NULL,
+                google_drive_access_token = NULL,
+                google_drive_refresh_token = NULL,
+                google_drive_token_expires_at = NULL,
+                google_drive_email = NULL,
+                google_drive_display_name = NULL
+             WHERE id = :id'
+        );
+        $stmt->execute([':id' => $userId]);
+    }
+
+    public function hasGoogleDrive(array $user): bool
+    {
+        return !empty($user['google_drive_access_token']) || !empty($user['google_drive_refresh_token']);
+    }
+
     public static function normalizeBehavior(string $behavior): string
     {
         return match ($behavior) {

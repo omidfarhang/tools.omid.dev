@@ -134,6 +134,12 @@ SQL);
         self::ensureColumn($pdo, 'users', 'dropbox_conflict', "dropbox_conflict TEXT NOT NULL DEFAULT 'rename'");
         self::ensureColumn($pdo, 'users', 'dropbox_email', 'dropbox_email TEXT NULL');
         self::ensureColumn($pdo, 'users', 'dropbox_display_name', 'dropbox_display_name TEXT NULL');
+        self::ensureColumn($pdo, 'users', 'google_drive_account_id', 'google_drive_account_id TEXT NULL');
+        self::ensureColumn($pdo, 'users', 'google_drive_access_token', 'google_drive_access_token TEXT NULL');
+        self::ensureColumn($pdo, 'users', 'google_drive_refresh_token', 'google_drive_refresh_token TEXT NULL');
+        self::ensureColumn($pdo, 'users', 'google_drive_token_expires_at', 'google_drive_token_expires_at TEXT NULL');
+        self::ensureColumn($pdo, 'users', 'google_drive_email', 'google_drive_email TEXT NULL');
+        self::ensureColumn($pdo, 'users', 'google_drive_display_name', 'google_drive_display_name TEXT NULL');
         self::ensureColumn($pdo, 'users', 'quota_bytes', 'quota_bytes INTEGER NULL');
         self::ensureColumn($pdo, 'download_jobs', 'force_ytdlp', 'force_ytdlp INTEGER NOT NULL DEFAULT 0');
         self::ensureColumn($pdo, 'download_jobs', 'yt_audio_only', 'yt_audio_only INTEGER NOT NULL DEFAULT 0');
@@ -152,7 +158,6 @@ SQL);
         self::migrateDownloadHistory($pdo);
         $settings = new SettingsRepository($pdo);
         (new YtDlpCookieStore($settings))->importLegacyFileIfNeeded();
-        ManagedSettings::importFromEnvIfMissing($settings);
     }
 
     private static function migrateDownloadHistory(PDO $pdo): void

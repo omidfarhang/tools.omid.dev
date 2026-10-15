@@ -1,8 +1,8 @@
 # Dropbox (first cloud provider)
 
-Dropbox is the first implemented cloud provider (`App\Cloud\Dropbox\DropboxProvider`, registered in `CloudRegistry`). Each user connects their own Dropbox account. There is no shared access token in `.env`.
+Dropbox is implemented as `App\Cloud\Dropbox\DropboxProvider` and registered in `CloudRegistry` (alongside Google Drive). Each user connects their own Dropbox account. There is no shared access token in `.env`.
 
-Upload jobs are stored in the generic `cloud_jobs` table with `provider = 'dropbox'`. Home uses Save to → Cloud / Disk + Cloud; Account loops registered providers (currently Dropbox only) for connect / disconnect / prefs.
+Upload jobs are stored in the generic `cloud_jobs` table with `provider = 'dropbox'`. Home uses Save to → per-provider cloud destinations; Account loops registered providers for connect / disconnect / prefs.
 
 ## Entrypoints
 
@@ -30,17 +30,9 @@ CLI script and endpoint names (`scripts/ytdl.sh`, `/api/cli_register_and_dropbox
 
    Example: `https://tools.omid.dev/oauth/dropbox/callback.php`
 
-5. Copy **App key** and **App secret** into **Admin → Settings → Cloud** (preferred).
+5. Copy **App key** and **App secret** into **Admin → Settings → Cloud**.
 
-   Legacy fallback (imported into the DB once if unset):
-
-```env
-DROPBOX_APP_KEY=...
-DROPBOX_APP_SECRET=...
-APP_BASE_URL=https://tools.omid.dev
-```
-
-   `APP_BASE_URL` must still be set in `.env` so the OAuth redirect URI matches.
+   `APP_BASE_URL` must be set in `.env` so the OAuth redirect URI matches.
 
 ## User flow
 

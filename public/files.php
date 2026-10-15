@@ -40,6 +40,12 @@ $redirect = Pager::url($pagerPath, $pagerQuery, ['page' => $result['page'] > 1 ?
 
 $cloud = CloudSendService::create();
 $cloudConnected = $cloud->registry()->anyConnected($user);
+$connectedCloudProviders = [];
+foreach ($cloud->registry()->all() as $provider) {
+    if ($provider->isConfigured() && $provider->isConnected($user)) {
+        $connectedCloudProviders[] = $provider;
+    }
+}
 $prefs = UserRepository::cloudPrefs($user);
 $usedBytes = $users->usedBytes((int) $user['id']);
 $quotaBytes = UserRepository::effectiveQuotaBytes($user);

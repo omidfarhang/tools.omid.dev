@@ -3,6 +3,7 @@
  * @var string $mode 'user'|'admin'
  * @var string $redirect
  * @var bool $cloudConnected
+ * @var list<\App\Cloud\CloudProvider> $connectedCloudProviders
  * @var array{folder?:string, conflict?:string} $prefs
  */
 $mode = $mode ?? 'user';
@@ -113,6 +114,24 @@ $prefs = $prefs ?? ['folder' => '', 'conflict' => 'rename'];
                 </div>
                 <div class="modal-body">
                     <p class="mono small mb-3" data-cloud-name></p>
+                    <?php
+                    $connectedCloudProviders = $connectedCloudProviders ?? [];
+                    if (count($connectedCloudProviders) > 1):
+                        $defaultProviderId = (string) ($connectedCloudProviders[0]->id());
+                    ?>
+                    <div class="mb-3">
+                        <label class="form-label" for="files-cloud-provider">Provider</label>
+                        <select class="form-select" name="provider" id="files-cloud-provider">
+                            <?php foreach ($connectedCloudProviders as $provider): ?>
+                                <option value="<?= e($provider->id()) ?>"<?= $provider->id() === $defaultProviderId ? ' selected' : '' ?>>
+                                    <?= e($provider->label()) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <?php elseif (count($connectedCloudProviders) === 1): ?>
+                        <input type="hidden" name="provider" value="<?= e($connectedCloudProviders[0]->id()) ?>">
+                    <?php endif; ?>
                     <div class="mb-3">
                         <label class="form-label" for="files-cloud-folder">Folder</label>
                         <input class="form-control mono" type="text" name="cloud_folder" id="files-cloud-folder"

@@ -11,7 +11,7 @@ final class Config
     /** @var array<string, mixed> */
     private static array $values = [];
 
-    /** DB-backed overrides for ManagedSettings keys (take precedence over env). */
+    /** DB-backed overrides for ManagedSettings keys (Admin → Settings). */
     /** @var array<string, string> */
     private static array $dbOverrides = [];
 
@@ -29,8 +29,11 @@ final class Config
             'db_path' => getenv('DB_PATH') ?: ($rootDir . '/storage/app.db'),
             'temp_dir' => getenv('TEMP_DIR') ?: ($rootDir . '/storage/temp'),
             'ytdlp_cookies_path' => getenv('YTDLP_COOKIES_PATH') ?: ($rootDir . '/storage/ytdlp-cookies.txt'),
-            'dropbox_app_key' => getenv('DROPBOX_APP_KEY') ?: '',
-            'dropbox_app_secret' => getenv('DROPBOX_APP_SECRET') ?: '',
+            // Cloud app credentials: Admin → Settings → Cloud (SQLite) only.
+            'dropbox_app_key' => '',
+            'dropbox_app_secret' => '',
+            'google_drive_client_id' => '',
+            'google_drive_client_secret' => '',
             'ytdlp_extra_args' => '',
             'admin_username' => getenv('ADMIN_USERNAME') ?: 'admin',
             'admin_password' => getenv('ADMIN_PASSWORD') ?: '',

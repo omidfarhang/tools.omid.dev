@@ -49,18 +49,15 @@ cp .env.example .env
 | `APP_CLI_TOKEN` / `APP_CLI_USERNAME` | CLI auth → that user’s cloud account |
 | `DB_PATH` / `TEMP_DIR` | SQLite + download storage |
 | `YTDLP_COOKIES_PATH` | On-disk cookie file materialized for yt-dlp (managed via Admin → yt-dlp) |
-| `DROPBOX_APP_KEY` / `DROPBOX_APP_SECRET` | Optional legacy fallback; prefer **Admin → Cloud** |
 
 ### Admin settings
-
-Site config that used to live only in `.env`:
 
 | Section | Path | What |
 |---------|------|------|
 | yt-dlp | `/admin/settings/ytdlp.php` | Netscape cookies + optional extra yt-dlp args |
-| Cloud | `/admin/settings/cloud.php` | Dropbox app key / secret |
+| Cloud | `/admin/settings/cloud.php` | Dropbox + Google Drive app credentials (SQLite only) |
 
-Values are stored in SQLite. Env is used as bootstrap fallback and imported once if the DB row is missing. See [docs/dropbox.md](docs/dropbox.md) for Dropbox app setup.
+See [docs/dropbox.md](docs/dropbox.md) and [docs/google-drive.md](docs/google-drive.md) for OAuth app setup.
 
 ## Layout
 
@@ -68,7 +65,7 @@ Values are stored in SQLite. Env is used as bootstrap fallback and imported once
 - `src/` — application code
 - `storage/` — SQLite DB + temp files + materialized yt-dlp cookies (mounted volume)
 - `src/Download/` — download source registry (HTTP, curated yt-dlp sites, generic yt-dlp)
-- `src/Cloud/` — cloud provider registry (Dropbox)
+- `src/Cloud/` — cloud provider registry (Dropbox, Google Drive)
 
 ## GHCR
 

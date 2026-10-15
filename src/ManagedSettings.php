@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App;
 
 /**
- * Site settings managed in Admin (SQLite), with env as bootstrap / legacy fallback.
+ * Site settings managed in Admin (SQLite). Cloud credentials are DB-only.
  */
 final class ManagedSettings
 {
     public const DROPBOX_APP_KEY = 'dropbox_app_key';
     public const DROPBOX_APP_SECRET = 'dropbox_app_secret';
+    public const GOOGLE_DRIVE_CLIENT_ID = 'google_drive_client_id';
+    public const GOOGLE_DRIVE_CLIENT_SECRET = 'google_drive_client_secret';
     public const YTDLP_EXTRA_ARGS = 'ytdlp_extra_args';
     /** NULL / missing = unlimited for new users without a per-user override. Stored as decimal byte string. */
     public const DEFAULT_USER_QUOTA_BYTES = 'default_user_quota_bytes';
@@ -21,25 +23,11 @@ final class ManagedSettings
         return [
             self::DROPBOX_APP_KEY,
             self::DROPBOX_APP_SECRET,
+            self::GOOGLE_DRIVE_CLIENT_ID,
+            self::GOOGLE_DRIVE_CLIENT_SECRET,
             self::YTDLP_EXTRA_ARGS,
             self::DEFAULT_USER_QUOTA_BYTES,
         ];
-    }
-
-    /**
-     * Copy Dropbox credentials from env into SQLite once if not already stored.
-     */
-    public static function importFromEnvIfMissing(SettingsRepository $repo): void
-    {
-        foreach ([self::DROPBOX_APP_KEY, self::DROPBOX_APP_SECRET] as $key) {
-            if ($repo->exists($key)) {
-                continue;
-            }
-            $value = (string) Config::raw($key, '');
-            if ($value !== '') {
-                $repo->set($key, $value);
-            }
-        }
     }
 
     public static function maskSecret(string $value): string

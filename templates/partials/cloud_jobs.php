@@ -42,7 +42,11 @@ if (empty($cloudJobs)) {
                     data-provider="<?= e($provider) ?>"
                     data-status="<?= e($status) ?>">
                     <td class="mono"><?= e((string) $job['filename']) ?></td>
-                    <td class="small text-muted"><?= e($provider) ?></td>
+                    <td class="small text-muted"><?= e(match ($provider) {
+                        'dropbox' => 'Dropbox',
+                        'google_drive' => 'Google Drive',
+                        default => ucfirst(str_replace('_', ' ', $provider)),
+                    }) ?></td>
                     <td class="mono small"><?= e($path) ?></td>
                     <td>
                         <span class="badge text-bg-<?= $badge ?> job-status-badge"><?= e($status) ?></span>

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Cloud;
 
 use App\Cloud\Dropbox\DropboxProvider;
+use App\Cloud\GoogleDrive\GoogleDriveProvider;
 
 final class CloudRegistry
 {
@@ -23,6 +24,7 @@ final class CloudRegistry
     {
         return new self([
             new DropboxProvider(),
+            new GoogleDriveProvider(),
         ]);
     }
 

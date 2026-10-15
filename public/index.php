@@ -214,7 +214,8 @@ foreach ($homeJobs as $job) {
 $providerLabel = static function (string $provider): string {
     return match ($provider) {
         'dropbox' => 'Dropbox',
-        default => $provider !== '' ? ucfirst($provider) : 'Cloud',
+        'google_drive' => 'Google Drive',
+        default => $provider !== '' ? ucfirst(str_replace('_', ' ', $provider)) : 'Cloud',
     };
 };
 
@@ -831,7 +832,8 @@ ob_start();
 
     function providerLabel(provider) {
         if (provider === 'dropbox') return 'Dropbox';
-        if (provider) return provider.charAt(0).toUpperCase() + provider.slice(1);
+        if (provider === 'google_drive') return 'Google Drive';
+        if (provider) return provider.replace(/_/g, ' ').replace(/\b\w/g, function (c) { return c.toUpperCase(); });
         return 'Cloud';
     }
 

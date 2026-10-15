@@ -8,7 +8,7 @@
 
 - Solo operators and small private groups who need a host-side downloader with accounts
 - Admins who approve registrations, manage users, and oversee stored files
-- Power users who also drive downloads via CLI (`scripts/ytdl.sh`) into their own cloud (Dropbox today)
+- Power users who also drive downloads via CLI (`scripts/ytdl.sh`) into their own cloud (Dropbox or Google Drive)
 
 ## Problem
 
@@ -16,7 +16,7 @@ Browsers and phones are awkward places to pull large remote assets (HTTP(S), cur
 
 ## Product Purpose
 
-Pull remote files onto the server via pluggable download sources, keep them per user, optionally publish share links, and let each user connect their own cloud provider (Dropbox is the first).
+Pull remote files onto the server via pluggable download sources, keep them per user, optionally publish share links, and let each user connect their own cloud provider (Dropbox and Google Drive).
 
 Success looks like:
 
@@ -41,7 +41,7 @@ Quiet, precise, operator-facing. Copy is short and literal (“My Files”, “C
 
 1. **One job per screen** — download, browse files, account/cloud, admin — keep secondary chrome minimal.
 2. **Ownership is obvious** — users see their files; admins see overview + all files; share links are explicit opt-in.
-3. **Credentials stay personal** — per-user cloud OAuth (Dropbox today); no shared cloud token in `.env`.
+3. **Credentials stay personal** — per-user cloud OAuth (Dropbox, Google Drive); no shared cloud token in `.env`.
 4. **Honest feedback** — flash messages and inline results state success or failure plainly.
 5. **Host-first** — the server disk (and optional share URL) is the source of truth; cloud sync is a convenience path.
 
@@ -60,7 +60,7 @@ Private / personal deployment. No public pricing. Operators self-host via Docker
 
 - Not a general-purpose CMS, blog, or link shortener
 - Not responsible for site ToS / DRM circumvention policy (YouTube and other yt-dlp extractors) — admins supply cookies via Admin → yt-dlp and accept host risk
-- Dropbox app key/secret are site settings (Admin → Cloud); does not store a global cloud *access* token — CLI maps to one configured username’s OAuth
+- Dropbox / Google Drive app credentials are site settings (Admin → Cloud); does not store a global cloud *access* token — CLI maps to one configured username’s OAuth
 - Public share routes (`/s/{token}`) are intentional capability, not accidental open directory listing
 
 ## Stack
@@ -68,5 +68,6 @@ Private / personal deployment. No public pricing. Operators self-host via Docker
 - [AGENTS.md](AGENTS.md) — build, layout, and coding conventions for agents
 - [DESIGN.md](DESIGN.md) — visual tokens and UI rules
 - [README.md](README.md) — human quick start
-- [docs/dropbox.md](docs/dropbox.md) — Dropbox (first cloud provider) OAuth setup
+- [docs/dropbox.md](docs/dropbox.md) — Dropbox OAuth setup
+- [docs/google-drive.md](docs/google-drive.md) — Google Drive OAuth setup
 - [docs/nginx-reverse-proxy.conf.example](docs/nginx-reverse-proxy.conf.example) — TLS reverse proxy example

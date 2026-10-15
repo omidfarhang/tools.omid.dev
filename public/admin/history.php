@@ -40,7 +40,8 @@ $pagerPerPage = $result['per_page'];
 $providerLabel = static function (string $provider): string {
     return match ($provider) {
         'dropbox' => 'Dropbox',
-        default => $provider !== '' ? ucfirst($provider) : 'Cloud',
+        'google_drive' => 'Google Drive',
+        default => $provider !== '' ? ucfirst(str_replace('_', ' ', $provider)) : 'Cloud',
     };
 };
 

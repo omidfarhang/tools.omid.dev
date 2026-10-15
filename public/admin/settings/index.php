@@ -7,6 +7,7 @@ require dirname(__DIR__, 3) . '/src/bootstrap.php';
 use App\Auth;
 use App\Config;
 use App\DropboxOAuth;
+use App\GoogleDriveOAuth;
 use App\UserRepository;
 use App\View;
 use App\YtDlpCookieStore;
@@ -14,12 +15,13 @@ use App\YtDlpCookieStore;
 $admin = Auth::requireAdmin();
 $cookies = new YtDlpCookieStore();
 $dropboxConfigured = (new DropboxOAuth())->isConfigured();
+$googleDriveConfigured = (new GoogleDriveOAuth())->isConfigured();
 $extraArgs = trim((string) Config::get('ytdlp_extra_args', ''));
 $defaultQuota = (new UserRepository())->defaultQuotaBytes();
 
 ob_start();
 ?>
-<p class="text-secondary mb-3">Site-wide configuration previously kept in <span class="font-monospace">.env</span> — edit by section.</p>
+<p class="text-secondary mb-3">Site-wide configuration — edit by section.</p>
 
 <div class="row row-cards">
     <div class="col-md-6">
@@ -38,9 +40,10 @@ ob_start();
         <a class="card card-link" href="/admin/settings/cloud.php">
             <div class="card-body">
                 <h3 class="card-title">Cloud</h3>
-                <div class="text-secondary mb-2">Dropbox app key and secret for per-user OAuth.</div>
+                <div class="text-secondary mb-2">Cloud app credentials for per-user OAuth.</div>
                 <div class="text-secondary small">
-                    Dropbox app: <?= $dropboxConfigured ? 'configured' : 'not set' ?>
+                    Dropbox: <?= $dropboxConfigured ? 'configured' : 'not set' ?>
+                    · Google Drive: <?= $googleDriveConfigured ? 'configured' : 'not set' ?>
                 </div>
             </div>
         </a>

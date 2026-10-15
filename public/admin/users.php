@@ -5,6 +5,7 @@ declare(strict_types=1);
 require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
 use App\Auth;
+use App\Cloud\CloudRegistry;
 use App\Csrf;
 use App\FileRepository;
 use App\UserRepository;
@@ -111,6 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $all = $repo->all();
 $defaultQuota = $repo->defaultQuotaBytes();
+$cloudRegistry = CloudRegistry::default();
 ob_start();
 ?>
 <p class="text-secondary mb-3">Create accounts and manage roles, approvals, quotas, and passwords.</p>
@@ -133,7 +135,7 @@ ob_start();
                 <th>Username</th>
                 <th>Role</th>
                 <th>Status</th>
-                <th>Dropbox</th>
+                <th>Cloud</th>
                 <th class="text-end">Storage</th>
                 <th class="text-end">Downloads</th>
                 <th class="text-end w-1"></th>
@@ -169,12 +171,23 @@ ob_start();
                         <?php endif; ?>
                     </td>
                     <td>
-                        <?php if (!empty($u['dropbox_access_token']) || !empty($u['dropbox_refresh_token'])): ?>
-                            <?php if (!empty($u['dropbox_email'])): ?>
-                                <span class="mono small"><?= e((string) $u['dropbox_email']) ?></span>
-                            <?php else: ?>
-                                <span class="badge bg-teal-lt text-teal">Connected</span>
-                            <?php endif; ?>
+                        <?php
+                        $cloudBits = [];
+                        foreach ($cloudRegistry->all() as $provider) {
+                            if (!$provider->isConnected($u)) {
+                                continue;
+                            }
+                            $details = $provider->connectionDetails($u);
+                            $label = $provider->label();
+                            if (!empty($details['email'])) {
+                                $cloudBits[] = $label . ': ' . (string) $details['email'];
+                            } else {
+                                $cloudBits[] = $label;
+                            }
+                        }
+                        ?>
+                        <?php if ($cloudBits !== []): ?>
+                            <span class="mono small"><?= e(implode(' · ', $cloudBits)) ?></span>
                         <?php else: ?>
                             <span class="text-secondary">—</span>
                         <?php endif; ?>
