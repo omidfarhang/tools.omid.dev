@@ -104,24 +104,36 @@ ob_start();
             <div class="alert alert-danger" role="alert"><?= e($error) ?></div>
         <?php endif; ?>
         <?php if ($hasPasskeys || $totpEnabled): ?>
+            <?php $bothMethods = $hasPasskeys && $totpEnabled; ?>
             <form method="post" autocomplete="off" id="mfa-form">
                 <?= Csrf::field() ?>
-                <?php if ($hasPasskeys): ?>
-                    <button type="button" class="btn btn-primary w-100 mb-3" id="passkey-assert-btn">
-                        Use a passkey
-                    </button>
-                    <?php if ($totpEnabled): ?>
-                        <div class="hr-text mb-3">or</div>
-                    <?php endif; ?>
-                <?php endif; ?>
-                <?php if ($totpEnabled): ?>
-                    <div class="mb-3">
-                        <label class="form-label" for="code">Authentication code</label>
-                        <input class="form-control form-control-lg text-center font-monospace" id="code" name="code"
-                               inputmode="text" autocomplete="one-time-code" required
-                               <?= $hasPasskeys ? '' : 'autofocus' ?>
-                               placeholder="000000">
+                <?php if ($bothMethods): ?>
+                    <div class="border rounded p-3 mb-3">
+                        <button type="button" class="btn btn-primary w-100" id="passkey-assert-btn">
+                            Use a passkey
+                        </button>
+                        <div class="hr-text my-3">or</div>
+                        <div>
+                            <label class="form-label" for="code">Authentication code</label>
+                            <input class="form-control form-control-lg text-center font-monospace" id="code" name="code"
+                                   inputmode="text" autocomplete="one-time-code" required
+                                   placeholder="000000">
+                        </div>
                     </div>
+                <?php else: ?>
+                    <?php if ($hasPasskeys): ?>
+                        <button type="button" class="btn btn-primary w-100 mb-3" id="passkey-assert-btn">
+                            Use a passkey
+                        </button>
+                    <?php endif; ?>
+                    <?php if ($totpEnabled): ?>
+                        <div class="mb-3">
+                            <label class="form-label" for="code">Authentication code</label>
+                            <input class="form-control form-control-lg text-center font-monospace" id="code" name="code"
+                                   inputmode="text" autocomplete="one-time-code" required autofocus
+                                   placeholder="000000">
+                        </div>
+                    <?php endif; ?>
                 <?php endif; ?>
                 <div class="mb-3">
                     <label class="form-check">
@@ -133,7 +145,7 @@ ob_start();
                 </div>
                 <?php if ($totpEnabled): ?>
                     <div class="form-footer">
-                        <button class="btn <?= $hasPasskeys ? 'btn-outline-primary' : 'btn-primary' ?> w-100" type="submit">Verify</button>
+                        <button class="btn <?= $bothMethods ? 'btn-outline-primary' : 'btn-primary' ?> w-100" type="submit">Verify</button>
                     </div>
                 <?php endif; ?>
             </form>
