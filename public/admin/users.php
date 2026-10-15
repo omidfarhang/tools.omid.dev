@@ -8,12 +8,15 @@ use App\Auth;
 use App\Cloud\CloudRegistry;
 use App\Csrf;
 use App\FileRepository;
+use App\TrustedDeviceRepository;
 use App\UserRepository;
 use App\View;
+use App\WebAuthnCredentialRepository;
 
 $admin = Auth::requireAdmin();
 $repo = new UserRepository();
 $files = new FileRepository();
+$passkeys = new WebAuthnCredentialRepository();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     Csrf::requireValid();
@@ -78,10 +81,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $target = $repo->findById($id);
         if ($target === null) {
             flash('error', 'User not found.');
-        } elseif (!UserRepository::totpEnabled($target)) {
+        } elseif (!Auth::mfaRequired($target)) {
             flash('error', 'Two-factor authentication is not enabled for that user.');
         } else {
             $repo->disableTotp($id);
+            $passkeys->deleteAllForUser($id);
+            (new TrustedDeviceRepository())->revokeAll($id);
             flash('success', 'Two-factor authentication reset. The user can set it up again from Account.');
         }
     } elseif ($action === 'set_role') {
@@ -165,6 +170,8 @@ ob_start();
                 $downloadCount = (int) ($u['download_count'] ?? 0);
                 $isAdminRole = $u['role'] === 'admin';
                 $totpOn = UserRepository::totpEnabled($u);
+                $passkeyCount = $passkeys->countForUser($userId);
+                $mfaOn = $totpOn || $passkeyCount > 0;
                 ?>
                 <tr class="<?= $active ? '' : 'table-warning' ?>">
                     <td class="text-secondary"><?= $userId ?></td>
@@ -184,8 +191,20 @@ ob_start();
                         <?php endif; ?>
                     </td>
                     <td>
-                        <?php if ($totpOn): ?>
+                        <?php if ($mfaOn): ?>
                             <span class="badge bg-green-lt">On</span>
+                            <span class="text-secondary small d-block">
+                                <?php
+                                $bits = [];
+                                if ($totpOn) {
+                                    $bits[] = 'TOTP';
+                                }
+                                if ($passkeyCount > 0) {
+                                    $bits[] = $passkeyCount === 1 ? '1 passkey' : "{$passkeyCount} passkeys";
+                                }
+                                echo e(implode(' · ', $bits));
+                                ?>
+                            </span>
                         <?php else: ?>
                             <span class="text-secondary">Off</span>
                         <?php endif; ?>
@@ -283,9 +302,9 @@ ob_start();
                                         Reset password…
                                     </button>
                                 </li>
-                                <?php if ($totpOn): ?>
+                                <?php if ($mfaOn): ?>
                                     <li>
-                                        <form method="post" onsubmit="return confirm('Reset 2FA for this user? They will need to set it up again.');">
+                                        <form method="post" onsubmit="return confirm('Reset 2FA for this user? Authenticator, passkeys, and trusted devices will be cleared.');">
                                             <?= Csrf::field() ?>
                                             <input type="hidden" name="action" value="reset_2fa">
                                             <input type="hidden" name="user_id" value="<?= $userId ?>">

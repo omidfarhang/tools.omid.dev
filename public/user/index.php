@@ -9,6 +9,7 @@ use App\Cloud\CloudRegistry;
 use App\TrustedDeviceRepository;
 use App\UserRepository;
 use App\View;
+use App\WebAuthnCredentialRepository;
 
 $user = Auth::requireLogin();
 $users = new UserRepository();
@@ -19,7 +20,9 @@ $trustedDevices = new TrustedDeviceRepository();
 $usedBytes = $users->usedBytes((int) $user['id']);
 $quotaBytes = UserRepository::effectiveQuotaBytes($user);
 $totpEnabled = UserRepository::totpEnabled($user);
-$deviceCount = $totpEnabled ? count($trustedDevices->listForUser((int) $user['id'])) : 0;
+$passkeyCount = (new WebAuthnCredentialRepository())->countForUser((int) $user['id']);
+$mfaOn = Auth::mfaRequired($user);
+$deviceCount = $mfaOn ? count($trustedDevices->listForUser((int) $user['id'])) : 0;
 
 $connectedLabels = [];
 foreach ($registry->all() as $provider) {
@@ -51,10 +54,14 @@ include dirname(__DIR__, 2) . '/templates/partials/account_nav.php';
         <a class="card card-link" href="/user/security.php">
             <div class="card-body">
                 <h3 class="card-title">Security</h3>
-                <div class="text-secondary mb-2">Password, two-factor authentication, and trusted devices.</div>
+                <div class="text-secondary mb-2">Password, authenticator, passkeys, and trusted devices.</div>
                 <div class="text-secondary small">
-                    2FA: <?= $totpEnabled ? 'enabled' : 'off' ?>
-                    <?php if ($totpEnabled): ?>
+                    2FA: <?= $mfaOn ? 'enabled' : 'off' ?>
+                    <?php if ($totpEnabled): ?> · TOTP<?php endif; ?>
+                    <?php if ($passkeyCount > 0): ?>
+                        · <?= (int) $passkeyCount ?> passkey<?= $passkeyCount === 1 ? '' : 's' ?>
+                    <?php endif; ?>
+                    <?php if ($mfaOn): ?>
                         · Trusted devices: <?= (int) $deviceCount ?>
                     <?php endif; ?>
                 </div>

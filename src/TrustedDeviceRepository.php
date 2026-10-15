@@ -7,7 +7,7 @@ namespace App;
 use PDO;
 
 /**
- * Remember-this-device tokens that skip TOTP for a limited time after password login.
+ * Remember-this-device tokens that skip MFA for a limited time after password login.
  * Cookie format: `{selector}.{validator}` (hex). Only SHA-256(validator) is stored.
  */
 final class TrustedDeviceRepository

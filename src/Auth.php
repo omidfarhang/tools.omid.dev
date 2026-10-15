@@ -47,7 +47,7 @@ final class Auth
         session_regenerate_id(true);
         unset($_SESSION['user_id'], $_SESSION[self::TOTP_SETUP_SECRET_KEY]);
 
-        if (UserRepository::totpEnabled($user)) {
+        if (self::mfaRequired($user)) {
             $devices = new TrustedDeviceRepository();
             if ($devices->isTrusted((int) $user['id'])) {
                 unset($_SESSION[self::PENDING_2FA_KEY]);
@@ -72,6 +72,18 @@ final class Auth
         return self::attemptLogin($username, $password) === 'ok';
     }
 
+    /**
+     * MFA is required when TOTP is enabled or the user has at least one passkey.
+     */
+    public static function mfaRequired(array $user): bool
+    {
+        if (UserRepository::totpEnabled($user)) {
+            return true;
+        }
+
+        return (new WebAuthnCredentialRepository())->hasForUser((int) $user['id']);
+    }
+
     public static function pendingTotpUserId(): ?int
     {
         $id = $_SESSION[self::PENDING_2FA_KEY] ?? null;
@@ -82,6 +94,7 @@ final class Auth
         return (int) $id;
     }
 
+    /** Pending MFA user (TOTP and/or passkey challenge). */
     public static function pendingTotpUser(): ?array
     {
         $id = self::pendingTotpUserId();
@@ -89,7 +102,7 @@ final class Auth
             return null;
         }
         $user = (new UserRepository())->findById($id);
-        if ($user === null || (int) $user['is_active'] !== 1 || !UserRepository::totpEnabled($user)) {
+        if ($user === null || (int) $user['is_active'] !== 1 || !self::mfaRequired($user)) {
             self::clearPendingTotp();
 
             return null;
@@ -101,12 +114,14 @@ final class Auth
     public static function clearPendingTotp(): void
     {
         unset($_SESSION[self::PENDING_2FA_KEY]);
+        WebAuthnService::clearCeremony();
     }
 
     public static function completeTotpLogin(int $userId): void
     {
         session_regenerate_id(true);
         unset($_SESSION[self::PENDING_2FA_KEY], $_SESSION[self::TOTP_SETUP_SECRET_KEY]);
+        WebAuthnService::clearCeremony();
         $_SESSION['user_id'] = $userId;
     }
 

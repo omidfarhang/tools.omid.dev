@@ -37,4 +37,11 @@ final class Csrf
             exit;
         }
     }
+
+    public static function requireValidToken(?string $token): void
+    {
+        if (!self::validate($token)) {
+            json_response(['ok' => false, 'error' => 'Invalid CSRF token.'], 403);
+        }
+    }
 }

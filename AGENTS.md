@@ -73,7 +73,7 @@ Asset pipeline: `@tabler/core` via npm, then `npm run build:assets` (copies Tabl
 - Validate/sanitize filenames and paths in download/delete flows; never take raw paths from the client as filesystem locations
 - CSRF on state-changing form posts; keep CLI token checks strict and constant-time where applicable
 - Login/register are rate-limited in-app (`LoginRateLimiter`; thresholds + unblock under Admin → Settings → Security); failed/lockout events append to `storage/logs/auth.log` for host fail2ban (see [docs/fail2ban.md](docs/fail2ban.md))
-- Optional TOTP 2FA (Account → Security); login uses `pending_2fa_user_id` until `/totp.php` succeeds; optional “remember this device” cookie (30 days, `trusted_devices`) skips TOTP; admin Reset 2FA / disabling 2FA clears trusted devices; CLI token auth does not use 2FA
+- Optional MFA (Account → Security): TOTP and/or WebAuthn passkeys; login uses `pending_2fa_user_id` until `/totp.php` (code) or passkey assert succeeds; optional “remember this device” cookie (30 days, `trusted_devices`) skips MFA; admin Reset 2FA clears TOTP, passkeys, and trusted devices; CLI token auth does not use MFA; WebAuthn RP ID/origin come from `APP_BASE_URL` (HTTPS in production; `localhost` HTTP OK for local Docker)
 - Trust `X-Forwarded-For` / `X-Forwarded-Proto` only from the TLS reverse proxy; nginx `limit_req` on `/login.php` and `/register.php` is documented in [docs/nginx-reverse-proxy.conf.example](docs/nginx-reverse-proxy.conf.example)
 
 ## Deployment notes

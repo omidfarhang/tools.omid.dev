@@ -101,3 +101,25 @@ function json_response(array $payload, int $status = 200): never
     echo json_encode($payload);
     exit;
 }
+
+/**
+ * @return array<string, mixed>
+ */
+function read_json_body(): array
+{
+    $raw = file_get_contents('php://input');
+    if ($raw === false || trim($raw) === '') {
+        return [];
+    }
+    try {
+        $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+    } catch (\JsonException) {
+        json_response(['ok' => false, 'error' => 'Invalid JSON body.'], 400);
+    }
+    if (!is_array($decoded)) {
+        json_response(['ok' => false, 'error' => 'Invalid JSON body.'], 400);
+    }
+
+    /** @var array<string, mixed> $decoded */
+    return $decoded;
+}
