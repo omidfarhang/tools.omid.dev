@@ -102,7 +102,7 @@ ob_start();
         <span class="text-muted small"><?= count($all) ?> total</span>
     </div>
     <div class="table-responsive">
-        <table class="table card-table table-sm align-middle mb-0">
+        <table class="table card-table table-sm align-middle mb-0" data-users-table>
             <thead>
             <tr>
                 <th>ID</th>
@@ -250,7 +250,18 @@ ob_start();
     </div>
 </div>
 <script>
-(function () {
+document.addEventListener('DOMContentLoaded', function () {
+    var table = document.querySelector('[data-users-table]');
+    if (table && typeof tabler !== 'undefined') {
+        table.querySelectorAll('[data-bs-toggle="dropdown"]').forEach(function (el) {
+            tabler.Dropdown.getOrCreateInstance(el, {
+                popperConfig: function (defaultConfig) {
+                    return Object.assign({}, defaultConfig, { strategy: 'fixed' });
+                }
+            });
+        });
+    }
+
     var modal = document.getElementById('resetPasswordModal');
     if (!modal) return;
     modal.addEventListener('show.bs.modal', function (event) {
@@ -261,7 +272,7 @@ ob_start();
         var input = document.getElementById('resetPasswordInput');
         if (input) input.value = '';
     });
-})();
+});
 </script>
 <?php
 View::render('Admin Users', ob_get_clean(), $admin);
