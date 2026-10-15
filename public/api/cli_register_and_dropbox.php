@@ -31,12 +31,27 @@ if ($path === null || !is_file($path)) {
     json_response(['success' => false, 'error' => 'File not found in temp storage'], 404);
 }
 
+$sizeBytes = (int) filesize($path);
+$users = new UserRepository();
+$user = $users->findById((int) $user['id']) ?? $user;
+if ($users->wouldExceedQuota($user, $sizeBytes)) {
+    $used = $users->usedBytes((int) $user['id']);
+    $quota = UserRepository::effectiveQuotaBytes($user);
+    json_response([
+        'success' => false,
+        'error' => sprintf(
+            'Storage quota exceeded (%s). Delete files or ask an admin to raise your limit.',
+            UserRepository::formatUsageLabel($used, $quota)
+        ),
+    ], 400);
+}
+
 $files = new FileRepository();
 $fileId = $files->create(
     (int) $user['id'],
     $filename,
     $filename,
-    (int) filesize($path),
+    $sizeBytes,
     null
 );
 

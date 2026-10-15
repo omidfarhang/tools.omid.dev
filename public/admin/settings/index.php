@@ -7,6 +7,7 @@ require dirname(__DIR__, 3) . '/src/bootstrap.php';
 use App\Auth;
 use App\Config;
 use App\DropboxOAuth;
+use App\UserRepository;
 use App\View;
 use App\YtDlpCookieStore;
 
@@ -14,6 +15,7 @@ $admin = Auth::requireAdmin();
 $cookies = new YtDlpCookieStore();
 $dropboxConfigured = (new DropboxOAuth())->isConfigured();
 $extraArgs = trim((string) Config::get('ytdlp_extra_args', ''));
+$defaultQuota = (new UserRepository())->defaultQuotaBytes();
 
 ob_start();
 ?>
@@ -42,6 +44,17 @@ ob_start();
                 <div class="text-secondary mb-2">Dropbox app key and secret for per-user OAuth.</div>
                 <div class="text-secondary small">
                     Dropbox app: <?= $dropboxConfigured ? 'configured' : 'not set' ?>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-6">
+        <a class="card card-link" href="/admin/settings/storage.php">
+            <div class="card-body">
+                <h3 class="card-title">Storage</h3>
+                <div class="text-secondary mb-2">Default disk quota for new user accounts.</div>
+                <div class="text-secondary small">
+                    Default quota: <?= e(UserRepository::formatQuotaLabel($defaultQuota)) ?>
                 </div>
             </div>
         </a>

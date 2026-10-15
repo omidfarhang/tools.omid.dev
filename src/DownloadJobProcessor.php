@@ -105,11 +105,31 @@ final class DownloadJobProcessor
                 }
 
                 $resultFilename = $downloadResult['original_name'] ?? $resultFilename;
+                $sizeBytes = (int) ($downloadResult['size'] ?? 0);
+                if ($this->users->wouldExceedQuota($user, $sizeBytes)) {
+                    $stored = (string) ($downloadResult['stored_name'] ?? '');
+                    if ($stored !== '') {
+                        $path = FileRepository::absolutePath($stored);
+                        if ($path !== null && is_file($path)) {
+                            unlink($path);
+                        }
+                    }
+                    $used = $this->users->usedBytes((int) $user['id']);
+                    $quota = UserRepository::effectiveQuotaBytes($user);
+                    $this->jobs->markFailed(
+                        $jobId,
+                        sprintf(
+                            'Storage quota exceeded (%s). Delete files or ask an admin to raise your limit.',
+                            UserRepository::formatUsageLabel($used, $quota)
+                        )
+                    );
+                    return;
+                }
                 $fileId = $this->files->create(
                     (int) $user['id'],
                     $downloadResult['stored_name'],
                     $downloadResult['original_name'],
-                    (int) $downloadResult['size'],
+                    $sizeBytes,
                     $url
                 );
             }

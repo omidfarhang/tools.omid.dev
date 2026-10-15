@@ -69,6 +69,8 @@ if ($connected && empty($user['dropbox_email'])) {
     $dropbox->syncAccountInfo($user);
 }
 $prefs = UserRepository::cloudPrefs($user);
+$usedBytes = $users->usedBytes((int) $user['id']);
+$quotaBytes = UserRepository::effectiveQuotaBytes($user);
 
 ob_start();
 ?>
@@ -83,7 +85,9 @@ ob_start();
                 <dt class="text-secondary">Username</dt>
                 <dd class="mb-3"><?= e($user['username']) ?></dd>
                 <dt class="text-secondary">Role</dt>
-                <dd class="mb-0"><span class="badge bg-azure-lt text-azure"><?= e($user['role']) ?></span></dd>
+                <dd class="mb-3"><span class="badge bg-azure-lt text-azure"><?= e($user['role']) ?></span></dd>
+                <dt class="text-secondary">Storage</dt>
+                <dd class="mb-0"><span class="mono"><?= e(UserRepository::formatUsageLabel($usedBytes, $quotaBytes)) ?></span></dd>
             </dl>
 
             <form method="post" class="mt-4" autocomplete="off">

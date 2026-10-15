@@ -132,6 +132,7 @@ SQL);
         self::ensureColumn($pdo, 'users', 'dropbox_conflict', "dropbox_conflict TEXT NOT NULL DEFAULT 'rename'");
         self::ensureColumn($pdo, 'users', 'dropbox_email', 'dropbox_email TEXT NULL');
         self::ensureColumn($pdo, 'users', 'dropbox_display_name', 'dropbox_display_name TEXT NULL');
+        self::ensureColumn($pdo, 'users', 'quota_bytes', 'quota_bytes INTEGER NULL');
         self::ensureColumn($pdo, 'download_jobs', 'force_ytdlp', 'force_ytdlp INTEGER NOT NULL DEFAULT 0');
         self::ensureColumn($pdo, 'download_jobs', 'hidden_at', 'hidden_at TEXT NULL');
         self::ensureColumn($pdo, 'cloud_jobs', 'hidden_at', 'hidden_at TEXT NULL');

@@ -25,6 +25,9 @@ $files = (new FileRepository())->forUser((int) $user['id'], $sort, $dir);
 $cloud = CloudSendService::create();
 $cloudConnected = $cloud->registry()->anyConnected($user);
 $prefs = UserRepository::cloudPrefs($user);
+$usedBytes = $users->usedBytes((int) $user['id']);
+$quotaBytes = UserRepository::effectiveQuotaBytes($user);
+$storageLabel = UserRepository::formatUsageLabel($usedBytes, $quotaBytes);
 
 $cloudJob = null;
 if (!empty($_SESSION['_cloud_monitor'])) {
@@ -59,8 +62,9 @@ ob_start();
 
 <div class="card">
     <?php if (!$files): ?>
-        <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h2 class="card-title mb-0">Your files</h2>
+            <span class="text-secondary small mono"><?= e($storageLabel) ?></span>
         </div>
         <div class="empty">
             <p class="empty-title">No files yet</p>
@@ -69,6 +73,7 @@ ob_start();
     <?php else: ?>
         <?php
         $panelTitle = 'Your files';
+        $panelMeta = $storageLabel;
         include dirname(__DIR__) . '/templates/partials/files_table.php';
         ?>
     <?php endif; ?>

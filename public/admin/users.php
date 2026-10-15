@@ -22,13 +22,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $username = trim((string) ($_POST['username'] ?? ''));
         $password = (string) ($_POST['password'] ?? '');
         $role = (string) ($_POST['role'] ?? 'user');
+        $quotaRaw = trim((string) ($_POST['quota_mib'] ?? ''));
         if ($username === '' || $password === '') {
             flash('error', 'Username and password required.');
         } elseif ($repo->findByUsername($username)) {
             flash('error', 'Username already exists.');
         } else {
-            $repo->create($username, $password, $role);
+            if ($quotaRaw === '') {
+                $quotaBytes = $repo->defaultQuotaBytes();
+            } else {
+                $quotaBytes = UserRepository::parseQuotaMibInput($quotaRaw);
+                if ($quotaBytes === false) {
+                    flash('error', 'Quota must be a whole number of MiB, or blank for the site default.');
+                    redirect('/admin/users.php');
+                }
+            }
+            $repo->create($username, $password, $role, true, $quotaBytes);
             flash('success', 'User created.');
+        }
+    } elseif ($action === 'set_quota') {
+        $id = (int) ($_POST['user_id'] ?? 0);
+        $quotaBytes = UserRepository::parseQuotaMibInput($_POST['quota_mib'] ?? null);
+        if ($id <= 0 || $repo->findById($id) === null) {
+            flash('error', 'User not found.');
+        } elseif ($quotaBytes === false) {
+            flash('error', 'Quota must be a whole number of MiB, or blank for unlimited.');
+        } else {
+            $repo->setQuota($id, $quotaBytes);
+            flash('success', 'Quota updated.');
         }
     } elseif ($action === 'toggle') {
         $id = (int) ($_POST['user_id'] ?? 0);
@@ -89,10 +110,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $all = $repo->all();
+$defaultQuota = $repo->defaultQuotaBytes();
 ob_start();
 ?>
 <a class="d-inline-block mb-3" href="/admin/">&larr; Admin</a>
-<p class="text-secondary mb-3">Create accounts and manage roles, approvals, and passwords.</p>
+<p class="text-secondary mb-3">Create accounts and manage roles, approvals, quotas, and passwords.</p>
 
 <div class="card mb-3">
     <div class="card-body">
@@ -100,11 +122,11 @@ ob_start();
         <form method="post" class="row g-3 align-items-end">
             <?= Csrf::field() ?>
             <input type="hidden" name="action" value="create">
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label">Username</label>
                 <input class="form-control" name="username" required>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label">Password</label>
                 <input class="form-control" type="password" name="password" required>
             </div>
@@ -114,6 +136,12 @@ ob_start();
                     <option value="user">user</option>
                     <option value="admin">admin</option>
                 </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Quota (MiB)</label>
+                <input class="form-control mono" type="text" inputmode="numeric" pattern="[0-9]*"
+                       name="quota_mib" placeholder="Default" autocomplete="off">
+                <div class="form-text">Blank = site default (<?= e(UserRepository::formatQuotaLabel($defaultQuota)) ?>); 0 = unlimited. <a href="/admin/settings/storage.php">Edit default</a></div>
             </div>
             <div class="col-md-2">
                 <button class="btn btn-primary" type="submit">Create</button>
@@ -136,7 +164,7 @@ ob_start();
                 <th>Role</th>
                 <th>Status</th>
                 <th>Dropbox</th>
-                <th class="text-end">Used</th>
+                <th class="text-end">Storage</th>
                 <th class="text-end">Downloads</th>
                 <th class="text-end w-1"></th>
             </tr>
@@ -148,6 +176,7 @@ ob_start();
                 $userId = (int) $u['id'];
                 $isSelf = $userId === (int) $admin['id'];
                 $usedBytes = (int) ($u['used_bytes'] ?? 0);
+                $quotaBytes = UserRepository::effectiveQuotaBytes($u);
                 $fileCount = (int) ($u['file_count'] ?? 0);
                 $downloadCount = (int) ($u['download_count'] ?? 0);
                 $isAdminRole = $u['role'] === 'admin';
@@ -182,7 +211,7 @@ ob_start();
                     </td>
                     <td class="text-end">
                         <a class="text-reset text-decoration-none" href="/admin/files.php?user_id=<?= $userId ?>" title="<?= $fileCount ?> file<?= $fileCount === 1 ? '' : 's' ?>">
-                            <span class="mono"><?= e(human_filesize($usedBytes)) ?></span>
+                            <span class="mono"><?= e(UserRepository::formatUsageLabel($usedBytes, $quotaBytes)) ?></span>
                             <?php if ($fileCount > 0): ?>
                                 <span class="d-block text-secondary small"><?= $fileCount ?> file<?= $fileCount === 1 ? '' : 's' ?></span>
                             <?php endif; ?>
@@ -235,6 +264,16 @@ ob_start();
                                 <li>
                                     <button type="button" class="dropdown-item"
                                             data-bs-toggle="modal"
+                                            data-bs-target="#setQuotaModal"
+                                            data-user-id="<?= $userId ?>"
+                                            data-username="<?= e($u['username']) ?>"
+                                            data-quota-mib="<?= e(UserRepository::quotaBytesToMib($quotaBytes)) ?>">
+                                        Set quota…
+                                    </button>
+                                </li>
+                                <li>
+                                    <button type="button" class="dropdown-item"
+                                            data-bs-toggle="modal"
                                             data-bs-target="#resetPasswordModal"
                                             data-user-id="<?= $userId ?>"
                                             data-username="<?= e($u['username']) ?>">
@@ -261,6 +300,33 @@ ob_start();
             <?php endforeach; ?>
             </tbody>
         </table>
+    </div>
+</div>
+
+<div class="modal fade" id="setQuotaModal" tabindex="-1" aria-labelledby="setQuotaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" autocomplete="off">
+                <?= Csrf::field() ?>
+                <input type="hidden" name="action" value="set_quota">
+                <input type="hidden" name="user_id" value="" id="setQuotaUserId">
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="setQuotaModalLabel">Set storage quota</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-secondary mb-3">Quota for <span class="fw-semibold" id="setQuotaUsername"></span>.</p>
+                    <label class="form-label" for="setQuotaInput">Quota (MiB)</label>
+                    <input class="form-control mono" type="text" inputmode="numeric" pattern="[0-9]*"
+                           name="quota_mib" id="setQuotaInput" placeholder="Unlimited" autocomplete="off">
+                    <div class="form-text">Leave blank for unlimited. Example: 1024 = 1 GiB.</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save quota</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
@@ -323,6 +389,18 @@ document.addEventListener('DOMContentLoaded', function () {
                     return Object.assign({}, defaultConfig, { strategy: 'fixed' });
                 }
             });
+        });
+    }
+
+    var quotaModal = document.getElementById('setQuotaModal');
+    if (quotaModal) {
+        quotaModal.addEventListener('show.bs.modal', function (event) {
+            var btn = event.relatedTarget;
+            if (!btn) return;
+            document.getElementById('setQuotaUserId').value = btn.getAttribute('data-user-id') || '';
+            document.getElementById('setQuotaUsername').textContent = btn.getAttribute('data-username') || '';
+            var input = document.getElementById('setQuotaInput');
+            if (input) input.value = btn.getAttribute('data-quota-mib') || '';
         });
     }
 

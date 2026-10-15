@@ -63,16 +63,23 @@ final class UserRepository
         )->fetchAll();
     }
 
-    public function create(string $username, string $password, string $role = 'user', bool $active = true): int
-    {
+    public function create(
+        string $username,
+        string $password,
+        string $role = 'user',
+        bool $active = true,
+        ?int $quotaBytes = null,
+    ): int {
         $stmt = $this->db->prepare(
-            'INSERT INTO users (username, password_hash, role, is_active) VALUES (:u, :p, :r, :a)'
+            'INSERT INTO users (username, password_hash, role, is_active, quota_bytes)
+             VALUES (:u, :p, :r, :a, :q)'
         );
         $stmt->execute([
             ':u' => $username,
             ':p' => password_hash($password, PASSWORD_DEFAULT),
             ':r' => $role === 'admin' ? 'admin' : 'user',
             ':a' => $active ? 1 : 0,
+            ':q' => $quotaBytes,
         ]);
 
         return (int) $this->db->lastInsertId();
@@ -81,7 +88,101 @@ final class UserRepository
     /** Self-registration: always role=user and inactive until admin approves. */
     public function register(string $username, string $password): int
     {
-        return $this->create($username, $password, 'user', false);
+        return $this->create($username, $password, 'user', false, $this->defaultQuotaBytes());
+    }
+
+    /** Site default for new users; null = unlimited. */
+    public function defaultQuotaBytes(): ?int
+    {
+        $raw = (new SettingsRepository($this->db))->get(ManagedSettings::DEFAULT_USER_QUOTA_BYTES);
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+        if (!ctype_digit($raw)) {
+            return null;
+        }
+
+        return (int) $raw;
+    }
+
+    public function usedBytes(int $userId): int
+    {
+        $stmt = $this->db->prepare(
+            'SELECT COALESCE(SUM(size_bytes), 0) FROM files WHERE user_id = :uid'
+        );
+        $stmt->execute([':uid' => $userId]);
+
+        return (int) $stmt->fetchColumn();
+    }
+
+    /** Null = unlimited. */
+    public static function effectiveQuotaBytes(array $user): ?int
+    {
+        if (!array_key_exists('quota_bytes', $user) || $user['quota_bytes'] === null || $user['quota_bytes'] === '') {
+            return null;
+        }
+
+        return (int) $user['quota_bytes'];
+    }
+
+    public function wouldExceedQuota(array $user, int $additionalBytes): bool
+    {
+        $quota = self::effectiveQuotaBytes($user);
+        if ($quota === null) {
+            return false;
+        }
+
+        return $this->usedBytes((int) $user['id']) + max(0, $additionalBytes) > $quota;
+    }
+
+    public function setQuota(int $id, ?int $quotaBytes): void
+    {
+        $stmt = $this->db->prepare('UPDATE users SET quota_bytes = :q WHERE id = :id');
+        $stmt->execute([
+            ':q' => $quotaBytes,
+            ':id' => $id,
+        ]);
+    }
+
+    /**
+     * Parse admin MiB input. Empty → null (unlimited). Invalid → false.
+     *
+     * @return int|null|false
+     */
+    public static function parseQuotaMibInput(?string $raw): int|null|false
+    {
+        $raw = trim((string) $raw);
+        if ($raw === '') {
+            return null;
+        }
+        if (!ctype_digit($raw)) {
+            return false;
+        }
+        $mib = (int) $raw;
+        if ($mib === 0) {
+            return null;
+        }
+
+        return $mib * 1024 * 1024;
+    }
+
+    public static function quotaBytesToMib(?int $bytes): string
+    {
+        if ($bytes === null) {
+            return '';
+        }
+
+        return (string) (int) round($bytes / (1024 * 1024));
+    }
+
+    public static function formatQuotaLabel(?int $quotaBytes): string
+    {
+        return $quotaBytes === null ? 'Unlimited' : human_filesize($quotaBytes);
+    }
+
+    public static function formatUsageLabel(int $usedBytes, ?int $quotaBytes): string
+    {
+        return human_filesize($usedBytes) . ' / ' . self::formatQuotaLabel($quotaBytes);
     }
 
     public function countPending(): int

@@ -12,6 +12,8 @@ final class ManagedSettings
     public const DROPBOX_APP_KEY = 'dropbox_app_key';
     public const DROPBOX_APP_SECRET = 'dropbox_app_secret';
     public const YTDLP_EXTRA_ARGS = 'ytdlp_extra_args';
+    /** NULL / missing = unlimited for new users without a per-user override. Stored as decimal byte string. */
+    public const DEFAULT_USER_QUOTA_BYTES = 'default_user_quota_bytes';
 
     /** @return list<string> */
     public static function configKeys(): array
@@ -20,6 +22,7 @@ final class ManagedSettings
             self::DROPBOX_APP_KEY,
             self::DROPBOX_APP_SECRET,
             self::YTDLP_EXTRA_ARGS,
+            self::DEFAULT_USER_QUOTA_BYTES,
         ];
     }
 

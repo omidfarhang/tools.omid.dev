@@ -2,6 +2,7 @@
 /**
  * @var string $mode 'user'|'admin'
  * @var string $panelTitle
+ * @var string|null $panelMeta Optional mono label (e.g. storage used / quota)
  * @var list<array<string, mixed>> $files
  * @var string $sort
  * @var string $dir ASC|DESC
@@ -12,6 +13,7 @@
 $mode = $mode ?? 'user';
 $isAdmin = $mode === 'admin';
 $panelTitle = $panelTitle ?? ($isAdmin ? 'All files' : 'Your files');
+$panelMeta = isset($panelMeta) && is_string($panelMeta) && $panelMeta !== '' ? $panelMeta : null;
 $redirect = $redirect ?? ($isAdmin ? '/admin/files.php' : '/files.php');
 $cloudConnected = $cloudConnected ?? false;
 $prefs = $prefs ?? ['folder' => '', 'conflict' => 'rename'];
@@ -43,7 +45,12 @@ $sortMark = static function (string $col) use ($sort, $dir): string {
 };
 ?>
 <div class="card-header files-card-header">
-    <h2 class="card-title mb-0"><?= e($panelTitle) ?></h2>
+    <div class="d-flex align-items-center flex-wrap gap-2 min-w-0">
+        <h2 class="card-title mb-0"><?= e($panelTitle) ?></h2>
+        <?php if ($panelMeta !== null): ?>
+            <span class="text-secondary small mono"><?= e($panelMeta) ?></span>
+        <?php endif; ?>
+    </div>
     <div class="files-panel-tools">
         <label class="visually-hidden" for="files-search">Filter files</label>
         <input type="search" id="files-search" class="form-control form-control-sm files-search"
