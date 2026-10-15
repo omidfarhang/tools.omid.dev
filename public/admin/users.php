@@ -211,22 +211,31 @@ ob_start();
                     </td>
                     <td>
                         <?php
-                        $cloudBits = [];
+                        $connectedClouds = [];
                         foreach ($cloudRegistry->all() as $provider) {
                             if (!$provider->isConnected($u)) {
                                 continue;
                             }
                             $details = $provider->connectionDetails($u);
-                            $label = $provider->label();
-                            if (!empty($details['email'])) {
-                                $cloudBits[] = $label . ': ' . (string) $details['email'];
-                            } else {
-                                $cloudBits[] = $label;
-                            }
+                            $connectedClouds[] = [
+                                'label' => $provider->label(),
+                                'email' => (string) ($details['email'] ?? ''),
+                                'display_name' => (string) ($details['display_name'] ?? ''),
+                                'account_id' => (string) ($details['account_id'] ?? ''),
+                            ];
                         }
+                        $cloudCount = count($connectedClouds);
                         ?>
-                        <?php if ($cloudBits !== []): ?>
-                            <span class="mono small"><?= e(implode(' · ', $cloudBits)) ?></span>
+                        <?php if ($cloudCount > 0): ?>
+                            <button type="button"
+                                    class="btn btn-link p-0 text-reset text-decoration-none"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#cloudDetailsModal"
+                                    data-username="<?= e($u['username']) ?>"
+                                    data-clouds="<?= e(json_encode($connectedClouds, JSON_THROW_ON_ERROR)) ?>"
+                                    title="View connected clouds">
+                                <span class="badge bg-azure-lt"><?= $cloudCount ?></span>
+                            </button>
                         <?php else: ?>
                             <span class="text-secondary">—</span>
                         <?php endif; ?>
@@ -458,6 +467,24 @@ ob_start();
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="cloudDetailsModal" tabindex="-1" aria-labelledby="cloudDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title h5" id="cloudDetailsModalLabel">Connected clouds</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-secondary mb-3">Cloud accounts for <span class="fw-semibold" id="cloudDetailsUsername"></span>.</p>
+                <div id="cloudDetailsList"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     var table = document.querySelector('[data-users-table]');
@@ -521,6 +548,68 @@ document.addEventListener('DOMContentLoaded', function () {
                     ? (n === 1 ? 'Their 1 stored file will be removed from disk.' : 'Their ' + n + ' stored files will be removed from disk.')
                     : 'They have no stored files on disk.';
             }
+        });
+    }
+
+    var cloudModal = document.getElementById('cloudDetailsModal');
+    if (cloudModal) {
+        cloudModal.addEventListener('show.bs.modal', function (event) {
+            var btn = event.relatedTarget;
+            if (!btn) return;
+            document.getElementById('cloudDetailsUsername').textContent = btn.getAttribute('data-username') || '';
+            var list = document.getElementById('cloudDetailsList');
+            if (!list) return;
+            list.replaceChildren();
+            var clouds = [];
+            try {
+                clouds = JSON.parse(btn.getAttribute('data-clouds') || '[]');
+            } catch (e) {
+                clouds = [];
+            }
+            if (!Array.isArray(clouds) || clouds.length === 0) {
+                var empty = document.createElement('p');
+                empty.className = 'text-secondary mb-0';
+                empty.textContent = 'No connected clouds.';
+                list.appendChild(empty);
+                return;
+            }
+            clouds.forEach(function (cloud, index) {
+                if (index > 0) {
+                    var hr = document.createElement('hr');
+                    hr.className = 'my-3';
+                    list.appendChild(hr);
+                }
+                var title = document.createElement('div');
+                title.className = 'fw-semibold mb-2';
+                title.textContent = cloud.label || 'Cloud';
+                list.appendChild(title);
+                var dl = document.createElement('dl');
+                dl.className = 'row mb-0';
+                [
+                    ['Name', cloud.display_name],
+                    ['Email', cloud.email],
+                    ['Account', cloud.account_id]
+                ].forEach(function (row) {
+                    var value = row[1];
+                    if (!value) return;
+                    var dt = document.createElement('dt');
+                    dt.className = 'col-sm-3 text-secondary';
+                    dt.textContent = row[0];
+                    var dd = document.createElement('dd');
+                    dd.className = 'col-sm-9 mono mb-1';
+                    dd.textContent = value;
+                    dl.appendChild(dt);
+                    dl.appendChild(dd);
+                });
+                if (!dl.children.length) {
+                    var none = document.createElement('p');
+                    none.className = 'text-secondary small mb-0';
+                    none.textContent = 'Connected (no account details stored).';
+                    list.appendChild(none);
+                } else {
+                    list.appendChild(dl);
+                }
+            });
         });
     }
 });
