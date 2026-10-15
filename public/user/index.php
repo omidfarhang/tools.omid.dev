@@ -42,6 +42,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash('success', 'Cloud defaults saved.');
         redirect('/user/');
     }
+    if ($action === 'change_password') {
+        $current = (string) ($_POST['current_password'] ?? '');
+        $new = (string) ($_POST['new_password'] ?? '');
+        $confirm = (string) ($_POST['new_password_confirm'] ?? '');
+        $hash = (string) ($user['password_hash'] ?? '');
+        if ($current === '' || $new === '' || $confirm === '') {
+            flash('error', 'All password fields are required.');
+        } elseif ($hash === '' || !password_verify($current, $hash)) {
+            flash('error', 'Current password is incorrect.');
+        } elseif (strlen($new) < 8) {
+            flash('error', 'New password must be at least 8 characters.');
+        } elseif ($new !== $confirm) {
+            flash('error', 'New passwords do not match.');
+        } else {
+            $users->setPassword((int) $user['id'], $new);
+            flash('success', 'Password updated.');
+        }
+        redirect('/user/');
+    }
 }
 
 $user = $users->findById((int) $user['id']) ?? $user;
@@ -66,6 +85,29 @@ ob_start();
                 <dt class="text-secondary">Role</dt>
                 <dd class="mb-0"><span class="badge bg-azure-lt text-azure"><?= e($user['role']) ?></span></dd>
             </dl>
+
+            <form method="post" class="mt-4" autocomplete="off">
+                <?= Csrf::field() ?>
+                <input type="hidden" name="action" value="change_password">
+                <h3 class="h6 mb-3">Change password</h3>
+                <div class="mb-3">
+                    <label class="form-label" for="current_password">Current password</label>
+                    <input class="form-control" type="password" name="current_password" id="current_password"
+                           required autocomplete="current-password">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="new_password">New password</label>
+                    <input class="form-control" type="password" name="new_password" id="new_password"
+                           required minlength="8" autocomplete="new-password">
+                    <div class="form-text">At least 8 characters.</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="new_password_confirm">Confirm new password</label>
+                    <input class="form-control" type="password" name="new_password_confirm" id="new_password_confirm"
+                           required minlength="8" autocomplete="new-password">
+                </div>
+                <button class="btn btn-outline-primary" type="submit">Update password</button>
+            </form>
 
             <form method="post" class="mt-4">
                 <?= Csrf::field() ?>
