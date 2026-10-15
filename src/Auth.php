@@ -48,6 +48,14 @@ final class Auth
         unset($_SESSION['user_id'], $_SESSION[self::TOTP_SETUP_SECRET_KEY]);
 
         if (UserRepository::totpEnabled($user)) {
+            $devices = new TrustedDeviceRepository();
+            if ($devices->isTrusted((int) $user['id'])) {
+                unset($_SESSION[self::PENDING_2FA_KEY]);
+                $_SESSION['user_id'] = (int) $user['id'];
+
+                return 'ok';
+            }
+
             $_SESSION[self::PENDING_2FA_KEY] = (int) $user['id'];
 
             return 'totp_required';

@@ -241,6 +241,7 @@ final class UserRepository
             'UPDATE users SET totp_secret = NULL, totp_enabled = 0, totp_recovery_hashes = NULL WHERE id = :id'
         );
         $stmt->execute([':id' => $id]);
+        (new TrustedDeviceRepository($this->db))->revokeAll($id);
     }
 
     /**

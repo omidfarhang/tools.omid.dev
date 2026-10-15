@@ -8,6 +8,7 @@ use App\Auth;
 use App\Cloud\CloudRegistry;
 use App\Csrf;
 use App\TotpService;
+use App\TrustedDeviceRepository;
 use App\UserRepository;
 use App\View;
 
@@ -16,6 +17,7 @@ $users = new UserRepository();
 $user = $users->findById((int) $user['id']) ?? $user;
 $registry = CloudRegistry::default();
 $totp = new TotpService();
+$trustedDevices = new TrustedDeviceRepository();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     Csrf::requireValid();
@@ -165,6 +167,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         unset($_SESSION['totp_recovery_codes_once']);
         redirect('/user/');
     }
+    if ($action === 'revoke_trusted_device') {
+        $deviceId = (int) ($_POST['device_id'] ?? 0);
+        if ($trustedDevices->revoke((int) $user['id'], $deviceId)) {
+            flash('success', 'Trusted device removed.');
+        } else {
+            flash('error', 'Device not found.');
+        }
+        redirect('/user/');
+    }
+    if ($action === 'revoke_all_trusted_devices') {
+        $n = $trustedDevices->revokeAll((int) $user['id']);
+        flash('success', $n > 0
+            ? "Removed {$n} trusted device(s)."
+            : 'No trusted devices to remove.');
+        redirect('/user/');
+    }
 }
 
 $user = $users->findById((int) $user['id']) ?? $user;
@@ -194,6 +212,7 @@ $recoveryCodesOnce = $_SESSION['totp_recovery_codes_once'] ?? null;
 if (!is_array($recoveryCodesOnce)) {
     $recoveryCodesOnce = null;
 }
+$deviceList = $totpEnabled ? $trustedDevices->listForUser((int) $user['id']) : [];
 
 ob_start();
 ?>
@@ -285,6 +304,45 @@ ob_start();
                     </form>
                 <?php elseif ($totpEnabled): ?>
                     <div class="alert alert-success mb-3">Two-factor authentication is enabled.</div>
+
+                    <div class="mb-4">
+                        <h4 class="h6">Trusted devices</h4>
+                        <p class="form-text mb-2">
+                            Devices that can skip the authenticator code for
+                            <?= (int) TrustedDeviceRepository::TTL_DAYS ?> days after password login.
+                        </p>
+                        <?php if ($deviceList === []): ?>
+                            <p class="text-secondary small mb-0">No remembered devices.</p>
+                        <?php else: ?>
+                            <ul class="list-group list-group-flush mb-2">
+                                <?php foreach ($deviceList as $device): ?>
+                                    <li class="list-group-item px-0 d-flex justify-content-between align-items-start gap-2">
+                                        <div class="min-w-0">
+                                            <div class="small text-truncate" title="<?= e((string) $device['label']) ?>">
+                                                <?= e((string) $device['label']) ?>
+                                            </div>
+                                            <div class="text-secondary small">
+                                                Added <?= e((string) $device['created_at']) ?> UTC
+                                                · expires <?= e((string) $device['expires_at']) ?> UTC
+                                            </div>
+                                        </div>
+                                        <form method="post" class="flex-shrink-0">
+                                            <?= Csrf::field() ?>
+                                            <input type="hidden" name="action" value="revoke_trusted_device">
+                                            <input type="hidden" name="device_id" value="<?= (int) $device['id'] ?>">
+                                            <button class="btn btn-sm btn-outline-danger" type="submit">Revoke</button>
+                                        </form>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                            <form method="post">
+                                <?= Csrf::field() ?>
+                                <input type="hidden" name="action" value="revoke_all_trusted_devices">
+                                <button class="btn btn-sm btn-link text-danger px-0" type="submit">Revoke all devices</button>
+                            </form>
+                        <?php endif; ?>
+                    </div>
+
                     <form method="post" class="mb-4" autocomplete="off">
                         <?= Csrf::field() ?>
                         <input type="hidden" name="action" value="totp_regenerate_recovery">

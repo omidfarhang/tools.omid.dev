@@ -10,6 +10,7 @@ use App\ClientIp;
 use App\Csrf;
 use App\LoginRateLimiter;
 use App\TotpService;
+use App\TrustedDeviceRepository;
 use App\UserRepository;
 use App\View;
 
@@ -58,6 +59,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($ok) {
             Auth::completeTotpLogin((int) $user['id']);
             $limiter->clear($ip, $username);
+            if (!empty($_POST['remember_device'])) {
+                (new TrustedDeviceRepository())->remember(
+                    (int) $user['id'],
+                    (string) ($_SERVER['HTTP_USER_AGENT'] ?? '')
+                );
+            }
             redirect('/');
         }
 
@@ -80,11 +87,19 @@ ob_start();
         <?php endif; ?>
         <form method="post" autocomplete="off">
             <?= Csrf::field() ?>
-            <div class="mb-2">
+            <div class="mb-3">
                 <label class="form-label" for="code">Authentication code</label>
                 <input class="form-control form-control-lg text-center font-monospace" id="code" name="code"
                        inputmode="text" autocomplete="one-time-code" required autofocus
                        placeholder="000000">
+            </div>
+            <div class="mb-3">
+                <label class="form-check">
+                    <input class="form-check-input" type="checkbox" name="remember_device" value="1" id="remember_device">
+                    <span class="form-check-label">
+                        Remember this device for <?= (int) TrustedDeviceRepository::TTL_DAYS ?> days
+                    </span>
+                </label>
             </div>
             <div class="form-footer">
                 <button class="btn btn-primary w-100" type="submit">Verify</button>

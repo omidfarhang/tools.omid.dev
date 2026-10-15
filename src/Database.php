@@ -136,6 +136,20 @@ CREATE TABLE IF NOT EXISTS login_attempts (
 );
 CREATE INDEX IF NOT EXISTS idx_login_attempts_ip_created ON login_attempts(ip, created_at);
 CREATE INDEX IF NOT EXISTS idx_login_attempts_user_created ON login_attempts(username, created_at);
+
+CREATE TABLE IF NOT EXISTS trusted_devices (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    selector TEXT NOT NULL UNIQUE,
+    token_hash TEXT NOT NULL,
+    label TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    expires_at TEXT NOT NULL,
+    last_used_at TEXT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_trusted_devices_user ON trusted_devices(user_id);
+CREATE INDEX IF NOT EXISTS idx_trusted_devices_expires ON trusted_devices(expires_at);
 SQL);
 
         self::ensureColumn($pdo, 'users', 'dropbox_default_behavior', "dropbox_default_behavior TEXT NOT NULL DEFAULT 'save_to_disk'");
