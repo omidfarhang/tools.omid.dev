@@ -41,6 +41,11 @@ code.mono {
     --tblr-navbar-bg: #080c14;
 }
 
+/* Page header: Tabler zeros .breadcrumb margin despite --tblr-breadcrumb-margin-bottom */
+.page-header .breadcrumb {
+    margin-bottom: 0.5rem;
+}
+
 /* Theme switcher */
 .theme-switch {
     display: inline-flex;

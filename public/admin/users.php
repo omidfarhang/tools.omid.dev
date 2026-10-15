@@ -464,7 +464,7 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 <?php
-View::render('Admin Users', ob_get_clean(), $admin, [
+View::render('Users', ob_get_clean(), $admin, [
     ['label' => 'Admin', 'href' => '/admin/'],
     ['label' => 'Users'],
 ]);

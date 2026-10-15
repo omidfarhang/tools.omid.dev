@@ -95,7 +95,7 @@ foreach ($entries as $entry) {
     }
 }
 
-$pageTitle = $filterUser !== null ? 'User history' : 'Admin History';
+$pageTitle = $filterUser !== null ? 'User history' : 'History';
 $panelTitle = $filterUser !== null
     ? 'History · ' . (string) $filterUser['username']
     : 'All history';

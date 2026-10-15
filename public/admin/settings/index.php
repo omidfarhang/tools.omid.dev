@@ -58,7 +58,7 @@ ob_start();
     </div>
 </div>
 <?php
-View::render('Admin · Settings', ob_get_clean(), $admin, [
+View::render('Settings', ob_get_clean(), $admin, [
     ['label' => 'Admin', 'href' => '/admin/'],
     ['label' => 'Settings'],
 ]);

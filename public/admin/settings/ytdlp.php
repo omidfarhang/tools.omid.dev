@@ -148,7 +148,7 @@ ob_start();
     </div>
 </div>
 <?php
-View::render('Admin · yt-dlp', ob_get_clean(), $admin, [
+View::render('yt-dlp', ob_get_clean(), $admin, [
     ['label' => 'Admin', 'href' => '/admin/'],
     ['label' => 'Settings', 'href' => '/admin/settings/'],
     ['label' => 'yt-dlp'],

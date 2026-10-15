@@ -27,7 +27,6 @@ $navIcon = static function (string $name): string {
         'home' => '<svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l-2 0l9 -9l9 9l-2 0"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7"/><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6"/></svg>',
         'files' => '<svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"/></svg>',
         'history' => '<svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8l0 4l2 2"/><path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5"/></svg>',
-        'user' => '<svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0"/><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/></svg>',
         'admin' => '<svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a12 12 0 0 0 8.5 3a12 12 0 0 1 -8.5 15a12 12 0 0 1 -8.5 -15a12 12 0 0 0 8.5 -3"/></svg>',
         'users' => '<svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0 -3 -3.85"/></svg>',
         'ytdlp' => '<svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2"/><path d="M7 11l5 5l5 -5"/><path d="M12 4l0 12"/></svg>',
@@ -54,7 +53,6 @@ $renderNav = static function () use ($user, $isActive, $navLink): void {
     echo $navLink('/', 'Home', 'home', $isActive('/', '/index.php'));
     echo $navLink('/files.php', 'My Files', 'files', $isActive('/files.php'));
     echo $navLink('/history.php', 'History', 'history', $isActive('/history.php'));
-    echo $navLink('/user/', 'Account', 'user', $isActive('/user'));
     if (($user['role'] ?? '') === 'admin') {
         echo '<li class="nav-section-title">Admin</li>';
         echo $navLink(
@@ -111,14 +109,36 @@ $renderThemeSwitch = static function (string $extraClass = ''): void {
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <a class="navbar-brand" href="/">
-                    <span class="avatar avatar-sm bg-teal-lt text-teal me-2"><?= e($brandInitial) ?></span>
-                    <?= e($appName) ?>
+                    <span class="d-inline-flex align-items-center gap-2">
+                        <span class="avatar avatar-sm bg-teal-lt text-teal"><?= e($brandInitial) ?></span>
+                        <?= e($appName) ?>
+                    </span>
                 </a>
                 <div class="navbar-nav flex-row d-lg-none">
                     <?php $renderThemeSwitch(); ?>
                 </div>
                 <div class="collapse navbar-collapse" id="sidebar-menu">
                     <?php $renderNav(); ?>
+                </div>
+                <div class="navbar-footer">
+                    <ul class="navbar-nav">
+                        <li class="nav-item dropup">
+                            <a href="#" class="nav-link" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" aria-label="Open user menu">
+                                <span class="avatar avatar-sm bg-azure-lt text-azure"><?= e(strtoupper(substr((string) $user['username'], 0, 1))) ?></span>
+                                <span class="nav-link-title">
+                                    <?= e($user['username']) ?>
+                                    <?php if (($user['role'] ?? '') === 'admin'): ?>
+                                        <div class="small text-secondary">Admin</div>
+                                    <?php endif; ?>
+                                </span>
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-end">
+                                <a class="dropdown-item" href="/user/">Account</a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item" href="/logout.php">Logout</a>
+                            </div>
+                        </li>
+                    </ul>
                 </div>
             </div>
         </aside>
@@ -150,14 +170,8 @@ $renderThemeSwitch = static function (string $extraClass = ''): void {
                             <?php endif; ?>
                             <h2 class="page-title"><?= e($title) ?></h2>
                         </div>
-                        <div class="col-auto ms-auto d-print-none">
-                            <div class="d-flex align-items-center gap-2">
-                                <div class="d-none d-lg-block">
-                                    <?php $renderThemeSwitch(); ?>
-                                </div>
-                                <span class="badge bg-azure-lt text-azure"><?= e($user['username']) ?></span>
-                                <a class="btn btn-outline-secondary btn-sm" href="/logout.php">Logout</a>
-                            </div>
+                        <div class="col-auto ms-auto d-print-none d-none d-lg-block">
+                            <?php $renderThemeSwitch(); ?>
                         </div>
                     </div>
                 </div>
@@ -189,8 +203,10 @@ $renderThemeSwitch = static function (string $extraClass = ''): void {
                     <?php $renderThemeSwitch('d-inline-flex'); ?>
                 </div>
                 <a href="/login.php" class="navbar-brand navbar-brand-autodark">
-                    <span class="avatar bg-teal-lt text-teal me-2"><?= e($brandInitial) ?></span>
-                    <?= e($appName) ?>
+                    <span class="d-inline-flex align-items-center gap-2">
+                        <span class="avatar bg-teal-lt text-teal"><?= e($brandInitial) ?></span>
+                        <?= e($appName) ?>
+                    </span>
                 </a>
             </div>
             <?php foreach ($flashes as $flash): ?>

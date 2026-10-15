@@ -72,7 +72,7 @@ ob_start();
     </div>
 </div>
 <?php
-View::render('Admin · Storage', ob_get_clean(), $admin, [
+View::render('Storage', ob_get_clean(), $admin, [
     ['label' => 'Admin', 'href' => '/admin/'],
     ['label' => 'Settings', 'href' => '/admin/settings/'],
     ['label' => 'Storage'],

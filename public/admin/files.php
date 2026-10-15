@@ -48,7 +48,7 @@ if ($filterUser !== null) {
         'q' => $q !== '' ? $q : null,
     ];
     $panelTitle = 'All files';
-    $pageTitle = 'Admin Files';
+    $pageTitle = 'Files';
 }
 
 $files = $result['items'];

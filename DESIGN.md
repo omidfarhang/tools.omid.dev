@@ -27,7 +27,7 @@ Canonical theme tokens live in `public/assets/css/app.css`. Keep this file in sy
 
 - **Modes:** `light` | `dark` | `auto` (OS). Default preference is **auto**.
 - **Mechanism:** `tabler-theme.min.js` (early in `<head>`) + `theme-switch.js`. Preference: `localStorage['tabler-theme']`. Resolved dark sets `data-bs-theme="dark"` on `<html>`.
-- **Control:** Compact Light / System / Dark switcher in the page header (and auth).
+- **Control:** Compact Light / System / Dark switcher alone in the page header (desktop) and the sidebar top bar (mobile). Auth pages keep it above the brand. Do not put the three-way switch inside the user menu.
 - Do not force dark as the product default.
 
 ## Brand / accent
@@ -35,6 +35,7 @@ Canonical theme tokens live in `public/assets/css/app.css`. Keep this file in sy
 - Light accent `#0f766e` → hover `#0d9488`; dark accent `#2dd4bf`.
 - Mapped to `--tblr-primary*` / `--tblr-link-*` in `app.css`.
 - Vertical sidebar stays dark (`navbar-vertical` + `data-bs-theme="dark"`) in both page modes.
+- Sidebar / auth brand: wrap avatar + app name in one flex child inside `.navbar-brand` (Tabler vertical brands use `justify-content: space-between` for an optional trailing control — do not leave mark and title as sibling flex items).
 
 ## Typography
 
@@ -44,8 +45,9 @@ Canonical theme tokens live in `public/assets/css/app.css`. Keep this file in sy
 ## Layout (Tabler)
 
 - **App:** `.page` → `.navbar.navbar-vertical.navbar-expand-lg` + `.page-wrapper` → `.page-header` / `.page-body` / `.footer` inside `.container-xl`.
+- **Sidebar zones:** brand at top → scrollable `.navbar-collapse` nav → pinned `.navbar-footer` user dropup (Account / Logout). Do not put username badge + Logout in the page header.
 - **Auth:** `.page.page-center` → `.container.container-tight` → brand (`.navbar-brand.navbar-brand-autodark`) → page-owned `.card.card-md` → secondary text link below the card (Sign up / Sign in). Forms use `.form-footer` + `.btn.btn-primary.w-100`.
-- **Page titles:** layout owns `.page-header` / `.page-title` (and optional Tabler `.breadcrumb`); page content uses a plain `.text-secondary` lede (do not nest another `.page-header`).
+- **Page titles:** layout owns `.page-header` / `.page-title` (and optional Tabler `.breadcrumb`); page content uses a plain `.text-secondary` lede (do not nest another `.page-header`). When breadcrumbs are present, use a short page title that does not repeat the trail parent (e.g. breadcrumbs `Admin / Settings` → title `Settings`).
 
 ## Components (prefer Tabler)
 
@@ -60,8 +62,9 @@ Canonical theme tokens live in `public/assets/css/app.css`. Keep this file in sy
 | Status chips | `.badge` + Tabler `bg-*-lt` helpers |
 | Forms | `.form-label`, `.form-control`, `.form-select`, `.subheader` section labels |
 | Hierarchy | Tabler `.breadcrumb` in `.page-header` via `View::render(..., $breadcrumbs)` — not ad-hoc “← Back” links |
+| Signed-in user | Sidebar `.navbar-footer` dropup (Account, Logout) — not header chips |
 
-App-specific leftovers in `app.css` (keep minimal): theme switcher, files table toolbar/selection bar, download destination `.choice-tile` grid.
+App-specific leftovers in `app.css` (keep minimal): theme switcher, `.page-header .breadcrumb` margin (Tabler zeros breadcrumb margin), files table toolbar/selection bar, download destination `.choice-tile` grid.
 
 ## Do's and Don'ts
 

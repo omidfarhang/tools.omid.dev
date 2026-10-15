@@ -111,7 +111,7 @@ ob_start();
     </div>
 </div>
 <?php
-View::render('Admin · Cloud', ob_get_clean(), $admin, [
+View::render('Cloud', ob_get_clean(), $admin, [
     ['label' => 'Admin', 'href' => '/admin/'],
     ['label' => 'Settings', 'href' => '/admin/settings/'],
     ['label' => 'Cloud'],
