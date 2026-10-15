@@ -22,9 +22,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const deleteModalEl = document.getElementById('filesDeleteModal');
     const renameModalEl = document.getElementById('filesRenameModal');
+    const shareModalEl = document.getElementById('filesShareModal');
     const cloudModalEl = document.getElementById('filesCloudModal');
     const deleteModal = deleteModalEl ? tabler.Modal.getOrCreateInstance(deleteModalEl) : null;
     const renameModal = renameModalEl ? tabler.Modal.getOrCreateInstance(renameModalEl) : null;
+    const shareModal = shareModalEl ? tabler.Modal.getOrCreateInstance(shareModalEl) : null;
     const cloudModal = cloudModalEl ? tabler.Modal.getOrCreateInstance(cloudModalEl) : null;
 
     let pendingBulkDelete = null;
@@ -211,6 +213,22 @@ document.addEventListener('DOMContentLoaded', function () {
                 setTimeout(function () { nameInput.focus(); nameInput.select(); }, 200);
             }
             renameModal.show();
+            return;
+        }
+
+        const shareBtn = e.target.closest('[data-action-share]');
+        if (shareBtn && shareModal && shareModalEl) {
+            const id = shareBtn.getAttribute('data-file-id') || '';
+            const name = shareBtn.getAttribute('data-file-name') || '';
+            const idInput = shareModalEl.querySelector('[data-share-id]');
+            const nameEl = shareModalEl.querySelector('[data-share-name]');
+            const expiresEl = shareModalEl.querySelector('[data-share-expires]');
+            const maxEl = shareModalEl.querySelector('[data-share-max]');
+            if (idInput) idInput.value = id;
+            if (nameEl) nameEl.textContent = name;
+            if (expiresEl) expiresEl.value = '';
+            if (maxEl) maxEl.value = '';
+            shareModal.show();
             return;
         }
 

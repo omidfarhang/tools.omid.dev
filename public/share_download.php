@@ -14,7 +14,8 @@ if ($token === '' || !preg_match('/^[a-f0-9]{64}$/i', $token)) {
     exit;
 }
 
-$share = (new ShareService())->findActiveByToken($token);
+$shares = new ShareService();
+$share = $shares->findActiveByToken($token);
 if ($share === null) {
     http_response_code(404);
     echo 'Not found';
@@ -25,6 +26,12 @@ $path = FileRepository::absolutePath((string) $share['stored_name']);
 if ($path === null || !is_file($path)) {
     http_response_code(404);
     echo 'File missing.';
+    exit;
+}
+
+if (!$shares->recordDownload((int) $share['id'])) {
+    http_response_code(404);
+    echo 'Not found';
     exit;
 }
 

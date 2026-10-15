@@ -91,6 +91,12 @@ $sortMark = static function (string $col) use ($sort, $dir): string {
             $name = (string) $file['original_name'];
             $shareToken = !empty($file['share_token']) ? (string) $file['share_token'] : null;
             $shareUrl = $shareToken !== null ? \App\ShareService::publicUrl($shareToken) : null;
+            $shareExpiresAt = !empty($file['share_expires_at']) ? (string) $file['share_expires_at'] : null;
+            $shareMaxDownloads = isset($file['share_max_downloads']) && $file['share_max_downloads'] !== null && $file['share_max_downloads'] !== ''
+                ? (int) $file['share_max_downloads']
+                : null;
+            $shareDownloadCount = (int) ($file['share_download_count'] ?? 0);
+            $shareRemaining = $shareMaxDownloads !== null ? max(0, $shareMaxDownloads - $shareDownloadCount) : null;
             $owner = $isAdmin ? (string) ($file['owner_username'] ?? '') : '';
             $searchHaystack = strtolower($name . ' ' . $owner);
             ?>
@@ -110,6 +116,16 @@ $sortMark = static function (string $col) use ($sort, $dir): string {
                 <td class="files-col-share">
                     <?php if ($shareUrl): ?>
                         <span class="badge bg-teal-lt text-teal">Public</span>
+                        <?php if ($shareExpiresAt !== null): ?>
+                            <span class="badge bg-azure-lt text-azure" title="Expires <?= e($shareExpiresAt) ?> UTC">
+                                until <?= e(substr($shareExpiresAt, 0, 16)) ?>
+                            </span>
+                        <?php endif; ?>
+                        <?php if ($shareRemaining !== null): ?>
+                            <span class="badge bg-orange-lt text-orange">
+                                <?= $shareRemaining === 1 ? '1 left' : $shareRemaining . ' left' ?>
+                            </span>
+                        <?php endif; ?>
                     <?php else: ?>
                         <span class="badge bg-secondary-lt">Private</span>
                     <?php endif; ?>
@@ -143,13 +159,9 @@ $sortMark = static function (string $col) use ($sort, $dir): string {
                                         <button class="dropdown-item" type="submit">Disable public link</button>
                                     </form>
                                 <?php else: ?>
-                                    <form method="post" action="/share.php">
-                                        <?= \App\Csrf::field() ?>
-                                        <input type="hidden" name="file_id" value="<?= $fileId ?>">
-                                        <input type="hidden" name="action" value="enable">
-                                        <input type="hidden" name="redirect" value="<?= e($redirect) ?>">
-                                        <button class="dropdown-item" type="submit">Make public</button>
-                                    </form>
+                                    <button type="button" class="dropdown-item" data-action-share
+                                            data-file-id="<?= $fileId ?>"
+                                            data-file-name="<?= e($name) ?>">Make public…</button>
                                 <?php endif; ?>
                             </li>
                             <li><hr class="dropdown-divider"></li>

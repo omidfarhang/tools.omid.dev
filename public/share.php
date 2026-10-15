@@ -32,11 +32,14 @@ if (!$isOwner && !$isAdmin) {
 
 $shares = new ShareService();
 if ($action === 'enable') {
-    if (!$isOwner && !$isAdmin) {
-        flash('error', 'Forbidden.');
-        redirect('/files.php');
+    $expiresAt = ShareService::expiresAtFromPreset((string) ($_POST['expires'] ?? ''));
+    $maxRaw = trim((string) ($_POST['max_downloads'] ?? ''));
+    $maxDownloads = null;
+    if ($maxRaw !== '') {
+        $maxDownloads = max(1, (int) $maxRaw);
     }
-    $token = $shares->enable($fileId, (int) $user['id']);
+
+    $token = $shares->enable($fileId, (int) $user['id'], $expiresAt, $maxDownloads);
     flash('success', 'Public link enabled: ' . ShareService::publicUrl($token));
 } elseif ($action === 'revoke') {
     $shares->revokeForFile($fileId);

@@ -68,6 +68,10 @@ CREATE TABLE IF NOT EXISTS shares (
     created_by INTEGER NOT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     revoked_at TEXT NULL,
+    expires_at TEXT NULL,
+    max_downloads INTEGER NULL,
+    download_count INTEGER NOT NULL DEFAULT 0,
+    purpose TEXT NOT NULL DEFAULT 'user',
     FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
 );
@@ -131,6 +135,10 @@ SQL);
         self::ensureColumn($pdo, 'download_jobs', 'force_ytdlp', 'force_ytdlp INTEGER NOT NULL DEFAULT 0');
         self::ensureColumn($pdo, 'download_jobs', 'hidden_at', 'hidden_at TEXT NULL');
         self::ensureColumn($pdo, 'cloud_jobs', 'hidden_at', 'hidden_at TEXT NULL');
+        self::ensureColumn($pdo, 'shares', 'expires_at', 'expires_at TEXT NULL');
+        self::ensureColumn($pdo, 'shares', 'max_downloads', 'max_downloads INTEGER NULL');
+        self::ensureColumn($pdo, 'shares', 'download_count', 'download_count INTEGER NOT NULL DEFAULT 0');
+        self::ensureColumn($pdo, 'shares', 'purpose', "purpose TEXT NOT NULL DEFAULT 'user'");
         self::migrateDropboxJobs($pdo);
         self::migrateBehaviorValues($pdo);
         self::migrateDefaultCloudFolder($pdo);

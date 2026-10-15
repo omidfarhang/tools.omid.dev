@@ -61,6 +61,45 @@ $prefs = $prefs ?? ['folder' => '', 'conflict' => 'rename'];
     </div>
 </div>
 
+<div class="modal fade" id="filesShareModal" tabindex="-1" aria-labelledby="filesShareModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" action="/share.php">
+                <?= \App\Csrf::field() ?>
+                <input type="hidden" name="file_id" value="" data-share-id>
+                <input type="hidden" name="action" value="enable">
+                <input type="hidden" name="redirect" value="<?= e($redirect) ?>">
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="filesShareModalLabel">Make public</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mono small mb-3" data-share-name></p>
+                    <div class="mb-3">
+                        <label class="form-label" for="files-share-expires">Link expires</label>
+                        <select class="form-select" name="expires" id="files-share-expires" data-share-expires>
+                            <option value="" selected>Never</option>
+                            <option value="1h">In 1 hour</option>
+                            <option value="24h">In 24 hours</option>
+                            <option value="7d">In 7 days</option>
+                        </select>
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label" for="files-share-max">Max downloads</label>
+                        <input class="form-control" type="number" name="max_downloads" id="files-share-max"
+                               data-share-max min="1" step="1" placeholder="Unlimited" inputmode="numeric">
+                        <div class="form-hint">Leave empty for unlimited downloads.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Enable link</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <?php if (!$isAdmin && $cloudConnected): ?>
 <div class="modal fade" id="filesCloudModal" tabindex="-1" aria-labelledby="filesCloudModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">

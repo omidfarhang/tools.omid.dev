@@ -84,9 +84,10 @@ final class FileRepository
     public function forUser(int $userId, string $sort = 'date', string $dir = 'DESC'): array
     {
         $order = $this->orderClause($sort, $dir);
+        $shareSelect = ShareService::fileListShareSelectSql();
         $stmt = $this->db->prepare(
             "SELECT f.*,
-                (SELECT s.token FROM shares s WHERE s.file_id = f.id AND s.revoked_at IS NULL ORDER BY s.id DESC LIMIT 1) AS share_token
+                {$shareSelect}
              FROM files f
              WHERE f.user_id = :uid
              ORDER BY {$order}"
@@ -100,9 +101,10 @@ final class FileRepository
     public function forUserWithOwner(int $userId, string $sort = 'date', string $dir = 'DESC'): array
     {
         $order = $this->orderClause($sort, $dir);
+        $shareSelect = ShareService::fileListShareSelectSql();
         $stmt = $this->db->prepare(
             "SELECT f.*, u.username AS owner_username,
-                (SELECT s.token FROM shares s WHERE s.file_id = f.id AND s.revoked_at IS NULL ORDER BY s.id DESC LIMIT 1) AS share_token
+                {$shareSelect}
              FROM files f
              JOIN users u ON u.id = f.user_id
              WHERE f.user_id = :uid
@@ -118,9 +120,11 @@ final class FileRepository
     {
         $order = $this->orderClause($sort, $dir);
 
+        $shareSelect = ShareService::fileListShareSelectSql();
+
         return $this->db->query(
             "SELECT f.*, u.username AS owner_username,
-                (SELECT s.token FROM shares s WHERE s.file_id = f.id AND s.revoked_at IS NULL ORDER BY s.id DESC LIMIT 1) AS share_token
+                {$shareSelect}
              FROM files f
              JOIN users u ON u.id = f.user_id
              ORDER BY {$order}"
