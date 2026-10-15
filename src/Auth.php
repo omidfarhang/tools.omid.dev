@@ -22,13 +22,19 @@ final class Auth
         return $user !== null && (int) $user['is_active'] === 1;
     }
 
+    /** Fixed bcrypt hash for timing equalization when the username is unknown. */
+    private const DUMMY_PASSWORD_HASH = '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi';
+
     /**
      * @return 'ok'|'inactive'|'invalid'
      */
     public static function attemptLogin(string $username, string $password): string
     {
         $user = (new UserRepository())->findByUsername($username);
-        if ($user === null || !password_verify($password, $user['password_hash'])) {
+        $hash = is_array($user) ? (string) $user['password_hash'] : self::DUMMY_PASSWORD_HASH;
+        $passwordOk = password_verify($password, $hash);
+
+        if ($user === null || !$passwordOk) {
             return 'invalid';
         }
         if ((int) $user['is_active'] !== 1) {

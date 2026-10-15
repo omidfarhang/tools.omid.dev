@@ -69,6 +69,7 @@ $renderNav = static function () use ($user, $isActive, $navLink): void {
         echo $navLink('/admin/settings/ytdlp.php', 'yt-dlp', 'ytdlp', $isActive('/admin/settings/ytdlp.php'));
         echo $navLink('/admin/settings/cloud.php', 'Cloud', 'cloud', $isActive('/admin/settings/cloud.php'));
         echo $navLink('/admin/settings/storage.php', 'Storage', 'storage', $isActive('/admin/settings/storage.php'));
+        echo $navLink('/admin/settings/security.php', 'Security', 'security', $isActive('/admin/settings/security.php'));
     }
     echo '</ul>';
 };

@@ -72,6 +72,8 @@ Asset pipeline: `@tabler/core` via npm, then `npm run build:assets` (copies Tabl
 - Public share download is intentionally unauthenticated for valid tokens — treat token entropy and revoke paths carefully
 - Validate/sanitize filenames and paths in download/delete flows; never take raw paths from the client as filesystem locations
 - CSRF on state-changing form posts; keep CLI token checks strict and constant-time where applicable
+- Login/register are rate-limited in-app (`LoginRateLimiter`; thresholds + unblock under Admin → Settings → Security); failed/lockout events append to `storage/logs/auth.log` for host fail2ban (see [docs/fail2ban.md](docs/fail2ban.md))
+- Trust `X-Forwarded-For` / `X-Forwarded-Proto` only from the TLS reverse proxy; nginx `limit_req` on `/login.php` and `/register.php` is documented in [docs/nginx-reverse-proxy.conf.example](docs/nginx-reverse-proxy.conf.example)
 
 ## Deployment notes
 

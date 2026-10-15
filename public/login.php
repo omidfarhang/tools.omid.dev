@@ -5,7 +5,10 @@ declare(strict_types=1);
 require dirname(__DIR__) . '/src/bootstrap.php';
 
 use App\Auth;
+use App\AuthLog;
+use App\ClientIp;
 use App\Csrf;
+use App\LoginRateLimiter;
 use App\View;
 
 if (Auth::check()) {
@@ -17,13 +20,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     Csrf::requireValid();
     $username = trim((string) ($_POST['username'] ?? ''));
     $password = (string) ($_POST['password'] ?? '');
-    $result = Auth::attemptLogin($username, $password);
-    if ($result === 'ok') {
-        redirect('/');
+    $ip = ClientIp::resolve();
+    $limiter = new LoginRateLimiter();
+
+    if ($limiter->isLimited($ip, $username)) {
+        AuthLog::write('LOCKOUT', $ip, $username, 'login');
+        $error = 'Too many attempts. Try again in a few minutes.';
+    } else {
+        $result = Auth::attemptLogin($username, $password);
+        if ($result === 'ok') {
+            $limiter->clear($ip, $username);
+            redirect('/');
+        }
+
+        $limiter->recordFailure($ip, $username);
+        AuthLog::write('FAILURE', $ip, $username, 'login');
+        // Do not distinguish inactive vs invalid (username enumeration).
+        $error = 'Invalid username or password.';
     }
-    $error = $result === 'inactive'
-        ? 'Your account is pending admin approval.'
-        : 'Invalid username or password.';
 }
 
 ob_start();

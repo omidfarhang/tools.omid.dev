@@ -26,7 +26,7 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-App is published on **http://127.0.0.1:8080** by default (`APP_PORT` → container `:8080`). If 8080 is already in use, set e.g. `APP_PORT=9080` in `.env` and point nginx at that host port — see [docs/nginx-reverse-proxy.conf.example](docs/nginx-reverse-proxy.conf.example).
+App is published on **http://127.0.0.1:8080** by default (`APP_PORT` → container `:8080`). If 8080 is already in use, set e.g. `APP_PORT=9080` in `.env` and point nginx at that host port — see [docs/nginx-reverse-proxy.conf.example](docs/nginx-reverse-proxy.conf.example) (includes `limit_req` for login/register). For host fail2ban against `storage/logs/auth.log`, see [docs/fail2ban.md](docs/fail2ban.md).
 
 First boot creates an admin from `ADMIN_USERNAME` / `ADMIN_PASSWORD`. Then use **Admin → Settings** for Dropbox app credentials and yt-dlp cookies/options.
 
@@ -56,6 +56,7 @@ cp .env.example .env
 |---------|------|------|
 | yt-dlp | `/admin/settings/ytdlp.php` | Netscape cookies + optional extra yt-dlp args |
 | Cloud | `/admin/settings/cloud.php` | Dropbox + Google Drive app credentials (SQLite only) |
+| Security | `/admin/settings/security.php` | Login rate limits + unblock IP/username |
 
 See [docs/dropbox.md](docs/dropbox.md) and [docs/google-drive.md](docs/google-drive.md) for OAuth app setup.
 
@@ -63,7 +64,7 @@ See [docs/dropbox.md](docs/dropbox.md) and [docs/google-drive.md](docs/google-dr
 
 - `public/` — webroot
 - `src/` — application code
-- `storage/` — SQLite DB + temp files + materialized yt-dlp cookies (mounted volume)
+- `storage/` — SQLite DB + temp files + auth log + materialized yt-dlp cookies (mounted volume)
 - `src/Download/` — download source registry (HTTP, curated yt-dlp sites, generic yt-dlp)
 - `src/Cloud/` — cloud provider registry (Dropbox, Google Drive)
 

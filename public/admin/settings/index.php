@@ -8,6 +8,7 @@ use App\Auth;
 use App\Config;
 use App\DropboxOAuth;
 use App\GoogleDriveOAuth;
+use App\LoginRateLimiter;
 use App\UserRepository;
 use App\View;
 use App\YtDlpCookieStore;
@@ -18,6 +19,10 @@ $dropboxConfigured = (new DropboxOAuth())->isConfigured();
 $googleDriveConfigured = (new GoogleDriveOAuth())->isConfigured();
 $extraArgs = trim((string) Config::get('ytdlp_extra_args', ''));
 $defaultQuota = (new UserRepository())->defaultQuotaBytes();
+$limiter = new LoginRateLimiter();
+$maxAttempts = $limiter->maxAttempts();
+$windowMinutes = $limiter->windowMinutes();
+$activeBlocks = count($limiter->listActiveBlocks());
 
 ob_start();
 ?>
@@ -55,6 +60,18 @@ ob_start();
                 <div class="text-secondary mb-2">Default disk quota for new user accounts.</div>
                 <div class="text-secondary small">
                     Default quota: <?= e(UserRepository::formatQuotaLabel($defaultQuota)) ?>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-6">
+        <a class="card card-link" href="/admin/settings/security.php">
+            <div class="card-body">
+                <h3 class="card-title">Security</h3>
+                <div class="text-secondary mb-2">Login rate limits and unblock locked IPs or usernames.</div>
+                <div class="text-secondary small">
+                    <?= (int) $maxAttempts ?> / <?= (int) $windowMinutes ?> min
+                    · Active blocks: <?= (int) $activeBlocks ?>
                 </div>
             </div>
         </a>

@@ -35,6 +35,8 @@ final class Config
             'google_drive_client_id' => '',
             'google_drive_client_secret' => '',
             'ytdlp_extra_args' => '',
+            'login_max_attempts' => '10',
+            'login_window_minutes' => '15',
             'admin_username' => getenv('ADMIN_USERNAME') ?: 'admin',
             'admin_password' => getenv('ADMIN_PASSWORD') ?: '',
             'app_cli_token' => getenv('APP_CLI_TOKEN') ?: '',

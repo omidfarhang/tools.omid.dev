@@ -16,6 +16,10 @@ final class ManagedSettings
     public const YTDLP_EXTRA_ARGS = 'ytdlp_extra_args';
     /** NULL / missing = unlimited for new users without a per-user override. Stored as decimal byte string. */
     public const DEFAULT_USER_QUOTA_BYTES = 'default_user_quota_bytes';
+    /** Failed login/register attempts before lock (per IP or username). */
+    public const LOGIN_MAX_ATTEMPTS = 'login_max_attempts';
+    /** Sliding window in minutes for counting failures. */
+    public const LOGIN_WINDOW_MINUTES = 'login_window_minutes';
 
     /** @return list<string> */
     public static function configKeys(): array
@@ -27,6 +31,8 @@ final class ManagedSettings
             self::GOOGLE_DRIVE_CLIENT_SECRET,
             self::YTDLP_EXTRA_ARGS,
             self::DEFAULT_USER_QUOTA_BYTES,
+            self::LOGIN_MAX_ATTEMPTS,
+            self::LOGIN_WINDOW_MINUTES,
         ];
     }
 

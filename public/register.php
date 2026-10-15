@@ -5,7 +5,10 @@ declare(strict_types=1);
 require dirname(__DIR__) . '/src/bootstrap.php';
 
 use App\Auth;
+use App\AuthLog;
+use App\ClientIp;
 use App\Csrf;
+use App\LoginRateLimiter;
 use App\UserRepository;
 use App\View;
 
@@ -19,22 +22,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim((string) ($_POST['username'] ?? ''));
     $password = (string) ($_POST['password'] ?? '');
     $confirm = (string) ($_POST['password_confirm'] ?? '');
-    $repo = new UserRepository();
+    $ip = ClientIp::resolve();
+    $limiter = new LoginRateLimiter();
+    $registerKey = LoginRateLimiter::REGISTER_KEY;
 
-    if ($username === '' || $password === '') {
-        $error = 'Username and password are required.';
-    } elseif (!preg_match('/^[a-zA-Z0-9._-]{3,32}$/', $username)) {
-        $error = 'Username must be 3–32 characters (letters, numbers, . _ -).';
-    } elseif (strlen($password) < 8) {
-        $error = 'Password must be at least 8 characters.';
-    } elseif ($password !== $confirm) {
-        $error = 'Passwords do not match.';
-    } elseif ($repo->findByUsername($username)) {
-        $error = 'That username is already taken.';
+    if ($limiter->isLimited($ip, $registerKey)) {
+        AuthLog::write('LOCKOUT', $ip, $username, 'register');
+        $error = 'Too many attempts. Try again in a few minutes.';
     } else {
-        $repo->register($username, $password);
-        flash('success', 'Account created. An admin must activate it before you can sign in.');
-        redirect('/login.php');
+        $repo = new UserRepository();
+
+        if ($username === '' || $password === '') {
+            $error = 'Username and password are required.';
+        } elseif (!preg_match('/^[a-zA-Z0-9._-]{3,32}$/', $username)) {
+            $error = 'Username must be 3–32 characters (letters, numbers, . _ -).';
+        } elseif (strlen($password) < 8) {
+            $error = 'Password must be at least 8 characters.';
+        } elseif ($password !== $confirm) {
+            $error = 'Passwords do not match.';
+        } elseif ($repo->findByUsername($username)) {
+            $error = 'That username is already taken.';
+        } else {
+            $repo->register($username, $password);
+            flash('success', 'Account created. An admin must activate it before you can sign in.');
+            redirect('/login.php');
+        }
+
+        $limiter->recordFailure($ip, $registerKey);
+        AuthLog::write('FAILURE', $ip, $username, 'register');
     }
 }
 
