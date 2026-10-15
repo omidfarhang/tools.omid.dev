@@ -214,6 +214,49 @@ final class UserRepository
         ]);
     }
 
+    public static function totpEnabled(array $user): bool
+    {
+        return (int) ($user['totp_enabled'] ?? 0) === 1
+            && trim((string) ($user['totp_secret'] ?? '')) !== '';
+    }
+
+    /**
+     * @param list<string> $recoveryHashes
+     */
+    public function enableTotp(int $id, string $secret, array $recoveryHashes): void
+    {
+        $stmt = $this->db->prepare(
+            'UPDATE users SET totp_secret = :s, totp_enabled = 1, totp_recovery_hashes = :h WHERE id = :id'
+        );
+        $stmt->execute([
+            ':s' => $secret,
+            ':h' => TotpService::encodeRecoveryHashes($recoveryHashes),
+            ':id' => $id,
+        ]);
+    }
+
+    public function disableTotp(int $id): void
+    {
+        $stmt = $this->db->prepare(
+            'UPDATE users SET totp_secret = NULL, totp_enabled = 0, totp_recovery_hashes = NULL WHERE id = :id'
+        );
+        $stmt->execute([':id' => $id]);
+    }
+
+    /**
+     * @param list<string> $recoveryHashes
+     */
+    public function setTotpRecoveryHashes(int $id, array $recoveryHashes): void
+    {
+        $stmt = $this->db->prepare(
+            'UPDATE users SET totp_recovery_hashes = :h WHERE id = :id'
+        );
+        $stmt->execute([
+            ':h' => TotpService::encodeRecoveryHashes($recoveryHashes),
+            ':id' => $id,
+        ]);
+    }
+
     public function setRole(int $id, string $role): void
     {
         $stmt = $this->db->prepare('UPDATE users SET role = :r WHERE id = :id');

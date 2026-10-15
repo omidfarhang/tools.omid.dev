@@ -5,9 +5,12 @@
     "require": {
         "php": ">=8.2",
         "ext-curl": "*",
+        "ext-iconv": "*",
         "ext-json": "*",
         "ext-pdo": "*",
-        "ext-pdo_sqlite": "*"
+        "ext-pdo_sqlite": "*",
+        "bacon/bacon-qr-code": "^3",
+        "robthree/twofactorauth": "^3.0"
     },
     "autoload": {
         "psr-4": {

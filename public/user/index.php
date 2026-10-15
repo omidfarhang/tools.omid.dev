@@ -7,6 +7,7 @@ require dirname(__DIR__, 2) . '/src/bootstrap.php';
 use App\Auth;
 use App\Cloud\CloudRegistry;
 use App\Csrf;
+use App\TotpService;
 use App\UserRepository;
 use App\View;
 
@@ -14,6 +15,7 @@ $user = Auth::requireLogin();
 $users = new UserRepository();
 $user = $users->findById((int) $user['id']) ?? $user;
 $registry = CloudRegistry::default();
+$totp = new TotpService();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     Csrf::requireValid();
@@ -77,6 +79,92 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         redirect('/user/');
     }
+    if ($action === 'totp_start') {
+        $password = (string) ($_POST['password'] ?? '');
+        $hash = (string) ($user['password_hash'] ?? '');
+        if (UserRepository::totpEnabled($user)) {
+            flash('error', 'Two-factor authentication is already enabled.');
+        } elseif ($hash === '' || !password_verify($password, $hash)) {
+            flash('error', 'Current password is incorrect.');
+        } else {
+            Auth::setTotpSetupSecret($totp->createSecret());
+            flash('success', 'Scan the QR code with your authenticator app, then enter a code to confirm.');
+        }
+        redirect('/user/');
+    }
+    if ($action === 'totp_cancel_setup') {
+        Auth::clearTotpSetupSecret();
+        flash('success', 'Two-factor setup cancelled.');
+        redirect('/user/');
+    }
+    if ($action === 'totp_confirm') {
+        $secret = Auth::totpSetupSecret();
+        $code = trim((string) ($_POST['code'] ?? ''));
+        if ($secret === null) {
+            flash('error', 'No two-factor setup in progress. Start again.');
+        } elseif (!$totp->verify($secret, $code)) {
+            flash('error', 'Invalid authentication code. Try again.');
+        } else {
+            $plainCodes = $totp->generateRecoveryCodes();
+            $users->enableTotp((int) $user['id'], $secret, $totp->hashRecoveryCodes($plainCodes));
+            Auth::clearTotpSetupSecret();
+            $_SESSION['totp_recovery_codes_once'] = $plainCodes;
+            flash('success', 'Two-factor authentication enabled. Save your recovery codes now — they will not be shown again.');
+        }
+        redirect('/user/');
+    }
+    if ($action === 'totp_disable') {
+        $password = (string) ($_POST['password'] ?? '');
+        $code = trim((string) ($_POST['code'] ?? ''));
+        $hash = (string) ($user['password_hash'] ?? '');
+        $secret = (string) ($user['totp_secret'] ?? '');
+        if (!UserRepository::totpEnabled($user)) {
+            flash('error', 'Two-factor authentication is not enabled.');
+        } elseif ($hash === '' || !password_verify($password, $hash)) {
+            flash('error', 'Current password is incorrect.');
+        } else {
+            $ok = $totp->verify($secret, $code);
+            if (!$ok) {
+                $hashes = TotpService::decodeRecoveryHashes(
+                    isset($user['totp_recovery_hashes']) ? (string) $user['totp_recovery_hashes'] : null
+                );
+                $consumed = $totp->consumeRecoveryCode($hashes, $code);
+                $ok = $consumed['ok'];
+            }
+            if (!$ok) {
+                flash('error', 'Invalid authentication or recovery code.');
+            } else {
+                $users->disableTotp((int) $user['id']);
+                Auth::clearTotpSetupSecret();
+                unset($_SESSION['totp_recovery_codes_once']);
+                flash('success', 'Two-factor authentication disabled.');
+            }
+        }
+        redirect('/user/');
+    }
+    if ($action === 'totp_regenerate_recovery') {
+        $password = (string) ($_POST['password'] ?? '');
+        $code = trim((string) ($_POST['code'] ?? ''));
+        $hash = (string) ($user['password_hash'] ?? '');
+        $secret = (string) ($user['totp_secret'] ?? '');
+        if (!UserRepository::totpEnabled($user)) {
+            flash('error', 'Two-factor authentication is not enabled.');
+        } elseif ($hash === '' || !password_verify($password, $hash)) {
+            flash('error', 'Current password is incorrect.');
+        } elseif (!$totp->verify($secret, $code)) {
+            flash('error', 'Invalid authentication code.');
+        } else {
+            $plainCodes = $totp->generateRecoveryCodes();
+            $users->setTotpRecoveryHashes((int) $user['id'], $totp->hashRecoveryCodes($plainCodes));
+            $_SESSION['totp_recovery_codes_once'] = $plainCodes;
+            flash('success', 'New recovery codes generated. Save them now — they will not be shown again.');
+        }
+        redirect('/user/');
+    }
+    if ($action === 'totp_dismiss_recovery') {
+        unset($_SESSION['totp_recovery_codes_once']);
+        redirect('/user/');
+    }
 }
 
 $user = $users->findById((int) $user['id']) ?? $user;
@@ -99,6 +187,12 @@ foreach ($providers as $provider) {
     if ($provider->isConfigured()) {
         $configuredProviders[] = $provider;
     }
+}
+$totpEnabled = UserRepository::totpEnabled($user);
+$totpSetupSecret = Auth::totpSetupSecret();
+$recoveryCodesOnce = $_SESSION['totp_recovery_codes_once'] ?? null;
+if (!is_array($recoveryCodesOnce)) {
+    $recoveryCodesOnce = null;
 }
 
 ob_start();
@@ -141,6 +235,103 @@ ob_start();
                 </div>
                 <button class="btn btn-outline-primary" type="submit">Update password</button>
             </form>
+
+            <div class="mt-4 pt-4 border-top">
+                <h3 class="h6 mb-3">Two-factor authentication</h3>
+                <?php if ($recoveryCodesOnce !== null): ?>
+                    <div class="alert alert-warning">
+                        <p class="mb-2 fw-semibold">Save these recovery codes now</p>
+                        <p class="small text-secondary mb-2">Each code works once. Store them offline — they will not be shown again.</p>
+                        <ul class="font-monospace small mb-3">
+                            <?php foreach ($recoveryCodesOnce as $rc): ?>
+                                <li><?= e((string) $rc) ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                        <form method="post">
+                            <?= Csrf::field() ?>
+                            <input type="hidden" name="action" value="totp_dismiss_recovery">
+                            <button class="btn btn-sm btn-primary" type="submit">I have saved these codes</button>
+                        </form>
+                    </div>
+                <?php elseif ($totpSetupSecret !== null): ?>
+                    <p class="text-secondary mb-3">Scan this QR code with your authenticator app, then enter a 6-digit code to confirm.</p>
+                    <?php
+                    $qrUri = $totp->qrDataUri((string) $user['username'], $totpSetupSecret, 200);
+                    ?>
+                    <?php if ($qrUri !== ''): ?>
+                        <div class="text-center mb-3">
+                            <img src="<?= e($qrUri) ?>"
+                                 alt="TOTP QR code" width="200" height="200" class="border rounded bg-white p-2">
+                        </div>
+                    <?php endif; ?>
+                    <p class="small text-secondary mb-1">Or enter this key manually:</p>
+                    <p class="font-monospace mb-3"><?= e($totp->manualKey($totpSetupSecret)) ?></p>
+                    <p class="small text-secondary mb-1">Provisioning URI:</p>
+                    <p class="font-monospace small text-break mb-3"><?= e($totp->otpauthUri((string) $user['username'], $totpSetupSecret)) ?></p>
+                    <form method="post" class="mb-2" autocomplete="off">
+                        <?= Csrf::field() ?>
+                        <input type="hidden" name="action" value="totp_confirm">
+                        <div class="mb-3">
+                            <label class="form-label" for="totp_confirm_code">Authentication code</label>
+                            <input class="form-control font-monospace" type="text" name="code" id="totp_confirm_code"
+                                   inputmode="numeric" autocomplete="one-time-code" required pattern="[0-9]{6}">
+                        </div>
+                        <button class="btn btn-primary" type="submit">Confirm and enable</button>
+                    </form>
+                    <form method="post">
+                        <?= Csrf::field() ?>
+                        <input type="hidden" name="action" value="totp_cancel_setup">
+                        <button class="btn btn-link px-0" type="submit">Cancel setup</button>
+                    </form>
+                <?php elseif ($totpEnabled): ?>
+                    <div class="alert alert-success mb-3">Two-factor authentication is enabled.</div>
+                    <form method="post" class="mb-4" autocomplete="off">
+                        <?= Csrf::field() ?>
+                        <input type="hidden" name="action" value="totp_regenerate_recovery">
+                        <h4 class="h6">Regenerate recovery codes</h4>
+                        <p class="form-text mb-2">Invalidates previous recovery codes.</p>
+                        <div class="mb-2">
+                            <label class="form-label" for="totp_regen_password">Current password</label>
+                            <input class="form-control" type="password" name="password" id="totp_regen_password"
+                                   required autocomplete="current-password">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label" for="totp_regen_code">Authenticator code</label>
+                            <input class="form-control font-monospace" type="text" name="code" id="totp_regen_code"
+                                   inputmode="numeric" autocomplete="one-time-code" required>
+                        </div>
+                        <button class="btn btn-outline-primary btn-sm" type="submit">Generate new codes</button>
+                    </form>
+                    <form method="post" autocomplete="off">
+                        <?= Csrf::field() ?>
+                        <input type="hidden" name="action" value="totp_disable">
+                        <h4 class="h6">Disable two-factor</h4>
+                        <div class="mb-2">
+                            <label class="form-label" for="totp_disable_password">Current password</label>
+                            <input class="form-control" type="password" name="password" id="totp_disable_password"
+                                   required autocomplete="current-password">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label" for="totp_disable_code">Authenticator or recovery code</label>
+                            <input class="form-control font-monospace" type="text" name="code" id="totp_disable_code"
+                                   required autocomplete="one-time-code">
+                        </div>
+                        <button class="btn btn-outline-danger btn-sm" type="submit">Disable 2FA</button>
+                    </form>
+                <?php else: ?>
+                    <p class="text-secondary mb-3">Add an authenticator app code at login for extra protection.</p>
+                    <form method="post" autocomplete="off">
+                        <?= Csrf::field() ?>
+                        <input type="hidden" name="action" value="totp_start">
+                        <div class="mb-3">
+                            <label class="form-label" for="totp_start_password">Confirm password</label>
+                            <input class="form-control" type="password" name="password" id="totp_start_password"
+                                   required autocomplete="current-password">
+                        </div>
+                        <button class="btn btn-outline-primary" type="submit">Set up two-factor</button>
+                    </form>
+                <?php endif; ?>
+            </div>
 
             <form method="post" class="mt-4">
                 <?= Csrf::field() ?>

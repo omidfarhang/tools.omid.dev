@@ -28,7 +28,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         python3 \
         python3-pip \
         unzip \
-    && docker-php-ext-install pdo pdo_sqlite \
+    && docker-php-ext-install pdo pdo_sqlite iconv \
+
     && arch="$(dpkg --print-architecture)" \
     && case "$arch" in \
          amd64) deno_arch=x86_64 ;; \

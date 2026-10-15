@@ -73,6 +73,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $repo->setPassword($id, $password);
             flash('success', 'Password reset.');
         }
+    } elseif ($action === 'reset_2fa') {
+        $id = (int) ($_POST['user_id'] ?? 0);
+        $target = $repo->findById($id);
+        if ($target === null) {
+            flash('error', 'User not found.');
+        } elseif (!UserRepository::totpEnabled($target)) {
+            flash('error', 'Two-factor authentication is not enabled for that user.');
+        } else {
+            $repo->disableTotp($id);
+            flash('success', 'Two-factor authentication reset. The user can set it up again from Account.');
+        }
     } elseif ($action === 'set_role') {
         $id = (int) ($_POST['user_id'] ?? 0);
         $role = (string) ($_POST['role'] ?? 'user');
@@ -135,6 +146,7 @@ ob_start();
                 <th>Username</th>
                 <th>Role</th>
                 <th>Status</th>
+                <th>2FA</th>
                 <th>Cloud</th>
                 <th class="text-end">Storage</th>
                 <th class="text-end">Downloads</th>
@@ -152,6 +164,7 @@ ob_start();
                 $fileCount = (int) ($u['file_count'] ?? 0);
                 $downloadCount = (int) ($u['download_count'] ?? 0);
                 $isAdminRole = $u['role'] === 'admin';
+                $totpOn = UserRepository::totpEnabled($u);
                 ?>
                 <tr class="<?= $active ? '' : 'table-warning' ?>">
                     <td class="text-secondary"><?= $userId ?></td>
@@ -168,6 +181,13 @@ ob_start();
                             <span class="badge bg-green-lt">Active</span>
                         <?php else: ?>
                             <span class="badge bg-yellow-lt">Pending</span>
+                        <?php endif; ?>
+                    </td>
+                    <td>
+                        <?php if ($totpOn): ?>
+                            <span class="badge bg-green-lt">On</span>
+                        <?php else: ?>
+                            <span class="text-secondary">Off</span>
                         <?php endif; ?>
                     </td>
                     <td>
@@ -263,6 +283,16 @@ ob_start();
                                         Reset password…
                                     </button>
                                 </li>
+                                <?php if ($totpOn): ?>
+                                    <li>
+                                        <form method="post" onsubmit="return confirm('Reset 2FA for this user? They will need to set it up again.');">
+                                            <?= Csrf::field() ?>
+                                            <input type="hidden" name="action" value="reset_2fa">
+                                            <input type="hidden" name="user_id" value="<?= $userId ?>">
+                                            <button class="dropdown-item text-warning" type="submit">Reset 2FA</button>
+                                        </form>
+                                    </li>
+                                <?php endif; ?>
                                 <?php if (!$isSelf && !$active): ?>
                                     <li><hr class="dropdown-divider"></li>
                                     <li>

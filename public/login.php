@@ -32,6 +32,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $limiter->clear($ip, $username);
             redirect('/');
         }
+        if ($result === 'totp_required') {
+            redirect('/totp.php');
+        }
 
         $limiter->recordFailure($ip, $username);
         AuthLog::write('FAILURE', $ip, $username, 'login');
