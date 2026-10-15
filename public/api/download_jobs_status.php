@@ -36,8 +36,8 @@ foreach ($active as $job) {
     $asyncId = (string) ($job['cloud_async_job_id'] ?? '');
     $cloudStatus = (string) ($job['cloud_status'] ?? '');
     if ($asyncId !== '' && in_array($cloudStatus, ['pending', 'in_progress'], true)) {
-        $provider = (string) ($job['cloud_provider'] ?? 'dropbox');
-        $cloud->checkStatus($user, $asyncId, $provider !== '' ? $provider : 'dropbox');
+        $provider = trim((string) ($job['cloud_provider'] ?? ''));
+        $cloud->checkStatus($user, $asyncId, $provider !== '' ? $provider : null);
     }
 }
 

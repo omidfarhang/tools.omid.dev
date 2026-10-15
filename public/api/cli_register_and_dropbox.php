@@ -60,11 +60,11 @@ $token = $shares->enable($fileId, (int) $user['id'], purpose: 'cloud_fetch');
 $publicUrl = ShareService::publicUrl($token);
 
 $cloud = CloudSendService::create();
-$provider = $cloud->provider('dropbox');
+$provider = $cloud->resolveProvider($user);
 if ($provider === null || !$provider->isConnected($user)) {
     json_response([
         'success' => false,
-        'error' => 'CLI user has not connected Dropbox',
+        'error' => 'CLI user has not connected a cloud account',
         'file_id' => $fileId,
         'share_url' => $publicUrl,
     ], 400);
@@ -79,7 +79,7 @@ $result = $cloud->startForUser(
     $prefs['conflict'],
     false,
     $fileId,
-    'dropbox'
+    $provider->id()
 );
 $result['file_id'] = $fileId;
 $result['share_url'] = $publicUrl;

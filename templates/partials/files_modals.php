@@ -104,7 +104,7 @@ $prefs = $prefs ?? ['folder' => '', 'conflict' => 'rename'];
 <div class="modal fade" id="filesCloudModal" tabindex="-1" aria-labelledby="filesCloudModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <form method="post" action="/dropbox_send.php">
+            <form method="post" action="/cloud_send.php">
                 <?= \App\Csrf::field() ?>
                 <input type="hidden" name="file_id" value="" data-cloud-id>
                 <div class="modal-header">

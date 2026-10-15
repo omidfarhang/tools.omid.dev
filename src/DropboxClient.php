@@ -7,7 +7,8 @@ namespace App;
 use App\Cloud\Dropbox\DropboxProvider;
 
 /**
- * Back-compat wrapper around DropboxProvider for older call sites.
+ * Legacy wrapper around DropboxProvider.
+ * Prefer CloudSendService / CloudRegistry outside the Dropbox package.
  */
 final class DropboxClient
 {

@@ -147,6 +147,12 @@ final class DownloadJobProcessor
                     $deleteAfter = false;
                 }
 
+                $cloudProvider = $this->cloud->registry()->defaultConnected($user);
+                if ($cloudProvider === null) {
+                    $this->jobs->markFailed($jobId, 'Connect a cloud account first (Account page).', $resultFilename, $fileId);
+                    return;
+                }
+
                 $sent = $this->cloud->startForUser(
                     $user,
                     $fetchUrl,
@@ -155,7 +161,7 @@ final class DownloadJobProcessor
                     $conflict,
                     $deleteAfter,
                     $localFileId,
-                    'dropbox'
+                    $cloudProvider->id()
                 );
 
                 $cloudJobId = isset($sent['job_id']) ? (int) $sent['job_id'] : null;

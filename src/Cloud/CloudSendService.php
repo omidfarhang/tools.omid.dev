@@ -29,9 +29,25 @@ final class CloudSendService
         return $this->registry;
     }
 
-    public function provider(string $id = 'dropbox'): ?CloudProvider
+    public function provider(?string $id = null): ?CloudProvider
     {
+        if ($id === null || $id === '') {
+            return null;
+        }
+
         return $this->registry->get($id);
+    }
+
+    /**
+     * Resolve an explicit provider id, or the user's first connected configured provider.
+     */
+    public function resolveProvider(array $user, ?string $providerId = null): ?CloudProvider
+    {
+        if ($providerId !== null && $providerId !== '') {
+            return $this->registry->get($providerId);
+        }
+
+        return $this->registry->defaultConnected($user);
     }
 
     /**
@@ -45,11 +61,17 @@ final class CloudSendService
         string $conflict,
         bool $deleteAfter,
         ?int $fileId = null,
-        string $providerId = 'dropbox',
+        ?string $providerId = null,
     ): array {
-        $provider = $this->provider($providerId);
+        $provider = $this->resolveProvider($user, $providerId);
         if ($provider === null) {
-            return ['success' => false, 'message' => 'Unknown cloud provider.', 'error' => 'unknown_provider'];
+            return [
+                'success' => false,
+                'message' => $providerId !== null && $providerId !== ''
+                    ? 'Unknown cloud provider.'
+                    : 'Connect a cloud account first (Account page).',
+                'error' => $providerId !== null && $providerId !== '' ? 'unknown_provider' : 'not_connected',
+            ];
         }
 
         return $provider->startJob($user, $url, $filename, $folder, $conflict, $deleteAfter, $fileId);
@@ -67,7 +89,7 @@ final class CloudSendService
         string $folder,
         string $conflict,
         bool $deleteAfter,
-        string $providerId = 'dropbox',
+        ?string $providerId = null,
     ): array {
         $shares = new ShareService();
         $token = $shares->enable((int) $file['id'], (int) $user['id'], purpose: 'cloud_fetch');
@@ -88,9 +110,9 @@ final class CloudSendService
     /**
      * @return array{success:bool, status?:string, data?:array, error?:string, job?:array, deleted_local?:bool}
      */
-    public function checkStatus(array $user, string $asyncJobId, string $providerId = 'dropbox'): array
+    public function checkStatus(array $user, string $asyncJobId, ?string $providerId = null): array
     {
-        $provider = $this->provider($providerId);
+        $provider = $this->resolveProvider($user, $providerId);
         if ($provider === null) {
             return ['success' => false, 'error' => 'Unknown cloud provider.'];
         }

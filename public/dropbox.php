@@ -26,9 +26,9 @@ if ($url === '' || !filter_var($url, FILTER_VALIDATE_URL)) {
 }
 
 $cloud = CloudSendService::create();
-$provider = $cloud->provider('dropbox');
+$provider = $cloud->resolveProvider($user);
 if ($provider === null || !$provider->isConnected($user)) {
-    json_response(['success' => false, 'error' => 'CLI user has not connected Dropbox'], 400);
+    json_response(['success' => false, 'error' => 'CLI user has not connected a cloud account'], 400);
 }
 
 $prefs = UserRepository::cloudPrefs($user);
@@ -40,6 +40,6 @@ $result = $cloud->startForUser(
     $prefs['conflict'],
     false,
     null,
-    'dropbox'
+    $provider->id()
 );
 json_response($result, $result['success'] ? 200 : 400);

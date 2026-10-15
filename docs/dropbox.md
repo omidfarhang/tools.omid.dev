@@ -1,8 +1,19 @@
 # Dropbox (first cloud provider)
 
-Dropbox is the first implemented cloud provider. Each user connects their own Dropbox account. There is no shared access token in `.env`.
+Dropbox is the first implemented cloud provider (`App\Cloud\Dropbox\DropboxProvider`, registered in `CloudRegistry`). Each user connects their own Dropbox account. There is no shared access token in `.env`.
 
-Upload jobs are stored in the generic `cloud_jobs` table with `provider = 'dropbox'`. Home uses Save to → Cloud / Disk + Cloud; Account still uses **Connect Dropbox**.
+Upload jobs are stored in the generic `cloud_jobs` table with `provider = 'dropbox'`. Home uses Save to → Cloud / Disk + Cloud; Account loops registered providers (currently Dropbox only) for connect / disconnect / prefs.
+
+## Entrypoints
+
+| Path | Role |
+|------|------|
+| `/cloud_send.php` | Send an existing host file to the user’s connected cloud provider |
+| `/dropbox_send.php` | Legacy alias → `cloud_send.php` |
+| `/api/check_cloud_status.php` | Poll cloud job status (`provider` POST field) |
+| `/api/check_dropbox_status.php` | Legacy alias → `check_cloud_status.php` |
+
+CLI script and endpoint names (`scripts/ytdl.sh`, `/api/cli_register_and_dropbox.php`, `/dropbox.php`) remain Dropbox-specific as legacy; they resolve the user’s default connected provider via `CloudRegistry`.
 
 ## Create a Dropbox app
 
@@ -44,7 +55,7 @@ APP_BASE_URL=https://tools.omid.dev
 - **Conflict policy** — rename, overwrite, or skip when the remote path already exists.
 - **Disk + Cloud** — keep a host copy and push to Dropbox in one action.
 - **Delete after success** — optional checkbox per job (never forced by defaults).
-- **Send existing host files** — My Files → Send to cloud.
+- **Send existing host files** — My Files → Send to cloud (`/cloud_send.php`).
 - **History** — URL pull jobs on the History page (expand a row for linked cloud details). Standalone My Files → cloud sends appear there too without duplicating download rows. Active download jobs show on Home while pending/in progress. Users can Remove a finished row to hide it from their History/Home; admins still see those rows under Admin → All history (marked Hidden).
 
 ## How uploads work

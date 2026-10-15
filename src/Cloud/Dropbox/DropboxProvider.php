@@ -29,6 +29,11 @@ final class DropboxProvider implements CloudProvider
         return 'dropbox';
     }
 
+    public function label(): string
+    {
+        return 'Dropbox';
+    }
+
     public function isConfigured(): bool
     {
         return $this->oauth->isConfigured();
@@ -37,6 +42,32 @@ final class DropboxProvider implements CloudProvider
     public function isConnected(array $user): bool
     {
         return $this->users->hasDropbox($user);
+    }
+
+    public function connectUrl(bool $reconnect = false): string
+    {
+        return '/oauth/dropbox/start.php' . ($reconnect ? '?reconnect=1' : '');
+    }
+
+    public function disconnect(int $userId): void
+    {
+        $this->users->clearDropbox($userId);
+    }
+
+    public function connectionDetails(array $user): array
+    {
+        $details = [];
+        if (!empty($user['dropbox_display_name'])) {
+            $details['display_name'] = (string) $user['dropbox_display_name'];
+        }
+        if (!empty($user['dropbox_email'])) {
+            $details['email'] = (string) $user['dropbox_email'];
+        }
+        if (!empty($user['dropbox_account_id'])) {
+            $details['account_id'] = (string) $user['dropbox_account_id'];
+        }
+
+        return $details;
     }
 
     /**

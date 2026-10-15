@@ -56,7 +56,7 @@ ob_start();
 
 <?php if (!$cloudConnected): ?>
     <div class="alert alert-warning">
-        Tip: <a href="/user/">Connect Dropbox</a> to send files to your cloud.
+        Tip: <a href="/user/">Connect a cloud account</a> to send files to your cloud.
     </div>
 <?php endif; ?>
 

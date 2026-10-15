@@ -37,7 +37,7 @@ final class CloudRegistry
         return array_values($this->providers);
     }
 
-    /** First configured+connected provider for the user (currently Dropbox only). */
+    /** First configured + connected provider for the user. */
     public function defaultConnected(array $user): ?CloudProvider
     {
         foreach ($this->providers as $provider) {

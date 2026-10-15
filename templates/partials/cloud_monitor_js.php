@@ -51,7 +51,7 @@ function checkCloudStatus(asyncJobId, filename, provider) {
         _csrf: <?= json_encode(\App\Csrf::token()) ?>,
     });
 
-    fetch('/api/check_dropbox_status.php', {
+    fetch('/api/check_cloud_status.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: body.toString(),

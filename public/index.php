@@ -163,7 +163,7 @@ ob_start();
 <?php if (!$cloudConnected): ?>
     <div class="alert alert-warning">
         No cloud account connected. You can still save to disk.
-        <a href="/user/">Connect Dropbox</a>
+        <a href="/user/">Connect a cloud account</a>
     </div>
 <?php endif; ?>
 
@@ -259,7 +259,7 @@ ob_start();
                                <?= $cloudConnected ? '' : 'disabled' ?>>
                         <span class="choice-tile-body">
                             <span class="choice-tile-title">Cloud</span>
-                            <span class="choice-tile-desc"><?= $cloudConnected ? 'Upload only' : 'Connect Dropbox first' ?></span>
+                            <span class="choice-tile-desc"><?= $cloudConnected ? 'Upload only' : 'Connect cloud first' ?></span>
                         </span>
                     </label>
                     <label class="choice-tile<?= $cloudConnected ? '' : ' is-disabled' ?>" for="behavior_both">
@@ -269,7 +269,7 @@ ob_start();
                                <?= $cloudConnected ? '' : 'disabled' ?>>
                         <span class="choice-tile-body">
                             <span class="choice-tile-title">Disk + Cloud</span>
-                            <span class="choice-tile-desc"><?= $cloudConnected ? 'Host copy and upload' : 'Connect Dropbox first' ?></span>
+                            <span class="choice-tile-desc"><?= $cloudConnected ? 'Host copy and upload' : 'Connect cloud first' ?></span>
                         </span>
                     </label>
                 </div>
