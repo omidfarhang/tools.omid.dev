@@ -21,8 +21,45 @@ final class DownloadRegistry
             new TwitterSource(),
             new InstagramSource(),
             new TikTokSource(),
+            new SoundCloudSource(),
+            new MixcloudSource(),
+            new BandcampSource(),
+            new VimeoSource(),
+            new RedditSource(),
             new HttpSource(),
         ]);
+    }
+
+    /** Whether this source is a curated yt-dlp site (not plain HTTP / force-yt-dlp). */
+    public static function isCurated(?DownloadSource $source): bool
+    {
+        if ($source === null) {
+            return false;
+        }
+        $id = $source->id();
+
+        return $id !== 'http' && $id !== 'ytdlp';
+    }
+
+    /**
+     * Curated source id → media kind for the download form.
+     *
+     * @return array<string, 'video'|'audio'>
+     */
+    public function curatedKinds(): array
+    {
+        $kinds = [];
+        foreach ($this->sources as $source) {
+            if (!self::isCurated($source)) {
+                continue;
+            }
+            $kind = $source->mediaKind();
+            if ($kind === 'video' || $kind === 'audio') {
+                $kinds[$source->id()] = $kind;
+            }
+        }
+
+        return $kinds;
     }
 
     /**

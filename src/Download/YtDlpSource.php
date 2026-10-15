@@ -24,6 +24,11 @@ final class YtDlpSource implements DownloadSource
         return true;
     }
 
+    public function mediaKind(): string
+    {
+        return 'video';
+    }
+
     public function download(string $url, array $options = []): array
     {
         $url = trim($url);

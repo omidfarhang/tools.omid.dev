@@ -12,7 +12,7 @@
 
 ## Problem
 
-Browsers and phones are awkward places to pull large remote assets (HTTP(S), curated sites via yt-dlp such as YouTube / X / Instagram / TikTok, plus optional generic yt-dlp). Shared cloud tokens and single-user scripts do not scale to multiple people on one host. Without this product, files land in ad-hoc shell sessions, share links are improvisational, and cloud credentials get shared or hard-coded.
+Browsers and phones are awkward places to pull large remote assets (HTTP(S), curated sites via yt-dlp such as YouTube / X / Instagram / TikTok / Vimeo / Reddit and audio sites like SoundCloud / Mixcloud / Bandcamp, plus optional generic yt-dlp). Shared cloud tokens and single-user scripts do not scale to multiple people on one host. Without this product, files land in ad-hoc shell sessions, share links are improvisational, and cloud credentials get shared or hard-coded.
 
 ## Product Purpose
 

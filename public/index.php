@@ -10,6 +10,7 @@ use App\Config;
 use App\Csrf;
 use App\Download\DownloadRegistry;
 use App\Download\YtDlpKnownHosts;
+use App\Download\YtDlpRunner;
 use App\DownloadJobDispatcher;
 use App\DownloadJobProcessor;
 use App\DownloadJobRepository;
@@ -52,8 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $autoSource = $downloads->resolve($url);
-    $curatedIds = ['youtube', 'twitter', 'instagram', 'tiktok'];
-    $isCurated = $autoSource !== null && in_array($autoSource->id(), $curatedIds, true);
+    $isCurated = DownloadRegistry::isCurated($autoSource);
     $forceYtdlp = $forceRequested && !$isCurated;
     $source = $downloads->resolve($url, ['force_ytdlp' => $forceYtdlp]);
     if ($source === null) {
@@ -64,18 +64,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $ytFormat = 'best';
     $ytAudioOnly = false;
     $ytSubs = null;
-    if ($isCurated) {
-        $ytFormat = match ($autoSource->id()) {
-            'youtube' => (string) ($_POST['yt_format'] ?? 'best'),
-            'twitter' => (string) ($_POST['twitter_format'] ?? 'best'),
-            'instagram' => (string) ($_POST['instagram_format'] ?? 'best'),
-            'tiktok' => (string) ($_POST['tiktok_format'] ?? 'best'),
-            default => 'best',
-        };
-        $ytAudioOnly = isset($_POST['yt_audio_only']) && (string) $_POST['yt_audio_only'] === '1';
-        $rawSubs = (string) ($_POST['yt_subs'] ?? 'none');
-        if (in_array($rawSubs, ['en', 'all'], true)) {
-            $ytSubs = $rawSubs;
+    if ($isCurated && $autoSource !== null) {
+        if ($autoSource->mediaKind() === 'audio') {
+            $rawAudio = (string) ($_POST['audio_format'] ?? 'best');
+            $ytFormat = in_array($rawAudio, YtDlpRunner::AUDIO_FORMATS, true) ? $rawAudio : 'best';
+            $ytAudioOnly = true;
+        } else {
+            $ytFormat = match ($autoSource->id()) {
+                'youtube' => (string) ($_POST['yt_format'] ?? 'best'),
+                'twitter' => (string) ($_POST['twitter_format'] ?? 'best'),
+                'instagram' => (string) ($_POST['instagram_format'] ?? 'best'),
+                'tiktok' => (string) ($_POST['tiktok_format'] ?? 'best'),
+                'vimeo' => (string) ($_POST['vimeo_format'] ?? 'best'),
+                'reddit' => (string) ($_POST['reddit_format'] ?? 'best'),
+                default => 'best',
+            };
+            $ytAudioOnly = isset($_POST['yt_audio_only']) && (string) $_POST['yt_audio_only'] === '1';
+            $rawSubs = (string) ($_POST['yt_subs'] ?? 'none');
+            if (in_array($rawSubs, ['en', 'all'], true)) {
+                $ytSubs = $rawSubs;
+            }
         }
     } elseif ($forceYtdlp) {
         $ytFormat = (string) ($_POST['ytdlp_format'] ?? 'best');
@@ -224,6 +232,36 @@ ob_start();
                     <option value="best" selected>Best</option>
                     <option value="720">720p</option>
                 </select>
+            </div>
+            <div class="source-options mt-3 d-none" id="vimeo-options">
+                <label for="vimeo_format" class="form-label">Vimeo quality</label>
+                <select class="form-select form-control-narrow" name="vimeo_format" id="vimeo_format">
+                    <option value="best" selected>Best</option>
+                    <option value="2160">2160p (4K)</option>
+                    <option value="1080">1080p (HD)</option>
+                    <option value="720">720p (HD)</option>
+                    <option value="360">360p (SD)</option>
+                </select>
+            </div>
+            <div class="source-options mt-3 d-none" id="reddit-options">
+                <label for="reddit_format" class="form-label">Reddit quality</label>
+                <select class="form-select form-control-narrow" name="reddit_format" id="reddit_format">
+                    <option value="best" selected>Best</option>
+                    <option value="1080">1080p</option>
+                    <option value="720">720p</option>
+                    <option value="480">480p</option>
+                </select>
+            </div>
+            <div class="source-options mt-3 d-none" id="audio-options">
+                <label for="audio_format" class="form-label">Audio format</label>
+                <select class="form-select form-control-narrow" name="audio_format" id="audio_format">
+                    <option value="best" selected>Original / best</option>
+                    <option value="m4a">M4A</option>
+                    <option value="mp3">MP3</option>
+                    <option value="opus">Opus</option>
+                    <option value="flac">FLAC</option>
+                </select>
+                <div class="form-text">Keep the original stream, or re-encode to a container.</div>
             </div>
             <div class="source-options mt-3 d-none" id="curated-extra-options">
                 <div class="form-check mb-2">
@@ -463,10 +501,15 @@ ob_start();
 (function () {
     const urlInput = document.getElementById('DLURL');
     const filenameInput = document.getElementById('DLFILENAME');
-    const youtubeOptions = document.getElementById('youtube-options');
-    const twitterOptions = document.getElementById('twitter-options');
-    const instagramOptions = document.getElementById('instagram-options');
-    const tiktokOptions = document.getElementById('tiktok-options');
+    const videoOptionEls = {
+        youtube: document.getElementById('youtube-options'),
+        twitter: document.getElementById('twitter-options'),
+        instagram: document.getElementById('instagram-options'),
+        tiktok: document.getElementById('tiktok-options'),
+        vimeo: document.getElementById('vimeo-options'),
+        reddit: document.getElementById('reddit-options'),
+    };
+    const audioOptions = document.getElementById('audio-options');
     const curatedExtraOptions = document.getElementById('curated-extra-options');
     const ytAudioOnly = document.getElementById('yt_audio_only');
     const curatedQualitySelects = [
@@ -474,6 +517,8 @@ ob_start();
         document.getElementById('twitter_format'),
         document.getElementById('instagram_format'),
         document.getElementById('tiktok_format'),
+        document.getElementById('vimeo_format'),
+        document.getElementById('reddit_format'),
     ].filter(Boolean);
     const ytdlpOptions = document.getElementById('ytdlp-options');
     const ytdlpFormatWrap = document.getElementById('ytdlp-format-wrap');
@@ -485,17 +530,28 @@ ob_start();
     let ytdlpTouched = false;
 
     const knownYtdlpHosts = new Set(<?= json_encode(YtDlpKnownHosts::hosts(), JSON_UNESCAPED_SLASHES) ?>);
+    const curatedKinds = <?= json_encode($downloads->curatedKinds(), JSON_UNESCAPED_SLASHES) ?>;
 
     const youtubeRe = /^(?:http(?:s)?:\/\/)?(?:www\.)?(?:m\.)?(?:youtu\.be\/|youtube\.com\/(?:(?:watch)?\?(?:.*&)?v(?:i)?=|(?:embed|v|vi|user|shorts)\/))([^\?&\"'>]+)/;
     const twitterRe = /^(?:https?:\/\/)?(?:www\.|mobile\.)?(?:twitter\.com|x\.com)\/[^/\s?#]+\/status\/\d+/i;
     const instagramRe = /^(?:https?:\/\/)?(?:www\.)?(?:instagram\.com|instagr\.am)\/(?:p|reel|reels|tv)\/[A-Za-z0-9_-]+/i;
     const tiktokRe = /^(?:https?:\/\/)?(?:(?:vm|vt)\.tiktok\.com\/[A-Za-z0-9_-]+|(?:www\.|m\.)?tiktok\.com\/@[^/\s?#]+\/video\/\d+)/i;
+    const soundcloudRe = /^(?:https?:\/\/)?(?:on\.soundcloud\.com\/[A-Za-z0-9_-]+|(?:(?:www|m)\.)?soundcloud\.com\/[^/\s?#]+\/[^/\s?#]+)/i;
+    const mixcloudRe = /^(?:https?:\/\/)?(?:(?:www|m)\.)?mixcloud\.com\/[^/\s?#]+\/[^/\s?#]+/i;
+    const bandcampRe = /^(?:https?:\/\/)?[a-z0-9-]+\.bandcamp\.com\/(?:track|album)\/[A-Za-z0-9_-]+/i;
+    const vimeoRe = /^(?:https?:\/\/)?(?:(?:www|player)\.)?vimeo\.com\/(?:channels\/[^/\s?#]+\/|groups\/[^/\s?#]+\/videos\/|video\/)?\d+/i;
+    const redditRe = /^(?:https?:\/\/)?(?:v\.redd\.it\/[A-Za-z0-9]+|(?:www\.)?redd\.it\/[A-Za-z0-9]+|(?:(?:www|old|new|np|m)\.)?reddit\.com\/r\/[^/\s?#]+\/comments\/[A-Za-z0-9]+)/i;
 
     function detectSource(url) {
         if (youtubeRe.test(url)) return 'youtube';
         if (twitterRe.test(url)) return 'twitter';
         if (instagramRe.test(url)) return 'instagram';
         if (tiktokRe.test(url)) return 'tiktok';
+        if (soundcloudRe.test(url)) return 'soundcloud';
+        if (mixcloudRe.test(url)) return 'mixcloud';
+        if (bandcampRe.test(url)) return 'bandcamp';
+        if (vimeoRe.test(url)) return 'vimeo';
+        if (redditRe.test(url)) return 'reddit';
         return url.trim() !== '' ? 'other' : null;
     }
 
@@ -539,7 +595,10 @@ ob_start();
     function syncSourceOptions() {
         const url = urlInput.value;
         const source = detectSource(url);
-        const curated = source === 'youtube' || source === 'twitter' || source === 'instagram' || source === 'tiktok';
+        const kind = source && curatedKinds[source] ? curatedKinds[source] : null;
+        const curated = kind === 'video' || kind === 'audio';
+        const isAudio = kind === 'audio';
+        const isVideo = kind === 'video';
         const host = hostFromUrl(url);
 
         if (forceYtdlp && source === 'other') {
@@ -558,18 +617,23 @@ ob_start();
         const useYtdlp = !curated && forceYtdlp && forceYtdlp.checked;
         const ytdlpActive = curated || useYtdlp;
 
-        youtubeOptions.classList.toggle('d-none', source !== 'youtube');
-        twitterOptions.classList.toggle('d-none', source !== 'twitter');
-        instagramOptions.classList.toggle('d-none', source !== 'instagram');
-        tiktokOptions.classList.toggle('d-none', source !== 'tiktok');
-        if (curatedExtraOptions) {
-            curatedExtraOptions.classList.toggle('d-none', !curated);
+        Object.keys(videoOptionEls).forEach(function (id) {
+            const el = videoOptionEls[id];
+            if (el) {
+                el.classList.toggle('d-none', source !== id);
+            }
+        });
+        if (audioOptions) {
+            audioOptions.classList.toggle('d-none', !isAudio);
         }
-        const audioOnly = curated && ytAudioOnly && ytAudioOnly.checked;
+        if (curatedExtraOptions) {
+            curatedExtraOptions.classList.toggle('d-none', !isVideo);
+        }
+        const audioOnly = isVideo && ytAudioOnly && ytAudioOnly.checked;
         curatedQualitySelects.forEach(function (sel) {
             sel.disabled = audioOnly;
             const wrap = sel.closest('.source-options');
-            if (wrap && wrap !== curatedExtraOptions) {
+            if (wrap && wrap !== curatedExtraOptions && wrap !== audioOptions) {
                 wrap.classList.toggle('opacity-50', audioOnly && !wrap.classList.contains('d-none'));
             }
         });

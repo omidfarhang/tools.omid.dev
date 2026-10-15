@@ -23,6 +23,11 @@ final class HttpSource implements DownloadSource
         return false;
     }
 
+    public function mediaKind(): string
+    {
+        return 'file';
+    }
+
     public function download(string $url, array $options = []): array
     {
         if (!$this->supports($url)) {

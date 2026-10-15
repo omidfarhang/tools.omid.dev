@@ -80,6 +80,9 @@ final class YtDlpRunner
         ];
     }
 
+    /** @var list<string> */
+    public const AUDIO_FORMATS = ['best', 'm4a', 'mp3', 'opus', 'flac'];
+
     /**
      * Build -f args from a quality token (best or a pixel height).
      * When $audioOnly, prefer bestaudio and extract to a common container.
@@ -90,7 +93,7 @@ final class YtDlpRunner
     public static function formatArgs(string $quality, array $allowedHeights, bool $audioOnly = false): array
     {
         if ($audioOnly) {
-            return ['-f', 'ba/bestaudio/best', '-x', '--audio-format', 'm4a'];
+            return self::audioFormatArgs('m4a');
         }
 
         if ($quality === 'best' || !in_array($quality, $allowedHeights, true)) {
@@ -98,6 +101,22 @@ final class YtDlpRunner
         }
 
         return ['-f', 'bestvideo*[height<=' . $quality . ']+bestaudio/best'];
+    }
+
+    /**
+     * Format args for audio-primary sites (SoundCloud, Mixcloud, …).
+     * "best" keeps the downloaded audio stream; other values re-encode via -x.
+     *
+     * @return list<string>
+     */
+    public static function audioFormatArgs(string $format): array
+    {
+        $format = in_array($format, self::AUDIO_FORMATS, true) ? $format : 'best';
+        if ($format === 'best') {
+            return ['-f', 'ba/bestaudio/best'];
+        }
+
+        return ['-f', 'ba/bestaudio/best', '-x', '--audio-format', $format];
     }
 
     /**

@@ -23,6 +23,11 @@ final class YoutubeSource implements DownloadSource
         return true;
     }
 
+    public function mediaKind(): string
+    {
+        return 'video';
+    }
+
     public function download(string $url, array $options = []): array
     {
         $videoId = $this->extractVideoId($url);

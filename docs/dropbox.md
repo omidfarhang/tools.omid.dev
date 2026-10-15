@@ -61,7 +61,7 @@ APP_BASE_URL=https://tools.omid.dev
 ## How uploads work
 
 - Direct HTTP(S) URLs are passed to Dropbox `files/save_url`.
-- yt-dlp sources (YouTube, X, Instagram, TikTok, generic), Disk + Cloud, My Files sends, and CLI downloads land in `storage/temp`, get a public share URL (`/s/{token}`), then that URL is sent to Dropbox so Dropbox can fetch the file.
+- yt-dlp sources (YouTube, X, Instagram, TikTok, Vimeo, Reddit, SoundCloud, Mixcloud, Bandcamp, generic), Disk + Cloud, My Files sends, and CLI downloads land in `storage/temp`, get a public share URL (`/s/{token}`), then that URL is sent to Dropbox so Dropbox can fetch the file.
 - Job rows live in `cloud_jobs` (`provider = dropbox`). Status polling updates them; if the job opted into delete-after, the host file is removed on success.
 
 ## Re-authorize after permission changes
