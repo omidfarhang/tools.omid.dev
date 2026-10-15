@@ -193,6 +193,10 @@ include dirname(__DIR__, 2) . '/templates/partials/account_nav.php';
             <div class="card-body">
                 <h2 class="card-title">Two-factor authentication</h2>
                 <?php if ($recoveryCodesOnce !== null): ?>
+                    <?php
+                    $recoveryCodesText = implode("\n", array_map(static fn ($c): string => (string) $c, $recoveryCodesOnce)) . "\n";
+                    $recoveryCodesDownloadHref = 'data:text/plain;charset=utf-8,' . rawurlencode($recoveryCodesText);
+                    ?>
                     <div class="alert alert-warning">
                         <p class="mb-2 fw-semibold">Save these recovery codes now</p>
                         <p class="small text-secondary mb-2">Each code works once. Store them offline — they will not be shown again.</p>
@@ -201,12 +205,47 @@ include dirname(__DIR__, 2) . '/templates/partials/account_nav.php';
                                 <li><?= e((string) $rc) ?></li>
                             <?php endforeach; ?>
                         </ul>
+                        <textarea id="recovery-codes-text" class="visually-hidden" readonly tabindex="-1" aria-hidden="true"><?= e($recoveryCodesText) ?></textarea>
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="recovery-codes-copy">Copy</button>
+                            <a class="btn btn-sm btn-outline-secondary"
+                               href="<?= e($recoveryCodesDownloadHref) ?>"
+                               download="recovery-codes.txt">Download as .txt</a>
+                        </div>
                         <form method="post">
                             <?= Csrf::field() ?>
                             <input type="hidden" name="action" value="totp_dismiss_recovery">
                             <button class="btn btn-sm btn-primary" type="submit">I have saved these codes</button>
                         </form>
                     </div>
+                    <script>
+                    (function () {
+                        var textEl = document.getElementById('recovery-codes-text');
+                        var copyBtn = document.getElementById('recovery-codes-copy');
+                        if (!textEl || !copyBtn) return;
+                        var text = textEl.value.replace(/\n$/, '');
+                        copyBtn.addEventListener('click', function () {
+                            var prev = copyBtn.textContent;
+                            var done = function () {
+                                copyBtn.textContent = 'Copied';
+                                setTimeout(function () { copyBtn.textContent = prev; }, 1200);
+                            };
+                            var fallback = function () {
+                                textEl.classList.remove('visually-hidden');
+                                textEl.focus();
+                                textEl.select();
+                                try { document.execCommand('copy'); } catch (e) {}
+                                textEl.classList.add('visually-hidden');
+                                done();
+                            };
+                            if (navigator.clipboard && navigator.clipboard.writeText) {
+                                navigator.clipboard.writeText(text).then(done).catch(fallback);
+                            } else {
+                                fallback();
+                            }
+                        });
+                    })();
+                    </script>
                 <?php elseif ($totpSetupSecret !== null): ?>
                     <p class="text-secondary mb-3">Scan this QR code with your authenticator app, then enter a 6-digit code to confirm.</p>
                     <?php
