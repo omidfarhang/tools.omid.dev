@@ -33,11 +33,33 @@ final class UserRepository
         return $row ?: null;
     }
 
-    /** @return list<array<string, mixed>> */
+    /**
+     * All users with disk usage and finished download counts for admin listing.
+     *
+     * @return list<array<string, mixed>>
+     */
     public function all(): array
     {
         return $this->db->query(
-            'SELECT * FROM users ORDER BY is_active ASC, created_at DESC'
+            "SELECT u.*,
+                COALESCE(f.file_count, 0) AS file_count,
+                COALESCE(f.used_bytes, 0) AS used_bytes,
+                COALESCE(d.download_count, 0) AS download_count
+             FROM users u
+             LEFT JOIN (
+                SELECT user_id,
+                       COUNT(*) AS file_count,
+                       SUM(size_bytes) AS used_bytes
+                FROM files
+                GROUP BY user_id
+             ) f ON f.user_id = u.id
+             LEFT JOIN (
+                SELECT user_id, COUNT(*) AS download_count
+                FROM download_jobs
+                WHERE status IN ('complete', 'failed')
+                GROUP BY user_id
+             ) d ON d.user_id = u.id
+             ORDER BY u.is_active ASC, u.created_at DESC"
         )->fetchAll();
     }
 

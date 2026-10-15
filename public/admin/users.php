@@ -108,60 +108,114 @@ ob_start();
                 <th>ID</th>
                 <th>Username</th>
                 <th>Role</th>
-                <th>Active</th>
+                <th>Status</th>
                 <th>Dropbox</th>
-                <th>Actions</th>
+                <th class="text-end">Used</th>
+                <th class="text-end">Downloads</th>
+                <th class="text-end w-1"></th>
             </tr>
             </thead>
             <tbody>
             <?php foreach ($all as $u): ?>
-                <?php $active = (int) $u['is_active'] === 1; ?>
+                <?php
+                $active = (int) $u['is_active'] === 1;
+                $userId = (int) $u['id'];
+                $isSelf = $userId === (int) $admin['id'];
+                $usedBytes = (int) ($u['used_bytes'] ?? 0);
+                $fileCount = (int) ($u['file_count'] ?? 0);
+                $downloadCount = (int) ($u['download_count'] ?? 0);
+                $isAdminRole = $u['role'] === 'admin';
+                ?>
                 <tr class="<?= $active ? '' : 'table-warning' ?>">
-                    <td><?= (int) $u['id'] ?></td>
+                    <td class="text-secondary"><?= $userId ?></td>
                     <td class="fw-semibold"><?= e($u['username']) ?></td>
                     <td>
-                        <form method="post" class="d-flex gap-1">
-                            <?= Csrf::field() ?>
-                            <input type="hidden" name="action" value="set_role">
-                            <input type="hidden" name="user_id" value="<?= (int) $u['id'] ?>">
-                            <select class="form-select form-select-sm" name="role">
-                                <option value="user" <?= $u['role'] === 'user' ? 'selected' : '' ?>>user</option>
-                                <option value="admin" <?= $u['role'] === 'admin' ? 'selected' : '' ?>>admin</option>
-                            </select>
-                            <button class="btn btn-sm btn-outline-secondary" type="submit">Set</button>
-                        </form>
-                    </td>
-                    <td><?= $active ? 'yes' : 'pending' ?></td>
-                    <td>
-                        <?php if (!empty($u['dropbox_access_token']) || !empty($u['dropbox_refresh_token'])): ?>
-                            <?php if (!empty($u['dropbox_email'])): ?>
-                                <span class="mono"><?= e((string) $u['dropbox_email']) ?></span>
-                            <?php else: ?>
-                                yes
-                            <?php endif; ?>
+                        <?php if ($isAdminRole): ?>
+                            <span class="badge bg-azure-lt">admin</span>
                         <?php else: ?>
-                            —
+                            <span class="badge bg-secondary-lt">user</span>
                         <?php endif; ?>
                     </td>
                     <td>
-                        <div class="d-flex flex-wrap gap-1 align-items-center">
-                            <a class="btn btn-sm btn-outline-secondary" href="/admin/files.php?user_id=<?= (int) $u['id'] ?>">Files</a>
-                            <a class="btn btn-sm btn-outline-secondary" href="/admin/history.php?user_id=<?= (int) $u['id'] ?>">History</a>
-                            <form method="post">
-                                <?= Csrf::field() ?>
-                                <input type="hidden" name="action" value="toggle">
-                                <input type="hidden" name="user_id" value="<?= (int) $u['id'] ?>">
-                                <button class="btn btn-sm <?= $active ? 'btn-outline-warning' : 'btn-success' ?>" type="submit">
-                                    <?= $active ? 'Disable' : 'Approve' ?>
-                                </button>
-                            </form>
-                            <form method="post" class="d-flex gap-1">
-                                <?= Csrf::field() ?>
-                                <input type="hidden" name="action" value="reset_password">
-                                <input type="hidden" name="user_id" value="<?= (int) $u['id'] ?>">
-                                <input class="form-control form-control-sm" type="password" name="password" placeholder="New password" required>
-                                <button class="btn btn-sm btn-outline-primary" type="submit">Reset</button>
-                            </form>
+                        <?php if ($active): ?>
+                            <span class="badge bg-green-lt">Active</span>
+                        <?php else: ?>
+                            <span class="badge bg-yellow-lt">Pending</span>
+                        <?php endif; ?>
+                    </td>
+                    <td>
+                        <?php if (!empty($u['dropbox_access_token']) || !empty($u['dropbox_refresh_token'])): ?>
+                            <?php if (!empty($u['dropbox_email'])): ?>
+                                <span class="mono small"><?= e((string) $u['dropbox_email']) ?></span>
+                            <?php else: ?>
+                                <span class="badge bg-teal-lt text-teal">Connected</span>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <span class="text-secondary">—</span>
+                        <?php endif; ?>
+                    </td>
+                    <td class="text-end">
+                        <a class="text-reset text-decoration-none" href="/admin/files.php?user_id=<?= $userId ?>" title="<?= $fileCount ?> file<?= $fileCount === 1 ? '' : 's' ?>">
+                            <span class="mono"><?= e(human_filesize($usedBytes)) ?></span>
+                            <?php if ($fileCount > 0): ?>
+                                <span class="d-block text-secondary small"><?= $fileCount ?> file<?= $fileCount === 1 ? '' : 's' ?></span>
+                            <?php endif; ?>
+                        </a>
+                    </td>
+                    <td class="text-end">
+                        <a class="mono text-reset text-decoration-none" href="/admin/history.php?user_id=<?= $userId ?>">
+                            <?= $downloadCount ?>
+                        </a>
+                    </td>
+                    <td class="text-end">
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary" type="button"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false"
+                                    aria-label="Actions for <?= e($u['username']) ?>">
+                                ···
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <a class="dropdown-item" href="/admin/files.php?user_id=<?= $userId ?>">Files</a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="/admin/history.php?user_id=<?= $userId ?>">History</a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <?php if (!$isSelf): ?>
+                                    <li>
+                                        <form method="post">
+                                            <?= Csrf::field() ?>
+                                            <input type="hidden" name="action" value="toggle">
+                                            <input type="hidden" name="user_id" value="<?= $userId ?>">
+                                            <button class="dropdown-item <?= $active ? 'text-warning' : 'text-success' ?>" type="submit">
+                                                <?= $active ? 'Disable' : 'Approve' ?>
+                                            </button>
+                                        </form>
+                                    </li>
+                                    <li>
+                                        <form method="post">
+                                            <?= Csrf::field() ?>
+                                            <input type="hidden" name="action" value="set_role">
+                                            <input type="hidden" name="user_id" value="<?= $userId ?>">
+                                            <input type="hidden" name="role" value="<?= $isAdminRole ? 'user' : 'admin' ?>">
+                                            <button class="dropdown-item" type="submit">
+                                                Make <?= $isAdminRole ? 'user' : 'admin' ?>
+                                            </button>
+                                        </form>
+                                    </li>
+                                <?php endif; ?>
+                                <li>
+                                    <button type="button" class="dropdown-item"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#resetPasswordModal"
+                                            data-user-id="<?= $userId ?>"
+                                            data-username="<?= e($u['username']) ?>">
+                                        Reset password…
+                                    </button>
+                                </li>
+                            </ul>
                         </div>
                     </td>
                 </tr>
@@ -170,5 +224,44 @@ ob_start();
         </table>
     </div>
 </div>
+
+<div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-labelledby="resetPasswordModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post">
+                <?= Csrf::field() ?>
+                <input type="hidden" name="action" value="reset_password">
+                <input type="hidden" name="user_id" value="" id="resetPasswordUserId">
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="resetPasswordModalLabel">Reset password</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-secondary mb-3">Set a new password for <span class="fw-semibold" id="resetPasswordUsername"></span>.</p>
+                    <label class="form-label" for="resetPasswordInput">New password</label>
+                    <input class="form-control" type="password" name="password" id="resetPasswordInput" required autocomplete="new-password">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Reset password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+(function () {
+    var modal = document.getElementById('resetPasswordModal');
+    if (!modal) return;
+    modal.addEventListener('show.bs.modal', function (event) {
+        var btn = event.relatedTarget;
+        if (!btn) return;
+        document.getElementById('resetPasswordUserId').value = btn.getAttribute('data-user-id') || '';
+        document.getElementById('resetPasswordUsername').textContent = btn.getAttribute('data-username') || '';
+        var input = document.getElementById('resetPasswordInput');
+        if (input) input.value = '';
+    });
+})();
+</script>
 <?php
 View::render('Admin Users', ob_get_clean(), $admin);
