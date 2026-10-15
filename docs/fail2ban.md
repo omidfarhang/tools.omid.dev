@@ -24,7 +24,8 @@ SQLite `login_attempts` rows are pruned to the configured rate-limit window (not
 
 ```ini
 [Definition]
-failregex = ^\s*\S+ tools-auth (?:FAILURE|LOCKOUT) ip=<HOST>
+# Timestamp is stripped by fail2ban's date template before failregex runs.
+failregex = ^\s*tools-auth (?:FAILURE|LOCKOUT) ip=<HOST>
 ignoreregex =
 ```
 
