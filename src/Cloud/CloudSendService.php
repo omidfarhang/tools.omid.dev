@@ -120,7 +120,15 @@ final class CloudSendService
         return $provider->checkJobStatus($user, $asyncJobId);
     }
 
-    /** @return array{behavior:string,folder:string,conflict:string} */
+    /**
+     * @return array{
+     *   behavior:string,
+     *   destinations?:list<string>,
+     *   folder:string,
+     *   conflict:string,
+     *   providers?:array<string, array{folder:string, conflict:string}>
+     * }
+     */
     public static function prefs(array $user): array
     {
         return UserRepository::cloudPrefs($user);

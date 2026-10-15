@@ -32,7 +32,7 @@ If the app is in testing mode on an External consent screen, add each user’s G
 
 1. Sign in → **Account** → **Cloud** → **Connect Google Drive**.
 2. Approve access in Google.
-3. Optionally set cloud **defaults** on Account → Cloud: destination folder (blank = My Drive root) and conflict policy.
+3. Optionally set Google Drive **defaults** on Account → Cloud (per provider): destination folder (blank = My Drive root) and conflict policy.
 4. Use **Save to** → Google Drive (or Disk + Google Drive) on the home page, **Send to cloud** on My Files (choose provider when more than one is connected), or CLI after the CLI user has connected Google Drive.
 
 ## How uploads work

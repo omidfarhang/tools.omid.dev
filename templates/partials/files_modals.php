@@ -4,13 +4,12 @@
  * @var string $redirect
  * @var bool $cloudConnected
  * @var list<\App\Cloud\CloudProvider> $connectedCloudProviders
- * @var array{folder?:string, conflict?:string} $prefs
+ * @var array $user
  */
 $mode = $mode ?? 'user';
 $isAdmin = $mode === 'admin';
 $redirect = $redirect ?? ($isAdmin ? '/admin/files.php' : '/files.php');
 $cloudConnected = $cloudConnected ?? false;
-$prefs = $prefs ?? ['folder' => '', 'conflict' => 'rename'];
 ?>
 <div class="modal fade" id="filesDeleteModal" tabindex="-1" aria-labelledby="filesDeleteModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -116,31 +115,41 @@ $prefs = $prefs ?? ['folder' => '', 'conflict' => 'rename'];
                     <p class="mono small mb-3" data-cloud-name></p>
                     <?php
                     $connectedCloudProviders = $connectedCloudProviders ?? [];
+                    $filesUser = $user ?? [];
+                    $defaultProviderId = $connectedCloudProviders !== []
+                        ? (string) $connectedCloudProviders[0]->id()
+                        : 'dropbox';
+                    $defaultProviderPrefs = \App\UserRepository::providerPrefs($filesUser, $defaultProviderId);
                     if (count($connectedCloudProviders) > 1):
-                        $defaultProviderId = (string) ($connectedCloudProviders[0]->id());
                     ?>
                     <div class="mb-3">
                         <label class="form-label" for="files-cloud-provider">Provider</label>
                         <select class="form-select" name="provider" id="files-cloud-provider">
                             <?php foreach ($connectedCloudProviders as $provider): ?>
-                                <option value="<?= e($provider->id()) ?>"<?= $provider->id() === $defaultProviderId ? ' selected' : '' ?>>
+                                <?php $optionPrefs = \App\UserRepository::providerPrefs($filesUser, $provider->id()); ?>
+                                <option value="<?= e($provider->id()) ?>"
+                                        data-folder="<?= e($optionPrefs['folder']) ?>"
+                                        data-conflict="<?= e($optionPrefs['conflict']) ?>"
+                                        <?= $provider->id() === $defaultProviderId ? ' selected' : '' ?>>
                                     <?= e($provider->label()) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
                     <?php elseif (count($connectedCloudProviders) === 1): ?>
-                        <input type="hidden" name="provider" value="<?= e($connectedCloudProviders[0]->id()) ?>">
+                        <input type="hidden" name="provider" value="<?= e($connectedCloudProviders[0]->id()) ?>"
+                               data-folder="<?= e($defaultProviderPrefs['folder']) ?>"
+                               data-conflict="<?= e($defaultProviderPrefs['conflict']) ?>">
                     <?php endif; ?>
                     <div class="mb-3">
                         <label class="form-label" for="files-cloud-folder">Folder</label>
                         <input class="form-control mono" type="text" name="cloud_folder" id="files-cloud-folder"
-                               value="<?= e((string) ($prefs['folder'] ?? '')) ?>">
+                               value="<?= e($defaultProviderPrefs['folder']) ?>">
                     </div>
                     <div class="mb-3">
                         <label class="form-label" for="files-cloud-conflict">If exists</label>
                         <select class="form-select" name="cloud_conflict" id="files-cloud-conflict">
-                            <?php $conflict = (string) ($prefs['conflict'] ?? 'rename'); ?>
+                            <?php $conflict = $defaultProviderPrefs['conflict']; ?>
                             <option value="rename" <?= $conflict === 'rename' ? 'selected' : '' ?>>Rename</option>
                             <option value="overwrite" <?= $conflict === 'overwrite' ? 'selected' : '' ?>>Overwrite</option>
                             <option value="skip" <?= $conflict === 'skip' ? 'selected' : '' ?>>Skip</option>

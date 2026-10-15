@@ -178,6 +178,8 @@ SQL);
         self::ensureColumn($pdo, 'users', 'google_drive_token_expires_at', 'google_drive_token_expires_at TEXT NULL');
         self::ensureColumn($pdo, 'users', 'google_drive_email', 'google_drive_email TEXT NULL');
         self::ensureColumn($pdo, 'users', 'google_drive_display_name', 'google_drive_display_name TEXT NULL');
+        self::ensureColumn($pdo, 'users', 'google_drive_folder', "google_drive_folder TEXT NOT NULL DEFAULT ''");
+        self::ensureColumn($pdo, 'users', 'google_drive_conflict', "google_drive_conflict TEXT NOT NULL DEFAULT 'rename'");
         self::ensureColumn($pdo, 'users', 'quota_bytes', 'quota_bytes INTEGER NULL');
         self::ensureColumn($pdo, 'users', 'totp_secret', 'totp_secret TEXT NULL');
         self::ensureColumn($pdo, 'users', 'totp_enabled', 'totp_enabled INTEGER NOT NULL DEFAULT 0');

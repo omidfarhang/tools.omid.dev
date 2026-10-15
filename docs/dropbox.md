@@ -38,13 +38,13 @@ CLI script and endpoint names (`scripts/ytdl.sh`, `/api/cli_register_and_dropbox
 
 1. Sign in → **Account** → **Cloud** → **Connect Dropbox**.
 2. Approve access in Dropbox.
-3. Optionally set Dropbox **defaults** on Account → Cloud: destination folder (blank = root) and conflict policy. Preferred destinations (Local and/or connected clouds) live under Account → Overview.
+3. Optionally set Dropbox **defaults** on Account → Cloud (per provider): destination folder (blank = root) and conflict policy. Preferred destinations (Local and/or connected clouds) live under Account → Overview.
 4. Use **Save to** → Cloud or Disk + Cloud on the home page, **Send to cloud** on My Files, or CLI (`scripts/ytdl.sh`) after the CLI user has connected Dropbox.
 
 ## Features after connect
 
-- **Destination folder** — per job (prefilled from Account default; shown when Save to includes cloud).
-- **Conflict policy** — rename, overwrite, or skip when the remote path already exists.
+- **Destination folder** — per job (prefilled from that provider’s Account default; shown when Save to includes Dropbox).
+- **Conflict policy** — rename, overwrite, or skip when the remote path already exists (per provider default).
 - **Disk + Cloud** — keep a host copy and push to Dropbox in one action.
 - **Delete after success** — optional checkbox per job (never forced by defaults).
 - **Send existing host files** — My Files → Send to cloud (`/cloud_send.php`).

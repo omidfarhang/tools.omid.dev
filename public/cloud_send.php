@@ -21,9 +21,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 Csrf::requireValid();
 
 $fileId = (int) ($_POST['file_id'] ?? 0);
-$prefs = UserRepository::cloudPrefs($user);
-$folder = UserRepository::normalizeFolder((string) ($_POST['cloud_folder'] ?? $_POST['dropbox_folder'] ?? $prefs['folder']));
-$conflict = UserRepository::normalizeConflict((string) ($_POST['cloud_conflict'] ?? $_POST['dropbox_conflict'] ?? $prefs['conflict']));
 $deleteAfter = isset($_POST['delete_after']) && (string) $_POST['delete_after'] === '1';
 $requestedProvider = trim((string) ($_POST['provider'] ?? ''));
 
@@ -40,6 +37,10 @@ if ($provider === null || !$provider->isConnected($user)) {
     flash('error', 'Connect a cloud account first (Account → Cloud).');
     redirect('/user/cloud.php');
 }
+
+$providerPrefs = UserRepository::providerPrefs($user, $provider->id());
+$folder = UserRepository::normalizeFolder((string) ($_POST['cloud_folder'] ?? $_POST['dropbox_folder'] ?? $providerPrefs['folder']));
+$conflict = UserRepository::normalizeConflict((string) ($_POST['cloud_conflict'] ?? $_POST['dropbox_conflict'] ?? $providerPrefs['conflict']));
 
 $sent = $cloud->sendLocalFile($user, $file, $folder, $conflict, $deleteAfter, $provider->id());
 

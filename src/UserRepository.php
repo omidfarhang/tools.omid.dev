@@ -499,17 +499,50 @@ final class UserRepository
         return implode('/', $parts);
     }
 
-    /** @return array{behavior:string,destinations:list<string>,folder:string,conflict:string} */
+    /**
+     * @return array{
+     *   behavior:string,
+     *   destinations:list<string>,
+     *   folder:string,
+     *   conflict:string,
+     *   providers:array<string, array{folder:string, conflict:string}>
+     * }
+     */
     public static function cloudPrefs(array $user): array
     {
         $destinations = self::destinationsFromUser($user);
+        $dropbox = self::providerPrefs($user, 'dropbox');
 
         return [
             'behavior' => self::behaviorFromDestinations($destinations),
             'destinations' => $destinations,
-            'folder' => self::normalizeFolder((string) ($user['dropbox_folder'] ?? '')),
-            'conflict' => self::normalizeConflict((string) ($user['dropbox_conflict'] ?? 'rename')),
+            // Dropbox aliases for older callers; prefer providers[...] / providerPrefs().
+            'folder' => $dropbox['folder'],
+            'conflict' => $dropbox['conflict'],
+            'providers' => [
+                'dropbox' => $dropbox,
+                'google_drive' => self::providerPrefs($user, 'google_drive'),
+            ],
         ];
+    }
+
+    /** @return array{folder:string, conflict:string} */
+    public static function providerPrefs(array $user, string $providerId): array
+    {
+        return match ($providerId) {
+            'dropbox' => [
+                'folder' => self::normalizeFolder((string) ($user['dropbox_folder'] ?? '')),
+                'conflict' => self::normalizeConflict((string) ($user['dropbox_conflict'] ?? 'rename')),
+            ],
+            'google_drive' => [
+                'folder' => self::normalizeFolder((string) ($user['google_drive_folder'] ?? '')),
+                'conflict' => self::normalizeConflict((string) ($user['google_drive_conflict'] ?? 'rename')),
+            ],
+            default => [
+                'folder' => '',
+                'conflict' => 'rename',
+            ],
+        };
     }
 
     /** @deprecated Use cloudPrefs() */
@@ -550,25 +583,32 @@ final class UserRepository
         ]);
     }
 
-    public function updateCloudDestinationPrefs(int $userId, string $folder, string $conflict): void
+    public function updateCloudDestinationPrefs(int $userId, string $providerId, string $folder, string $conflict): void
     {
-        $stmt = $this->db->prepare(
-            'UPDATE users SET
-                dropbox_folder = :f,
-                dropbox_conflict = :c
-             WHERE id = :id'
-        );
+        $folder = self::normalizeFolder($folder);
+        $conflict = self::normalizeConflict($conflict);
+
+        $sql = match ($providerId) {
+            'dropbox' => 'UPDATE users SET dropbox_folder = :f, dropbox_conflict = :c WHERE id = :id',
+            'google_drive' => 'UPDATE users SET google_drive_folder = :f, google_drive_conflict = :c WHERE id = :id',
+            default => null,
+        };
+        if ($sql === null) {
+            return;
+        }
+
+        $stmt = $this->db->prepare($sql);
         $stmt->execute([
-            ':f' => self::normalizeFolder($folder),
-            ':c' => self::normalizeConflict($conflict),
+            ':f' => $folder,
+            ':c' => $conflict,
             ':id' => $userId,
         ]);
     }
 
-    public function updateCloudPrefs(int $userId, string $behavior, string $folder, string $conflict): void
+    public function updateCloudPrefs(int $userId, string $behavior, string $folder, string $conflict, string $providerId = 'dropbox'): void
     {
         $this->updateDefaultBehavior($userId, $behavior);
-        $this->updateCloudDestinationPrefs($userId, $folder, $conflict);
+        $this->updateCloudDestinationPrefs($userId, $providerId, $folder, $conflict);
     }
 
     /** @deprecated Use updateCloudPrefs() */

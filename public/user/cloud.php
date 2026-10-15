@@ -30,8 +30,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('/user/cloud.php');
     }
     if ($action === 'save_dropbox_prefs' || $action === 'save_cloud_prefs') {
+        $providerId = (string) ($_POST['provider'] ?? 'dropbox');
+        if ($registry->get($providerId) === null) {
+            flash('error', 'Unknown cloud provider.');
+            redirect('/user/cloud.php');
+        }
         $users->updateCloudDestinationPrefs(
             (int) $user['id'],
+            $providerId,
             (string) ($_POST['cloud_folder'] ?? $_POST['dropbox_folder'] ?? ''),
             (string) ($_POST['cloud_conflict'] ?? $_POST['dropbox_conflict'] ?? 'rename')
         );
@@ -51,7 +57,6 @@ foreach ($registry->all() as $provider) {
         }
     }
 }
-$prefs = UserRepository::cloudPrefs($user);
 $providers = $registry->all();
 
 ob_start();
@@ -69,6 +74,7 @@ include dirname(__DIR__, 2) . '/templates/partials/account_nav.php';
         $label = $provider->label();
         $folderId = 'cloud_folder_' . $provider->id();
         $conflictId = 'cloud_conflict_' . $provider->id();
+        $providerPrefs = UserRepository::providerPrefs($user, $provider->id());
         ?>
         <div class="col-lg-6">
             <div class="card">
@@ -101,15 +107,15 @@ include dirname(__DIR__, 2) . '/templates/partials/account_nav.php';
                             <div class="mb-3">
                                 <label for="<?= e($folderId) ?>" class="form-label">Default folder</label>
                                 <input class="form-control mono" type="text" name="cloud_folder" id="<?= e($folderId) ?>"
-                                       value="<?= e($prefs['folder']) ?>" placeholder="(root)">
+                                       value="<?= e($providerPrefs['folder']) ?>" placeholder="(root)">
                                 <div class="form-text">Relative to your <?= e($label) ?> root. Leave blank for root.</div>
                             </div>
                             <div class="mb-3">
                                 <label for="<?= e($conflictId) ?>" class="form-label">Default conflict policy</label>
                                 <select class="form-select" name="cloud_conflict" id="<?= e($conflictId) ?>">
-                                    <option value="rename" <?= $prefs['conflict'] === 'rename' ? 'selected' : '' ?>>Rename (add number)</option>
-                                    <option value="overwrite" <?= $prefs['conflict'] === 'overwrite' ? 'selected' : '' ?>>Overwrite</option>
-                                    <option value="skip" <?= $prefs['conflict'] === 'skip' ? 'selected' : '' ?>>Skip</option>
+                                    <option value="rename" <?= $providerPrefs['conflict'] === 'rename' ? 'selected' : '' ?>>Rename (add number)</option>
+                                    <option value="overwrite" <?= $providerPrefs['conflict'] === 'overwrite' ? 'selected' : '' ?>>Overwrite</option>
+                                    <option value="skip" <?= $providerPrefs['conflict'] === 'skip' ? 'selected' : '' ?>>Skip</option>
                                 </select>
                             </div>
                             <button class="btn btn-primary" type="submit">Save defaults</button>

@@ -26,6 +26,34 @@ document.addEventListener('DOMContentLoaded', function () {
     const renameModal = renameModalEl ? tabler.Modal.getOrCreateInstance(renameModalEl) : null;
     const shareModal = shareModalEl ? tabler.Modal.getOrCreateInstance(shareModalEl) : null;
     const cloudModal = cloudModalEl ? tabler.Modal.getOrCreateInstance(cloudModalEl) : null;
+    const cloudProviderSelect = cloudModalEl ? cloudModalEl.querySelector('#files-cloud-provider') : null;
+    const cloudFolderInput = cloudModalEl ? cloudModalEl.querySelector('#files-cloud-folder') : null;
+    const cloudConflictSelect = cloudModalEl ? cloudModalEl.querySelector('#files-cloud-conflict') : null;
+
+    function applyCloudProviderDefaults(sourceEl) {
+        if (!sourceEl || !cloudFolderInput || !cloudConflictSelect) return;
+        let folder = sourceEl.getAttribute('data-folder');
+        let conflict = sourceEl.getAttribute('data-conflict');
+        if (sourceEl.tagName === 'SELECT') {
+            const opt = sourceEl.options[sourceEl.selectedIndex];
+            if (opt) {
+                folder = opt.getAttribute('data-folder');
+                conflict = opt.getAttribute('data-conflict');
+            }
+        }
+        if (folder !== null) {
+            cloudFolderInput.value = folder;
+        }
+        if (conflict !== null) {
+            cloudConflictSelect.value = conflict;
+        }
+    }
+
+    if (cloudProviderSelect) {
+        cloudProviderSelect.addEventListener('change', function () {
+            applyCloudProviderDefaults(cloudProviderSelect);
+        });
+    }
 
     let pendingBulkDelete = null;
 
@@ -218,6 +246,12 @@ document.addEventListener('DOMContentLoaded', function () {
             const nameEl = cloudModalEl.querySelector('[data-cloud-name]');
             if (idInput) idInput.value = id;
             if (nameEl) nameEl.textContent = name;
+            if (cloudProviderSelect) {
+                applyCloudProviderDefaults(cloudProviderSelect);
+            } else {
+                const hiddenProvider = cloudModalEl.querySelector('input[name="provider"]');
+                applyCloudProviderDefaults(hiddenProvider);
+            }
             cloudModal.show();
             return;
         }

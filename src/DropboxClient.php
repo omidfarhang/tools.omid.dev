@@ -60,7 +60,7 @@ final class DropboxClient
     /** @deprecated Use startJob(); kept for any callers expecting the old shape. */
     public function saveUrl(string $url, ?string $filename = null): array
     {
-        $prefs = UserRepository::cloudPrefs($this->user);
+        $prefs = UserRepository::providerPrefs($this->user, 'dropbox');
         $result = $this->startJob($url, $filename, $prefs['folder'], $prefs['conflict'], false, null);
         if ($result['success'] && ($result['status'] ?? '') === 'skipped') {
             return [

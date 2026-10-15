@@ -70,7 +70,7 @@ if ($provider === null || !$provider->isConnected($user)) {
     ], 400);
 }
 
-$prefs = UserRepository::cloudPrefs($user);
+$prefs = UserRepository::providerPrefs($user, $provider->id());
 $result = $cloud->startForUser(
     $user,
     $publicUrl,

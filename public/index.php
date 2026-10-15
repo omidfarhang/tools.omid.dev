@@ -70,8 +70,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $url = trim((string) ($_POST['DLURL'] ?? ''));
     $filename = trim((string) ($_POST['DLFILENAME'] ?? ''));
     $forceRequested = isset($_POST['force_ytdlp']) && (string) $_POST['force_ytdlp'] === '1';
-    $folder = UserRepository::normalizeFolder((string) ($_POST['cloud_folder'] ?? $_POST['dropbox_folder'] ?? $prefs['folder']));
-    $conflict = UserRepository::normalizeConflict((string) ($_POST['cloud_conflict'] ?? $_POST['dropbox_conflict'] ?? $prefs['conflict']));
+    $rawFolders = $_POST['cloud_folder'] ?? $_POST['dropbox_folder'] ?? [];
+    if (!is_array($rawFolders)) {
+        // Legacy flat field from older clients.
+        $rawFolders = ['dropbox' => (string) $rawFolders];
+    }
+    $rawConflicts = $_POST['cloud_conflict'] ?? $_POST['dropbox_conflict'] ?? [];
+    if (!is_array($rawConflicts)) {
+        $rawConflicts = ['dropbox' => (string) $rawConflicts];
+    }
     $deleteAfter = isset($_POST['delete_after']) && (string) $_POST['delete_after'] === '1';
 
     if ($url === '') {
@@ -147,6 +154,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($provider === null) {
             continue;
         }
+
+        $providerPrefs = UserRepository::providerPrefs($user, $provider->id());
+        $folder = UserRepository::normalizeFolder(
+            (string) ($rawFolders[$provider->id()] ?? $providerPrefs['folder'])
+        );
+        $conflict = UserRepository::normalizeConflict(
+            (string) ($rawConflicts[$provider->id()] ?? $providerPrefs['conflict'])
+        );
 
         $jobIds[] = $jobRepo->create([
             'user_id' => (int) $user['id'],
@@ -425,31 +440,45 @@ ob_start();
             </fieldset>
 
             <?php if ($configuredProviders !== []): ?>
-                <div class="cloud-options d-none" id="cloud-options">
-                    <div class="row g-3">
-                        <div class="col-md-7">
-                            <label for="cloud_folder" class="form-label">Cloud folder</label>
-                            <input name="cloud_folder" type="text" class="form-control mono" id="cloud_folder"
-                                   value="<?= e($prefs['folder']) ?>" placeholder="(root)">
-                            <div class="form-text">Relative to your cloud root. Leave blank for root. Applies to all cloud destinations.</div>
-                        </div>
-                        <div class="col-md-5">
-                            <label for="cloud_conflict" class="form-label">If file already exists</label>
-                            <select class="form-select" name="cloud_conflict" id="cloud_conflict">
-                                <option value="rename" <?= $prefs['conflict'] === 'rename' ? 'selected' : '' ?>>Rename (add number)</option>
-                                <option value="overwrite" <?= $prefs['conflict'] === 'overwrite' ? 'selected' : '' ?>>Overwrite</option>
-                                <option value="skip" <?= $prefs['conflict'] === 'skip' ? 'selected' : '' ?>>Skip</option>
-                            </select>
-                        </div>
-                        <div class="col-12">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="1" name="delete_after" id="delete_after">
-                                <label class="form-check-label" for="delete_after">
-                                    Delete host staging file after cloud succeeds
-                                </label>
-                                <div class="form-text">Applies to cloud jobs that stage on the host first (e.g. yt-dlp). Does not affect a separate Local job.</div>
+                <?php foreach ($configuredProviders as $provider): ?>
+                    <?php
+                    $pid = $provider->id();
+                    $pConnected = $provider->isConnected($user);
+                    if (!$pConnected) {
+                        continue;
+                    }
+                    $providerPrefs = UserRepository::providerPrefs($user, $pid);
+                    $folderFieldId = 'cloud_folder_' . $pid;
+                    $conflictFieldId = 'cloud_conflict_' . $pid;
+                    ?>
+                    <div class="cloud-options d-none mt-3" id="cloud-options-<?= e($pid) ?>" data-cloud-provider="<?= e($pid) ?>">
+                        <h3 class="h6 mb-2"><?= e($provider->label()) ?> options</h3>
+                        <div class="row g-3">
+                            <div class="col-md-7">
+                                <label for="<?= e($folderFieldId) ?>" class="form-label">Folder</label>
+                                <input name="cloud_folder[<?= e($pid) ?>]" type="text" class="form-control mono"
+                                       id="<?= e($folderFieldId) ?>"
+                                       value="<?= e($providerPrefs['folder']) ?>" placeholder="(root)">
+                                <div class="form-text">Relative to your <?= e($provider->label()) ?> root. Leave blank for root.</div>
+                            </div>
+                            <div class="col-md-5">
+                                <label for="<?= e($conflictFieldId) ?>" class="form-label">If file already exists</label>
+                                <select class="form-select" name="cloud_conflict[<?= e($pid) ?>]" id="<?= e($conflictFieldId) ?>">
+                                    <option value="rename" <?= $providerPrefs['conflict'] === 'rename' ? 'selected' : '' ?>>Rename (add number)</option>
+                                    <option value="overwrite" <?= $providerPrefs['conflict'] === 'overwrite' ? 'selected' : '' ?>>Overwrite</option>
+                                    <option value="skip" <?= $providerPrefs['conflict'] === 'skip' ? 'selected' : '' ?>>Skip</option>
+                                </select>
                             </div>
                         </div>
+                    </div>
+                <?php endforeach; ?>
+                <div class="cloud-options-shared d-none mt-3" id="cloud-options-shared">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="1" name="delete_after" id="delete_after">
+                        <label class="form-check-label" for="delete_after">
+                            Delete host staging file after cloud succeeds
+                        </label>
+                        <div class="form-text">Applies to cloud jobs that stage on the host first (e.g. yt-dlp). Does not affect a separate Local job.</div>
                     </div>
                 </div>
             <?php endif; ?>
@@ -665,7 +694,8 @@ ob_start();
     const ytdlpFormatWrap = document.getElementById('ytdlp-format-wrap');
     const forceYtdlp = document.getElementById('force_ytdlp');
     const filenameHint = document.getElementById('filename-ytdlp-hint');
-    const cloudOptions = document.getElementById('cloud-options');
+    const cloudOptionPanels = document.querySelectorAll('.cloud-options[data-cloud-provider]');
+    const cloudOptionsShared = document.getElementById('cloud-options-shared');
     let filenameDirty = false;
     let lastYtdlpHost = null;
     let ytdlpTouched = false;
@@ -795,9 +825,19 @@ ob_start();
     }
 
     function syncCloudOptions() {
-        if (!cloudOptions) return;
-        const anyCloud = document.querySelectorAll('input.dest-cloud:checked:not(:disabled)').length > 0;
-        cloudOptions.classList.toggle('d-none', !anyCloud);
+        let anyCloud = false;
+        cloudOptionPanels.forEach(function (panel) {
+            const providerId = panel.getAttribute('data-cloud-provider');
+            const checkbox = document.getElementById('dest_' + providerId);
+            const show = !!(checkbox && checkbox.checked && !checkbox.disabled);
+            panel.classList.toggle('d-none', !show);
+            if (show) {
+                anyCloud = true;
+            }
+        });
+        if (cloudOptionsShared) {
+            cloudOptionsShared.classList.toggle('d-none', !anyCloud);
+        }
     }
 
     filenameInput.addEventListener('input', function () {

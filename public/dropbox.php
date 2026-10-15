@@ -31,7 +31,7 @@ if ($provider === null || !$provider->isConnected($user)) {
     json_response(['success' => false, 'error' => 'CLI user has not connected a cloud account'], 400);
 }
 
-$prefs = UserRepository::cloudPrefs($user);
+$prefs = UserRepository::providerPrefs($user, $provider->id());
 $result = $cloud->startForUser(
     $user,
     $url,
