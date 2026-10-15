@@ -154,6 +154,8 @@ if (!is_array($recoveryCodesOnce)) {
 $deviceList = $totpEnabled ? $trustedDevices->listForUser((int) $user['id']) : [];
 
 ob_start();
+$active = 'security';
+include dirname(__DIR__, 2) . '/templates/partials/account_nav.php';
 ?>
 <p class="text-secondary mb-3">Password and two-factor authentication for this account.</p>
 

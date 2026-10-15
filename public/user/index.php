@@ -29,6 +29,8 @@ foreach ($registry->all() as $provider) {
 }
 
 ob_start();
+$active = 'overview';
+include dirname(__DIR__, 2) . '/templates/partials/account_nav.php';
 ?>
 <p class="text-secondary mb-3">Profile, security, and cloud connections for this account.</p>
 

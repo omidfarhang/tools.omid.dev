@@ -55,6 +55,8 @@ $prefs = UserRepository::cloudPrefs($user);
 $providers = $registry->all();
 
 ob_start();
+$active = 'cloud';
+include dirname(__DIR__, 2) . '/templates/partials/account_nav.php';
 ?>
 <p class="text-secondary mb-3">Connect your own cloud accounts for “Save To Cloud”.</p>
 

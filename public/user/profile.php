@@ -54,6 +54,8 @@ foreach ($registry->all() as $provider) {
 }
 
 ob_start();
+$active = 'profile';
+include dirname(__DIR__, 2) . '/templates/partials/account_nav.php';
 ?>
 <p class="text-secondary mb-3">Account details and preferred download destinations.</p>
 
