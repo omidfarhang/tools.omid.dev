@@ -87,7 +87,7 @@ final class DiskOverview
 
         $orphans = [];
         foreach ($entries as $name) {
-            if ($name === '.' || $name === '..') {
+            if ($name === '.' || $name === '..' || $name === '.gitkeep') {
                 continue;
             }
             if (isset($tracked[$name])) {
