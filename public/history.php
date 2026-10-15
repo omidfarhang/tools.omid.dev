@@ -73,8 +73,7 @@ $failReasonButton = static function (string $error, string $status): string {
 
     return '<button type="button" class="btn btn-link btn-sm text-danger p-0 align-baseline ms-1"'
         . ' data-bs-toggle="modal" data-bs-target="#history-fail-modal"'
-        . ' data-fail-reason="' . e($error) . '"'
-        . ' onclick="event.stopPropagation()">'
+        . ' data-fail-reason="' . e($error) . '">'
         . 'Reason</button>';
 };
 
@@ -133,18 +132,19 @@ ob_start();
                         $rowId = 'dl-' . (int) $job['id'];
                         $error = (string) ($job['error'] ?? '');
                         ?>
-                        <tr class="<?= $hasCloud ? 'history-row-toggle' : '' ?>"
-                            <?= $hasCloud ? 'data-bs-toggle="collapse" data-bs-target="#' . e($rowId) . '" role="button" aria-expanded="false"' : '' ?>>
+                        <tr>
                             <td class="small text-muted text-nowrap"><?= e((string) ($job['updated_at'] ?? $job['created_at'])) ?></td>
                             <td class="mono">
                                 <?php if ($fileId !== null): ?>
-                                    <a class="filename" href="/download.php?id=<?= $fileId ?>" onclick="event.stopPropagation()"><?= e($name !== '' ? $name : 'file') ?></a>
+                                    <a class="filename" href="/download.php?id=<?= $fileId ?>"><?= e($name !== '' ? $name : 'file') ?></a>
                                 <?php else: ?>
                                     <?= e($name !== '' ? $name : '—') ?>
                                 <?php endif; ?>
                             </td>
                             <td class="mono small" title="<?= e($sourceUrl) ?>"><?= e($truncateUrl($sourceUrl)) ?></td>
-                            <td>
+                            <td<?= $hasCloud
+                                ? ' class="history-row-toggle" data-bs-toggle="collapse" data-bs-target="#' . e($rowId) . '" role="button" aria-expanded="false" style="cursor:pointer"'
+                                : '' ?>>
                                 <?= e($destinationLabel((string) ($job['behavior'] ?? ''), $hasCloud ? $cloudProvider : null)) ?>
                                 <?php if ($hasCloud): ?>
                                     <div class="text-muted small">Cloud details ↓</div>
@@ -155,7 +155,7 @@ ob_start();
                                 <?= $failReasonButton($error, $status) ?>
                             </td>
                             <td class="text-end small">
-                                <div class="d-inline-flex align-items-center gap-2" onclick="event.stopPropagation()">
+                                <div class="d-inline-flex align-items-center gap-2">
                                     <?php if (DownloadJobRepository::canRetry($job)): ?>
                                         <form method="post" action="/job_action.php" class="d-inline">
                                             <?= Csrf::field() ?>

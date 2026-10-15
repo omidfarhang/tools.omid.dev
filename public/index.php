@@ -193,8 +193,7 @@ $failReasonButton = static function (string $error, string $status): string {
 
     return '<button type="button" class="btn btn-link btn-sm text-danger p-0 align-baseline ms-1"'
         . ' data-bs-toggle="modal" data-bs-target="#jobs-fail-modal"'
-        . ' data-fail-reason="' . e($error) . '"'
-        . ' onclick="event.stopPropagation()">'
+        . ' data-fail-reason="' . e($error) . '">'
         . 'Reason</button>';
 };
 
@@ -471,20 +470,20 @@ ob_start();
                     $canHide = DownloadJobRepository::canHide($job);
                     $error = (string) ($job['error'] ?? '');
                     $rowId = 'job-cloud-' . (int) $job['id'];
-                    $rowClass = trim(($isActive ? '' : 'text-muted') . ($hasCloud ? ' history-row-toggle' : ''));
+                    $rowClass = $isActive ? '' : 'text-muted';
                     ?>
-                    <tr data-job-id="<?= (int) $job['id'] ?>"
-                        class="<?= e($rowClass) ?>"
-                        <?= $hasCloud ? 'data-bs-toggle="collapse" data-bs-target="#' . e($rowId) . '" role="button" aria-expanded="false"' : '' ?>>
+                    <tr data-job-id="<?= (int) $job['id'] ?>"<?= $rowClass !== '' ? ' class="' . e($rowClass) . '"' : '' ?>>
                         <td class="mono small" title="<?= e((string) $job['source_url']) ?>"><?= e($truncateUrl((string) $job['source_url'])) ?></td>
                         <td class="mono">
                             <?php if ($fileId !== null && $status === 'complete'): ?>
-                                <a class="filename" href="/download.php?id=<?= $fileId ?>" onclick="event.stopPropagation()"><?= e($name !== '' ? $name : 'file') ?></a>
+                                <a class="filename" href="/download.php?id=<?= $fileId ?>"><?= e($name !== '' ? $name : 'file') ?></a>
                             <?php else: ?>
                                 <?= e($name !== '' ? $name : '—') ?>
                             <?php endif; ?>
                         </td>
-                        <td>
+                        <td<?= $hasCloud
+                            ? ' class="history-row-toggle" data-bs-toggle="collapse" data-bs-target="#' . e($rowId) . '" role="button" aria-expanded="false" style="cursor:pointer"'
+                            : '' ?>>
                             <?= e($destinationLabel((string) $job['behavior'], $hasCloud ? $cloudProvider : null)) ?>
                             <?php if ($hasCloud): ?>
                                 <div class="text-muted small">Cloud details ↓</div>
@@ -497,7 +496,7 @@ ob_start();
                             <?= $failReasonButton($error, $status) ?>
                         </td>
                         <td class="text-end text-nowrap">
-                            <div class="d-inline-flex align-items-center gap-2" onclick="event.stopPropagation()">
+                            <div class="d-inline-flex align-items-center gap-2">
                                 <?php if ($canCancel): ?>
                                     <form method="post" action="/job_action.php" class="d-inline">
                                         <?= Csrf::field() ?>
@@ -802,8 +801,7 @@ ob_start();
         }
         return '<button type="button" class="btn btn-link btn-sm text-danger p-0 align-baseline ms-1"'
             + ' data-bs-toggle="modal" data-bs-target="#jobs-fail-modal"'
-            + ' data-fail-reason="' + escapeAttr(error) + '"'
-            + ' onclick="event.stopPropagation()">Reason</button>';
+            + ' data-fail-reason="' + escapeAttr(error) + '">Reason</button>';
     }
 
     function jobActionHtml(job) {
@@ -837,7 +835,7 @@ ob_start();
         if (!parts.length) {
             return '';
         }
-        return '<div class="d-inline-flex align-items-center gap-2" onclick="event.stopPropagation()">' + parts.join('') + '</div>';
+        return '<div class="d-inline-flex align-items-center gap-2">' + parts.join('') + '</div>';
     }
 
     function cloudDetailsHtml(job) {
@@ -886,26 +884,23 @@ ob_start();
             const status = job.status || 'pending';
             const hasCloud = !!job.cloud_job_id;
             const rowId = 'job-cloud-' + job.id;
-            const classes = [];
-            if (!job.active) classes.push('text-muted');
-            if (hasCloud) classes.push('history-row-toggle');
-            const rowClass = classes.length ? ' class="' + classes.join(' ') + '"' : '';
-            const toggleAttrs = hasCloud
-                ? ' data-bs-toggle="collapse" data-bs-target="#' + rowId + '" role="button" aria-expanded="'
-                    + (expanded[rowId] ? 'true' : 'false') + '"'
+            const rowClass = job.active ? '' : ' class="text-muted"';
+            const destToggle = hasCloud
+                ? ' class="history-row-toggle" data-bs-toggle="collapse" data-bs-target="#' + rowId
+                    + '" role="button" aria-expanded="' + (expanded[rowId] ? 'true' : 'false')
+                    + '" style="cursor:pointer"'
                 : '';
             let nameHtml = escapeHtml(name);
             if (job.file_id && job.status === 'complete') {
-                nameHtml = '<a class="filename" href="/download.php?id=' + job.file_id
-                    + '" onclick="event.stopPropagation()">'
+                nameHtml = '<a class="filename" href="/download.php?id=' + job.file_id + '">'
                     + escapeHtml(name === '—' ? 'file' : name) + '</a>';
             }
             const destHtml = escapeHtml(destinationLabel(job.behavior, hasCloud ? (job.cloud_provider || 'dropbox') : null))
                 + (hasCloud ? '<div class="text-muted small">Cloud details ↓</div>' : '');
-            let html = '<tr data-job-id="' + job.id + '"' + rowClass + toggleAttrs + '>'
+            let html = '<tr data-job-id="' + job.id + '"' + rowClass + '>'
                 + '<td class="mono small" title="' + escapeAttr(job.source_url) + '">' + escapeHtml(truncateUrl(job.source_url)) + '</td>'
                 + '<td class="mono">' + nameHtml + '</td>'
-                + '<td>' + destHtml + '</td>'
+                + '<td' + destToggle + '>' + destHtml + '</td>'
                 + '<td><span class="' + statusBadgeClass(status) + '">' + escapeHtml(status) + '</span>'
                 + failReasonButton(job.error, status)
                 + '</td>'

@@ -177,6 +177,7 @@ ob_start();
                         $status = (string) ($job['status'] ?? 'complete');
                         $name = (string) ($job['result_filename'] ?? $job['requested_filename'] ?? '');
                         $sourceUrl = (string) ($job['source_url'] ?? '');
+                        $fileId = isset($job['file_id']) && $job['file_id'] !== null ? (int) $job['file_id'] : null;
                         $hasCloud = !empty($job['cloud_job_id']);
                         $cloudPath = (string) ($job['cloud_result_path'] ?? $job['cloud_remote_path'] ?? '');
                         $cloudStatus = (string) ($job['cloud_status'] ?? '');
@@ -184,15 +185,22 @@ ob_start();
                         $rowId = 'admin-dl-' . (int) $job['id'];
                         $error = (string) ($job['error'] ?? '');
                         ?>
-                        <tr class="<?= $isHidden ? 'table-secondary' : '' ?> <?= $hasCloud ? 'history-row-toggle' : '' ?>"
-                            <?= $hasCloud ? 'data-bs-toggle="collapse" data-bs-target="#' . e($rowId) . '" role="button" aria-expanded="false"' : '' ?>>
+                        <tr class="<?= $isHidden ? 'table-secondary' : '' ?>">
                             <td class="small text-muted text-nowrap"><?= e((string) ($job['updated_at'] ?? $job['created_at'])) ?></td>
                             <?php if ($filterUser === null): ?>
                                 <td class="small"><?= e($owner !== '' ? $owner : '—') ?></td>
                             <?php endif; ?>
-                            <td class="mono"><?= e($name !== '' ? $name : '—') ?></td>
+                            <td class="mono">
+                                <?php if ($fileId !== null): ?>
+                                    <a class="filename" href="/download.php?id=<?= $fileId ?>"><?= e($name !== '' ? $name : 'file') ?></a>
+                                <?php else: ?>
+                                    <?= e($name !== '' ? $name : '—') ?>
+                                <?php endif; ?>
+                            </td>
                             <td class="mono small" title="<?= e($sourceUrl) ?>"><?= e($truncateUrl($sourceUrl)) ?></td>
-                            <td>
+                            <td<?= $hasCloud
+                                ? ' class="history-row-toggle" data-bs-toggle="collapse" data-bs-target="#' . e($rowId) . '" role="button" aria-expanded="false" style="cursor:pointer"'
+                                : '' ?>>
                                 <?= e($destinationLabel((string) ($job['behavior'] ?? ''), $hasCloud ? $cloudProvider : null)) ?>
                                 <?php if ($hasCloud): ?>
                                     <div class="text-muted small">Cloud details ↓</div>
