@@ -21,11 +21,30 @@ $user = Auth::requireLogin();
 $users = new UserRepository();
 $user = $users->findById((int) $user['id']) ?? $user;
 $cloud = CloudSendService::create();
-$cloudConnected = $cloud->registry()->anyConnected($user);
+$cloudRegistry = $cloud->registry();
+$cloudConnected = $cloudRegistry->anyConnected($user);
+$configuredProviders = [];
+foreach ($cloudRegistry->all() as $provider) {
+    if ($provider->isConfigured()) {
+        $configuredProviders[] = $provider;
+    }
+}
 $prefs = UserRepository::cloudPrefs($user);
-$preferred = $prefs['behavior'];
-if (!$cloudConnected && in_array($preferred, ['save_to_cloud', 'save_to_both'], true)) {
-    $preferred = 'save_to_disk';
+$preferredDestinations = $prefs['destinations'];
+$connectedProviderIds = [];
+foreach ($configuredProviders as $provider) {
+    if ($provider->isConnected($user)) {
+        $connectedProviderIds[] = $provider->id();
+    }
+}
+$preferredDestinations = array_values(array_filter(
+    $preferredDestinations,
+    static function (string $id) use ($connectedProviderIds): bool {
+        return $id === 'disk' || in_array($id, $connectedProviderIds, true);
+    }
+));
+if ($preferredDestinations === []) {
+    $preferredDestinations = ['disk'];
 }
 
 $downloads = DownloadRegistry::default();
@@ -33,12 +52,20 @@ $jobRepo = new DownloadJobRepository();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     Csrf::requireValid();
-    $rawBehavior = (string) ($_POST['behavior'] ?? '');
-    if (!in_array($rawBehavior, ['save_to_disk', 'save_to_cloud', 'save_to_dropbox', 'save_to_both'], true)) {
-        flash('error', 'Invalid action.');
+
+    $allowedProviderIds = [];
+    foreach ($configuredProviders as $provider) {
+        $allowedProviderIds[] = $provider->id();
+    }
+    $rawDest = $_POST['dest'] ?? [];
+    if (!is_array($rawDest)) {
+        $rawDest = [];
+    }
+    $destinations = UserRepository::normalizeDestinations($rawDest, array_merge(['disk'], $allowedProviderIds));
+    if ($destinations === []) {
+        flash('error', 'Choose at least one destination.');
         redirect('/');
     }
-    $behavior = UserRepository::normalizeBehavior($rawBehavior);
 
     $url = trim((string) ($_POST['DLURL'] ?? ''));
     $filename = trim((string) ($_POST['DLFILENAME'] ?? ''));
@@ -89,27 +116,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $ytFormat = (string) ($_POST['ytdlp_format'] ?? 'best');
     }
 
-    $needsCloud = $behavior === 'save_to_cloud' || $behavior === 'save_to_both';
-    if ($needsCloud && !$cloudConnected) {
-        flash('error', 'Connect a cloud account first (Account page).');
-        redirect('/user/');
+    foreach ($destinations as $destId) {
+        if ($destId === 'disk') {
+            continue;
+        }
+        $provider = $cloudRegistry->get($destId);
+        if ($provider === null || !$provider->isConfigured() || !$provider->isConnected($user)) {
+            flash('error', 'Connect ' . ($provider?->label() ?? $destId) . ' first (Account page).');
+            redirect('/user/');
+        }
     }
 
-    $jobId = $jobRepo->create([
-        'user_id' => (int) $user['id'],
-        'source_url' => $url,
-        'requested_filename' => $filename !== '' ? $filename : null,
-        'behavior' => $behavior,
-        'yt_format' => $ytFormat,
-        'yt_audio_only' => $ytAudioOnly,
-        'yt_subs' => $ytSubs,
-        'force_ytdlp' => $forceYtdlp,
-        'cloud_folder' => $needsCloud ? $folder : null,
-        'cloud_conflict' => $needsCloud ? $conflict : null,
-        'delete_after' => $needsCloud && $deleteAfter,
-    ]);
+    $jobIds = [];
+    foreach ($destinations as $destId) {
+        if ($destId === 'disk') {
+            $jobIds[] = $jobRepo->create([
+                'user_id' => (int) $user['id'],
+                'source_url' => $url,
+                'requested_filename' => $filename !== '' ? $filename : null,
+                'behavior' => 'save_to_disk',
+                'yt_format' => $ytFormat,
+                'yt_audio_only' => $ytAudioOnly,
+                'yt_subs' => $ytSubs,
+                'force_ytdlp' => $forceYtdlp,
+            ]);
+            continue;
+        }
 
-    flash('success', 'Download queued.');
+        $provider = $cloudRegistry->get($destId);
+        if ($provider === null) {
+            continue;
+        }
+
+        $jobIds[] = $jobRepo->create([
+            'user_id' => (int) $user['id'],
+            'source_url' => $url,
+            'requested_filename' => $filename !== '' ? $filename : null,
+            'behavior' => 'save_to_cloud',
+            'yt_format' => $ytFormat,
+            'yt_audio_only' => $ytAudioOnly,
+            'yt_subs' => $ytSubs,
+            'force_ytdlp' => $forceYtdlp,
+            'cloud_folder' => $folder,
+            'cloud_conflict' => $conflict,
+            'cloud_provider' => $provider->id(),
+            'delete_after' => $deleteAfter,
+        ]);
+    }
+
+    if ($jobIds === []) {
+        flash('error', 'Choose at least one destination.');
+        redirect('/');
+    }
+
+    $count = count($jobIds);
+    flash('success', $count === 1 ? 'Download queued.' : $count . ' downloads queued.');
     session_write_close();
 
     // Send the redirect first, then process in this request so Apache does not
@@ -129,10 +190,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     ignore_user_abort(true);
     @set_time_limit(0);
-    try {
-        (new DownloadJobProcessor())->process($jobId);
-    } catch (\Throwable) {
-        // Job stays pending/in_progress for Home/API retry.
+    $processor = new DownloadJobProcessor();
+    foreach ($jobIds as $jobId) {
+        try {
+            $processor->process($jobId);
+        } catch (\Throwable) {
+            // Job stays pending/in_progress for Home/API retry.
+        }
     }
     exit;
 }
@@ -161,8 +225,8 @@ $destinationLabel = static function (string $behavior, ?string $provider = null)
 
     return match ($behavior) {
         'save_to_cloud', 'save_to_dropbox' => $cloud,
-        'save_to_both' => 'Disk + ' . $cloud,
-        default => 'Disk',
+        'save_to_both' => 'Local + ' . $cloud,
+        default => 'Local',
     };
 };
 
@@ -327,47 +391,46 @@ ob_start();
         <section class="mb-4">
             <h2 class="subheader">Save to</h2>
             <fieldset class="choice-fieldset">
-                <legend class="visually-hidden">Save destination</legend>
+                <legend class="visually-hidden">Save destinations</legend>
                 <div class="choice-grid">
-                    <label class="choice-tile" for="behavior_disk">
-                        <input class="form-check-input" type="radio" name="behavior" id="behavior_disk"
-                               value="save_to_disk" <?= $preferred === 'save_to_disk' ? 'checked' : '' ?>>
+                    <label class="choice-tile" for="dest_disk">
+                        <input class="form-check-input" type="checkbox" name="dest[]" id="dest_disk"
+                               value="disk" <?= in_array('disk', $preferredDestinations, true) ? 'checked' : '' ?>>
                         <span class="choice-tile-body">
-                            <span class="choice-tile-title">Disk</span>
+                            <span class="choice-tile-title">Local</span>
                             <span class="choice-tile-desc">Keep on this host</span>
                         </span>
                     </label>
-                    <label class="choice-tile<?= $cloudConnected ? '' : ' is-disabled' ?>" for="behavior_cloud">
-                        <input class="form-check-input" type="radio" name="behavior" id="behavior_cloud"
-                               value="save_to_cloud"
-                               <?= $preferred === 'save_to_cloud' ? 'checked' : '' ?>
-                               <?= $cloudConnected ? '' : 'disabled' ?>>
-                        <span class="choice-tile-body">
-                            <span class="choice-tile-title">Cloud</span>
-                            <span class="choice-tile-desc"><?= $cloudConnected ? 'Upload only' : 'Connect cloud first' ?></span>
-                        </span>
-                    </label>
-                    <label class="choice-tile<?= $cloudConnected ? '' : ' is-disabled' ?>" for="behavior_both">
-                        <input class="form-check-input" type="radio" name="behavior" id="behavior_both"
-                               value="save_to_both"
-                               <?= $preferred === 'save_to_both' ? 'checked' : '' ?>
-                               <?= $cloudConnected ? '' : 'disabled' ?>>
-                        <span class="choice-tile-body">
-                            <span class="choice-tile-title">Disk + Cloud</span>
-                            <span class="choice-tile-desc"><?= $cloudConnected ? 'Host copy and upload' : 'Connect cloud first' ?></span>
-                        </span>
-                    </label>
+                    <?php foreach ($configuredProviders as $provider): ?>
+                        <?php
+                        $pid = $provider->id();
+                        $pConnected = $provider->isConnected($user);
+                        $pChecked = $pConnected && in_array($pid, $preferredDestinations, true);
+                        ?>
+                        <label class="choice-tile<?= $pConnected ? '' : ' is-disabled' ?>" for="dest_<?= e($pid) ?>">
+                            <input class="form-check-input dest-cloud" type="checkbox" name="dest[]"
+                                   id="dest_<?= e($pid) ?>"
+                                   value="<?= e($pid) ?>"
+                                   <?= $pChecked ? 'checked' : '' ?>
+                                   <?= $pConnected ? '' : 'disabled' ?>>
+                            <span class="choice-tile-body">
+                                <span class="choice-tile-title"><?= e($provider->label()) ?></span>
+                                <span class="choice-tile-desc"><?= $pConnected ? 'Upload to ' . e($provider->label()) : 'Connect first' ?></span>
+                            </span>
+                        </label>
+                    <?php endforeach; ?>
                 </div>
+                <div class="form-text mt-2">Each checked destination starts its own job.</div>
             </fieldset>
 
-            <?php if ($cloudConnected): ?>
+            <?php if ($configuredProviders !== []): ?>
                 <div class="cloud-options d-none" id="cloud-options">
                     <div class="row g-3">
                         <div class="col-md-7">
                             <label for="cloud_folder" class="form-label">Cloud folder</label>
                             <input name="cloud_folder" type="text" class="form-control mono" id="cloud_folder"
                                    value="<?= e($prefs['folder']) ?>" placeholder="(root)">
-                            <div class="form-text">Relative to your cloud root. Leave blank for root.</div>
+                            <div class="form-text">Relative to your cloud root. Leave blank for root. Applies to all cloud destinations.</div>
                         </div>
                         <div class="col-md-5">
                             <label for="cloud_conflict" class="form-label">If file already exists</label>
@@ -381,9 +444,9 @@ ob_start();
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" value="1" name="delete_after" id="delete_after">
                                 <label class="form-check-label" for="delete_after">
-                                    Delete from host after cloud succeeds
+                                    Delete host staging file after cloud succeeds
                                 </label>
-                                <div class="form-text">Only when this download also keeps a host copy (yt-dlp sources → cloud, or Disk + Cloud).</div>
+                                <div class="form-text">Applies to cloud jobs that stage on the host first (e.g. yt-dlp). Does not affect a separate Local job.</div>
                             </div>
                         </div>
                     </div>
@@ -732,10 +795,8 @@ ob_start();
 
     function syncCloudOptions() {
         if (!cloudOptions) return;
-        const selected = document.querySelector('input[name="behavior"]:checked');
-        const value = selected ? selected.value : 'save_to_disk';
-        const show = value === 'save_to_cloud' || value === 'save_to_both';
-        cloudOptions.classList.toggle('d-none', !show);
+        const anyCloud = document.querySelectorAll('input.dest-cloud:checked:not(:disabled)').length > 0;
+        cloudOptions.classList.toggle('d-none', !anyCloud);
     }
 
     filenameInput.addEventListener('input', function () {
@@ -755,7 +816,7 @@ ob_start();
         ytAudioOnly.addEventListener('change', syncSourceOptions);
     }
 
-    document.querySelectorAll('input[name="behavior"]').forEach(function (el) {
+    document.querySelectorAll('input[name="dest[]"]').forEach(function (el) {
         el.addEventListener('change', syncCloudOptions);
     });
 
@@ -777,8 +838,8 @@ ob_start();
     function destinationLabel(behavior, provider) {
         const cloud = provider ? providerLabel(provider) : 'Cloud';
         if (behavior === 'save_to_cloud' || behavior === 'save_to_dropbox') return cloud;
-        if (behavior === 'save_to_both') return 'Disk + ' + cloud;
-        return 'Disk';
+        if (behavior === 'save_to_both') return 'Local + ' + cloud;
+        return 'Local';
     }
 
     function statusBadgeClass(status) {

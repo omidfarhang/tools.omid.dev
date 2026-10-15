@@ -80,10 +80,30 @@ final class DownloadJobProcessor
         }
 
         $needsCloud = $behavior === 'save_to_cloud' || $behavior === 'save_to_both';
-        $cloudConnected = $this->cloud->registry()->anyConnected($user);
-        if ($needsCloud && !$cloudConnected) {
-            $this->jobs->markFailed($jobId, 'Connect a cloud account first (Account page).');
-            return;
+        $requestedProviderId = trim((string) ($job['cloud_provider'] ?? ''));
+        $cloudProvider = null;
+        if ($needsCloud) {
+            $registry = $this->cloud->registry();
+            if ($requestedProviderId !== '') {
+                $cloudProvider = $registry->get($requestedProviderId);
+                if ($cloudProvider === null || !$cloudProvider->isConfigured()) {
+                    $this->jobs->markFailed($jobId, 'Unknown or unconfigured cloud provider.');
+                    return;
+                }
+                if (!$cloudProvider->isConnected($user)) {
+                    $this->jobs->markFailed(
+                        $jobId,
+                        'Connect ' . $cloudProvider->label() . ' first (Account page).'
+                    );
+                    return;
+                }
+            } else {
+                $cloudProvider = $registry->defaultConnected($user);
+                if ($cloudProvider === null) {
+                    $this->jobs->markFailed($jobId, 'Connect a cloud account first (Account page).');
+                    return;
+                }
+            }
         }
 
         $downloadResult = null;
@@ -160,7 +180,6 @@ final class DownloadJobProcessor
                     $deleteAfter = false;
                 }
 
-                $cloudProvider = $this->cloud->registry()->defaultConnected($user);
                 if ($cloudProvider === null) {
                     $this->jobs->markFailed($jobId, 'Connect a cloud account first (Account page).', $resultFilename, $fileId);
                     return;

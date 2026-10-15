@@ -139,6 +139,7 @@ SQL);
         self::ensureColumn($pdo, 'download_jobs', 'yt_audio_only', 'yt_audio_only INTEGER NOT NULL DEFAULT 0');
         self::ensureColumn($pdo, 'download_jobs', 'yt_subs', 'yt_subs TEXT NULL');
         self::ensureColumn($pdo, 'download_jobs', 'hidden_at', 'hidden_at TEXT NULL');
+        self::ensureColumn($pdo, 'download_jobs', 'cloud_provider', 'cloud_provider TEXT NULL');
         self::ensureColumn($pdo, 'cloud_jobs', 'hidden_at', 'hidden_at TEXT NULL');
         self::ensureColumn($pdo, 'shares', 'expires_at', 'expires_at TEXT NULL');
         self::ensureColumn($pdo, 'shares', 'max_downloads', 'max_downloads INTEGER NULL');
@@ -147,6 +148,7 @@ SQL);
         self::migrateDropboxJobs($pdo);
         self::migrateBehaviorValues($pdo);
         self::migrateDefaultCloudFolder($pdo);
+        self::migrateDefaultDestinations($pdo);
         self::migrateDownloadHistory($pdo);
         $settings = new SettingsRepository($pdo);
         (new YtDlpCookieStore($settings))->importLegacyFileIfNeeded();
@@ -217,18 +219,49 @@ SQL);
         );
     }
 
-    private static function ensureColumn(PDO $pdo, string $table, string $column, string $ddl): void
+    private static function migrateDefaultDestinations(PDO $pdo): void
+    {
+        $added = self::ensureColumn(
+            $pdo,
+            'users',
+            'default_destinations',
+            "default_destinations TEXT NOT NULL DEFAULT '[\"disk\"]'"
+        );
+        if (!$added) {
+            return;
+        }
+
+        $rows = $pdo->query('SELECT id, dropbox_default_behavior FROM users')->fetchAll();
+        $stmt = $pdo->prepare('UPDATE users SET default_destinations = :d WHERE id = :id');
+        foreach ($rows as $row) {
+            $behavior = (string) ($row['dropbox_default_behavior'] ?? 'save_to_disk');
+            $destinations = match ($behavior) {
+                'save_to_cloud', 'save_to_dropbox' => '["dropbox"]',
+                'save_to_both' => '["disk","dropbox"]',
+                default => '["disk"]',
+            };
+            $stmt->execute([
+                ':d' => $destinations,
+                ':id' => (int) $row['id'],
+            ]);
+        }
+    }
+
+    /** @return bool True when the column was added */
+    private static function ensureColumn(PDO $pdo, string $table, string $column, string $ddl): bool
     {
         $stmt = $pdo->query('PRAGMA table_info(' . $table . ')');
         if ($stmt === false) {
-            return;
+            return false;
         }
         foreach ($stmt->fetchAll() as $col) {
             if (($col['name'] ?? '') === $column) {
-                return;
+                return false;
             }
         }
         $pdo->exec('ALTER TABLE ' . $table . ' ADD COLUMN ' . $ddl);
+
+        return true;
     }
 
     private static function seedAdmin(PDO $pdo): void

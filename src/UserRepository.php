@@ -282,6 +282,106 @@ final class UserRepository
         };
     }
 
+    /**
+     * Normalize destination ids from form/prefs.
+     * "disk" = local host; any other id is a cloud provider id.
+     *
+     * @param list<mixed> $raw
+     * @param list<string>|null $allowedProviders Provider ids that may be selected (null = any non-empty id)
+     * @return list<string>
+     */
+    public static function normalizeDestinations(array $raw, ?array $allowedProviders = null): array
+    {
+        $out = [];
+        $seen = [];
+        foreach ($raw as $item) {
+            if (!is_string($item) && !is_int($item)) {
+                continue;
+            }
+            $id = strtolower(trim((string) $item));
+            if ($id === '' || isset($seen[$id])) {
+                continue;
+            }
+            if ($id === 'disk' || $id === 'local') {
+                $seen['disk'] = true;
+                $out[] = 'disk';
+                continue;
+            }
+            if ($allowedProviders !== null && !in_array($id, $allowedProviders, true)) {
+                continue;
+            }
+            if (!preg_match('/^[a-z][a-z0-9_-]*$/', $id)) {
+                continue;
+            }
+            $seen[$id] = true;
+            $out[] = $id;
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param list<string> $destinations
+     */
+    public static function destinationsToJson(array $destinations): string
+    {
+        $normalized = self::normalizeDestinations($destinations);
+        if ($normalized === []) {
+            $normalized = ['disk'];
+        }
+
+        return json_encode(array_values($normalized), JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function destinationsFromUser(array $user): array
+    {
+        $raw = $user['default_destinations'] ?? null;
+        if (is_string($raw) && $raw !== '') {
+            $decoded = json_decode($raw, true);
+            if (is_array($decoded)) {
+                $dest = self::normalizeDestinations($decoded);
+                if ($dest !== []) {
+                    return $dest;
+                }
+            }
+        }
+
+        return match (self::normalizeBehavior((string) ($user['dropbox_default_behavior'] ?? 'save_to_disk'))) {
+            'save_to_cloud' => ['dropbox'],
+            'save_to_both' => ['disk', 'dropbox'],
+            default => ['disk'],
+        };
+    }
+
+    /**
+     * Legacy single behavior derived from destination list (for older callers).
+     *
+     * @param list<string> $destinations
+     */
+    public static function behaviorFromDestinations(array $destinations): string
+    {
+        $dest = self::normalizeDestinations($destinations);
+        $hasDisk = in_array('disk', $dest, true);
+        $hasCloud = false;
+        foreach ($dest as $id) {
+            if ($id !== 'disk') {
+                $hasCloud = true;
+                break;
+            }
+        }
+        if ($hasDisk && $hasCloud) {
+            return 'save_to_both';
+        }
+        if ($hasCloud) {
+            return 'save_to_cloud';
+        }
+
+        return 'save_to_disk';
+    }
+
     public static function normalizeConflict(string $conflict): string
     {
         return match ($conflict) {
@@ -306,11 +406,14 @@ final class UserRepository
         return implode('/', $parts);
     }
 
-    /** @return array{behavior:string,folder:string,conflict:string} */
+    /** @return array{behavior:string,destinations:list<string>,folder:string,conflict:string} */
     public static function cloudPrefs(array $user): array
     {
+        $destinations = self::destinationsFromUser($user);
+
         return [
-            'behavior' => self::normalizeBehavior((string) ($user['dropbox_default_behavior'] ?? 'save_to_disk')),
+            'behavior' => self::behaviorFromDestinations($destinations),
+            'destinations' => $destinations,
             'folder' => self::normalizeFolder((string) ($user['dropbox_folder'] ?? '')),
             'conflict' => self::normalizeConflict((string) ($user['dropbox_conflict'] ?? 'rename')),
         ];
@@ -324,11 +427,32 @@ final class UserRepository
 
     public function updateDefaultBehavior(int $userId, string $behavior): void
     {
+        $destinations = match (self::normalizeBehavior($behavior)) {
+            'save_to_cloud' => ['dropbox'],
+            'save_to_both' => ['disk', 'dropbox'],
+            default => ['disk'],
+        };
+        $this->updateDefaultDestinations($userId, $destinations);
+    }
+
+    /**
+     * @param list<string> $destinations
+     */
+    public function updateDefaultDestinations(int $userId, array $destinations): void
+    {
+        $normalized = self::normalizeDestinations($destinations);
+        if ($normalized === []) {
+            $normalized = ['disk'];
+        }
         $stmt = $this->db->prepare(
-            'UPDATE users SET dropbox_default_behavior = :b WHERE id = :id'
+            'UPDATE users SET
+                default_destinations = :d,
+                dropbox_default_behavior = :b
+             WHERE id = :id'
         );
         $stmt->execute([
-            ':b' => self::normalizeBehavior($behavior),
+            ':d' => self::destinationsToJson($normalized),
+            ':b' => self::behaviorFromDestinations($normalized),
             ':id' => $userId,
         ]);
     }

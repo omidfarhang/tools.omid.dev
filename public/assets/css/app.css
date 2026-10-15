@@ -161,7 +161,7 @@ code.mono {
 /* Destination choice tiles on download form */
 .choice-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
     gap: 0.65rem;
 }
 

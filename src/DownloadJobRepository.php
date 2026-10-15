@@ -28,6 +28,7 @@ final class DownloadJobRepository
      *   force_ytdlp?:bool,
      *   cloud_folder?:?string,
      *   cloud_conflict?:?string,
+     *   cloud_provider?:?string,
      *   delete_after?:bool
      * } $data
      */
@@ -41,12 +42,17 @@ final class DownloadJobRepository
             $subs = null;
         }
 
+        $provider = isset($data['cloud_provider']) ? trim((string) $data['cloud_provider']) : '';
+        if ($provider === '') {
+            $provider = null;
+        }
+
         $stmt = $this->db->prepare(
             'INSERT INTO download_jobs
                 (user_id, source_url, requested_filename, behavior, yt_format, yt_audio_only, yt_subs,
-                 force_ytdlp, cloud_folder, cloud_conflict, delete_after, status)
+                 force_ytdlp, cloud_folder, cloud_conflict, cloud_provider, delete_after, status)
              VALUES
-                (:uid, :url, :req, :beh, :yt, :audio, :subs, :fy, :folder, :conflict, :da, :st)'
+                (:uid, :url, :req, :beh, :yt, :audio, :subs, :fy, :folder, :conflict, :provider, :da, :st)'
         );
         $stmt->execute([
             ':uid' => $data['user_id'],
@@ -59,6 +65,7 @@ final class DownloadJobRepository
             ':fy' => !empty($data['force_ytdlp']) ? 1 : 0,
             ':folder' => $data['cloud_folder'] ?? null,
             ':conflict' => $data['cloud_conflict'] ?? null,
+            ':provider' => $provider,
             ':da' => !empty($data['delete_after']) ? 1 : 0,
             ':st' => 'pending',
         ]);
@@ -240,7 +247,7 @@ final class DownloadJobRepository
         return 'SELECT d.*,
                     cj.status AS cloud_status,
                     cj.async_job_id AS cloud_async_job_id,
-                    cj.provider AS cloud_provider,
+                    COALESCE(cj.provider, d.cloud_provider) AS cloud_provider,
                     cj.result_path AS cloud_result_path,
                     cj.remote_path AS cloud_remote_path,
                     cj.error AS cloud_error,
@@ -400,7 +407,7 @@ final class DownloadJobRepository
 
         return "SELECT d.*{$ownerSelect},
                     cj.status AS cloud_status,
-                    cj.provider AS cloud_provider,
+                    COALESCE(cj.provider, d.cloud_provider) AS cloud_provider,
                     cj.result_path AS cloud_result_path,
                     cj.remote_path AS cloud_remote_path,
                     cj.error AS cloud_error,

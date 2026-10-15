@@ -30,10 +30,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('/user/');
     }
     if ($action === 'save_download_prefs') {
-        $users->updateDefaultBehavior(
-            (int) $user['id'],
-            (string) ($_POST['cloud_default_behavior'] ?? $_POST['dropbox_default_behavior'] ?? 'save_to_disk')
-        );
+        $allowed = ['disk'];
+        foreach ($registry->all() as $provider) {
+            if ($provider->isConfigured()) {
+                $allowed[] = $provider->id();
+            }
+        }
+        $rawDest = $_POST['dest'] ?? [];
+        if (!is_array($rawDest)) {
+            $rawDest = [];
+        }
+        $destinations = UserRepository::normalizeDestinations($rawDest, $allowed);
+        if ($destinations === []) {
+            flash('error', 'Choose at least one preferred destination.');
+            redirect('/user/');
+        }
+        $users->updateDefaultDestinations((int) $user['id'], $destinations);
         flash('success', 'Download preference saved.');
         redirect('/user/');
     }
@@ -78,9 +90,16 @@ foreach ($registry->all() as $provider) {
     }
 }
 $prefs = UserRepository::cloudPrefs($user);
+$preferredDestinations = $prefs['destinations'];
 $usedBytes = $users->usedBytes((int) $user['id']);
 $quotaBytes = UserRepository::effectiveQuotaBytes($user);
 $providers = $registry->all();
+$configuredProviders = [];
+foreach ($providers as $provider) {
+    if ($provider->isConfigured()) {
+        $configuredProviders[] = $provider;
+    }
+}
 
 ob_start();
 ?>
@@ -126,15 +145,38 @@ ob_start();
             <form method="post" class="mt-4">
                 <?= Csrf::field() ?>
                 <input type="hidden" name="action" value="save_download_prefs">
-                <div class="mb-3">
-                    <label for="cloud_default_behavior" class="form-label">Preferred download action</label>
-                    <select class="form-select" name="cloud_default_behavior" id="cloud_default_behavior">
-                        <option value="save_to_disk" <?= $prefs['behavior'] === 'save_to_disk' ? 'selected' : '' ?>>Save To Disk</option>
-                        <option value="save_to_cloud" <?= $prefs['behavior'] === 'save_to_cloud' ? 'selected' : '' ?>>Save To Cloud</option>
-                        <option value="save_to_both" <?= $prefs['behavior'] === 'save_to_both' ? 'selected' : '' ?>>Save To Disk + Cloud</option>
-                    </select>
-                    <div class="form-text">Highlights the primary button on the home page. Cloud options need a connected provider. Auto-delete is chosen per job, not here.</div>
-                </div>
+                <fieldset class="choice-fieldset mb-3">
+                    <legend class="form-label">Preferred destinations</legend>
+                    <div class="choice-grid">
+                        <label class="choice-tile" for="pref_dest_disk">
+                            <input class="form-check-input" type="checkbox" name="dest[]" id="pref_dest_disk"
+                                   value="disk" <?= in_array('disk', $preferredDestinations, true) ? 'checked' : '' ?>>
+                            <span class="choice-tile-body">
+                                <span class="choice-tile-title">Local</span>
+                                <span class="choice-tile-desc">Keep on this host</span>
+                            </span>
+                        </label>
+                        <?php foreach ($configuredProviders as $provider): ?>
+                            <?php
+                            $pid = $provider->id();
+                            $pConnected = $provider->isConnected($user);
+                            $pChecked = $pConnected && in_array($pid, $preferredDestinations, true);
+                            ?>
+                            <label class="choice-tile<?= $pConnected ? '' : ' is-disabled' ?>" for="pref_dest_<?= e($pid) ?>">
+                                <input class="form-check-input" type="checkbox" name="dest[]"
+                                       id="pref_dest_<?= e($pid) ?>"
+                                       value="<?= e($pid) ?>"
+                                       <?= $pChecked ? 'checked' : '' ?>
+                                       <?= $pConnected ? '' : 'disabled' ?>>
+                                <span class="choice-tile-body">
+                                    <span class="choice-tile-title"><?= e($provider->label()) ?></span>
+                                    <span class="choice-tile-desc"><?= $pConnected ? 'Pre-select on home' : 'Connect first' ?></span>
+                                </span>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+                    <div class="form-text mt-2">Pre-selects destinations on the home download form. Auto-delete is chosen per job.</div>
+                </fieldset>
                 <button class="btn btn-primary" type="submit">Save preference</button>
             </form>
 

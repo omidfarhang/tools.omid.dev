@@ -41,8 +41,8 @@ $destinationLabel = static function (string $behavior, ?string $provider = null)
 
     return match ($behavior) {
         'save_to_cloud', 'save_to_dropbox' => $cloud,
-        'save_to_both' => 'Disk + ' . $cloud,
-        default => 'Disk',
+        'save_to_both' => 'Local + ' . $cloud,
+        default => 'Local',
     };
 };
 
