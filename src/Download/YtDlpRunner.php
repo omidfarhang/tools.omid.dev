@@ -21,7 +21,7 @@ final class YtDlpRunner
             mkdir(Config::tempDir(), 0775, true);
         }
 
-        $template = Config::tempDir() . '/%(title).200B [%(id)s].%(ext)s';
+        $template = Config::tempDir() . '/%(title).60B [%(id)s].%(ext)s';
         $cookiePath = (new YtDlpCookieStore())->cookieFilePath();
         try {
             $siteExtra = ManagedSettings::parseExtraArgs((string) Config::get('ytdlp_extra_args', ''));
@@ -29,7 +29,7 @@ final class YtDlpRunner
             $siteExtra = [];
         }
 
-        $cmd = ['yt-dlp', ...$formatArgs, ...$siteExtra, ...$extraArgs, '-o', $template, '--no-playlist', '-q', '--print', 'after_move:filepath'];
+        $cmd = ['yt-dlp', ...$formatArgs, ...$siteExtra, ...$extraArgs, '-o', $template, '--restrict-filenames', '--no-playlist', '-q', '--print', 'after_move:filepath'];
         if ($cookiePath !== null && is_file($cookiePath)) {
             $cmd[] = '--cookies';
             $cmd[] = $cookiePath;

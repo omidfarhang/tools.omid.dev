@@ -32,7 +32,8 @@ fi
 
 DLFILE="$(yt-dlp "$URL" "$@" \
   "${COOKIE_ARGS[@]}" \
-  -o "${TEMP_DIR}/%(title).200B [%(id)s].%(ext)s" \
+  -o "${TEMP_DIR}/%(title).60B [%(id)s].%(ext)s" \
+  --restrict-filenames \
   --no-playlist \
   -q \
   --print after_move:filepath)"
