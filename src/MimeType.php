@@ -49,6 +49,8 @@ final class MimeType
         'video/ogg' => 'video',
         'audio/mpeg' => 'audio',
         'audio/mp4' => 'audio',
+        'audio/x-m4a' => 'audio',
+        'audio/m4a' => 'audio',
         'audio/ogg' => 'audio',
         'audio/wav' => 'audio',
         'audio/x-wav' => 'audio',
@@ -63,22 +65,23 @@ final class MimeType
 
     public static function detect(string $path, string $originalName): string
     {
-        $mime = '';
+        // Prefer extension for known media so .m4a is audio/mp4 (not video/mp4 from finfo).
+        $fromName = self::fromExtension($originalName);
+        if ($fromName !== null) {
+            return $fromName;
+        }
+
         if (function_exists('mime_content_type') && is_file($path)) {
             $detected = @mime_content_type($path);
             if (is_string($detected) && $detected !== '') {
                 $mime = strtolower(trim(explode(';', $detected, 2)[0]));
+                if ($mime !== '' && $mime !== 'application/octet-stream' && $mime !== 'inode/x-empty') {
+                    return $mime;
+                }
             }
         }
 
-        if ($mime === '' || $mime === 'application/octet-stream' || $mime === 'inode/x-empty') {
-            $fromName = self::fromExtension($originalName);
-            if ($fromName !== null) {
-                return $fromName;
-            }
-        }
-
-        return $mime !== '' ? $mime : 'application/octet-stream';
+        return 'application/octet-stream';
     }
 
     public static function fromExtension(string $filename): ?string

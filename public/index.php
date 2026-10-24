@@ -14,6 +14,7 @@ use App\Download\YtDlpRunner;
 use App\DownloadJobDispatcher;
 use App\DownloadJobProcessor;
 use App\DownloadJobRepository;
+use App\MimeType;
 use App\UserRepository;
 use App\View;
 
@@ -569,7 +570,20 @@ ob_start();
                         <td class="mono small" title="<?= e((string) $job['source_url']) ?>"><?= e($truncateUrl((string) $job['source_url'])) ?></td>
                         <td class="mono">
                             <?php if ($fileId !== null && $status === 'complete'): ?>
-                                <a class="filename" href="/download.php?id=<?= $fileId ?>"><?= e($name !== '' ? $name : 'file') ?></a>
+                                <?php
+                                $displayName = $name !== '' ? $name : 'file';
+                                $previewKind = MimeType::previewKindFromName($displayName);
+                                $canPreview = $previewKind !== null;
+                                ?>
+                                <?php if ($canPreview): ?>
+                                    <button type="button" class="filename btn btn-link p-0 align-baseline"
+                                            data-action-preview
+                                            data-file-id="<?= $fileId ?>"
+                                            data-file-name="<?= e($displayName) ?>"
+                                            data-preview-kind="<?= e($previewKind) ?>"><?= e($displayName) ?></button>
+                                <?php else: ?>
+                                    <a class="filename" href="/download.php?id=<?= $fileId ?>"><?= e($displayName) ?></a>
+                                <?php endif; ?>
                             <?php else: ?>
                                 <?= e($name !== '' ? $name : '—') ?>
                             <?php endif; ?>
@@ -995,8 +1009,11 @@ ob_start();
                 : '';
             let nameHtml = escapeHtml(name);
             if (job.file_id && job.status === 'complete') {
-                nameHtml = '<a class="filename" href="/download.php?id=' + job.file_id + '">'
-                    + escapeHtml(name === '—' ? 'file' : name) + '</a>';
+                const label = name === '—' ? 'file' : name;
+                nameHtml = typeof window.filePreviewLinkHtml === 'function'
+                    ? window.filePreviewLinkHtml(job.file_id, label)
+                    : ('<a class="filename" href="/download.php?id=' + job.file_id + '">'
+                        + escapeHtml(label) + '</a>');
             }
             const destHtml = escapeHtml(destinationLabel(job.behavior, hasCloud ? (job.cloud_provider || 'dropbox') : null))
                 + (hasCloud ? '<div class="text-muted small">Cloud details ↓</div>' : '');
@@ -1076,4 +1093,6 @@ ob_start();
 })();
 </script>
 <?php
+include dirname(__DIR__) . '/templates/partials/preview_modal.php';
+include dirname(__DIR__) . '/templates/partials/preview_js.php';
 View::render('Download', ob_get_clean(), $user);

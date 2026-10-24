@@ -157,6 +157,11 @@ button.filename.btn-link {
     text-align: left;
     text-decoration: none;
     color: var(--tblr-link-color, var(--accent));
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
 }
 
 button.filename.btn-link:hover {

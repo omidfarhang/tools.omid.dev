@@ -50,16 +50,61 @@ if ($kind === 'text' && !MimeType::isTextPreviewAllowed($mime, $size)) {
     exit;
 }
 
-if ($kind === 'text' && !str_contains($mime, 'charset=')) {
-    $mime .= '; charset=utf-8';
+$contentType = $mime;
+if ($kind === 'text' && !str_contains($contentType, 'charset=')) {
+    $contentType .= '; charset=utf-8';
 }
 
 $safeName = str_replace(['"', "\r", "\n"], '', $originalName);
 
-header('Content-Type: ' . $mime);
-header('Content-Length: ' . (string) $size);
+header('Content-Type: ' . $contentType);
 header('Content-Disposition: inline; filename="' . $safeName . '"');
 header('X-Content-Type-Options: nosniff');
 header('Cache-Control: private, no-store');
+
+$needsRanges = $kind === 'audio' || $kind === 'video';
+if ($needsRanges) {
+    header('Accept-Ranges: bytes');
+}
+
+$rangeHeader = $_SERVER['HTTP_RANGE'] ?? '';
+if ($needsRanges && is_string($rangeHeader) && preg_match('/^bytes=(\d*)-(\d*)$/', $rangeHeader, $m) === 1) {
+    $start = $m[1] !== '' ? (int) $m[1] : 0;
+    $end = $m[2] !== '' ? (int) $m[2] : ($size - 1);
+
+    if ($size === 0 || $start >= $size || $start > $end) {
+        http_response_code(416);
+        header('Content-Range: bytes */' . $size);
+        exit;
+    }
+
+    $end = min($end, $size - 1);
+    $length = $end - $start + 1;
+
+    http_response_code(206);
+    header('Content-Range: bytes ' . $start . '-' . $end . '/' . $size);
+    header('Content-Length: ' . (string) $length);
+
+    $fp = fopen($path, 'rb');
+    if ($fp === false) {
+        http_response_code(500);
+        echo 'Could not read file.';
+        exit;
+    }
+    fseek($fp, $start);
+    $remaining = $length;
+    while ($remaining > 0 && !feof($fp)) {
+        $chunk = fread($fp, min(8192, $remaining));
+        if ($chunk === false || $chunk === '') {
+            break;
+        }
+        echo $chunk;
+        $remaining -= strlen($chunk);
+    }
+    fclose($fp);
+    exit;
+}
+
+header('Content-Length: ' . (string) $size);
 readfile($path);
 exit;

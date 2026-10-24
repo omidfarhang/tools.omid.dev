@@ -18,12 +18,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const bulkAction = document.querySelector('[data-bulk-action]');
     const bulkIds = document.querySelector('[data-bulk-ids]');
 
-    const previewModalEl = document.getElementById('filesPreviewModal');
     const deleteModalEl = document.getElementById('filesDeleteModal');
     const renameModalEl = document.getElementById('filesRenameModal');
     const shareModalEl = document.getElementById('filesShareModal');
     const cloudModalEl = document.getElementById('filesCloudModal');
-    const previewModal = previewModalEl ? tabler.Modal.getOrCreateInstance(previewModalEl) : null;
     const deleteModal = deleteModalEl ? tabler.Modal.getOrCreateInstance(deleteModalEl) : null;
     const renameModal = renameModalEl ? tabler.Modal.getOrCreateInstance(renameModalEl) : null;
     const shareModal = shareModalEl ? tabler.Modal.getOrCreateInstance(shareModalEl) : null;
@@ -195,89 +193,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    function clearPreviewStage() {
-        if (!previewModalEl) return;
-        const stage = previewModalEl.querySelector('[data-preview-stage]');
-        if (!stage) return;
-        stage.querySelectorAll('video, audio').forEach(function (el) {
-            try { el.pause(); } catch (err) { /* ignore */ }
-            el.removeAttribute('src');
-            if (typeof el.load === 'function') el.load();
-        });
-        stage.innerHTML = '<p class="text-secondary small mb-0 p-3" data-preview-empty>Select a file to preview.</p>';
-    }
-
-    function showPreview(opts) {
-        if (!previewModal || !previewModalEl) return;
-        const id = opts.id || '';
-        const name = opts.name || '';
-        const kind = opts.kind || '';
-        const url = '/preview.php?id=' + encodeURIComponent(id);
-        const titleEl = document.getElementById('filesPreviewModalLabel');
-        const downloadEl = previewModalEl.querySelector('[data-preview-download]');
-        const stage = previewModalEl.querySelector('[data-preview-stage]');
-        if (titleEl) titleEl.textContent = name || 'Preview';
-        if (downloadEl) downloadEl.href = '/download.php?id=' + encodeURIComponent(id);
-        if (!stage) {
-            previewModal.show();
-            return;
-        }
-
-        clearPreviewStage();
-        stage.innerHTML = '';
-
-        if (kind === 'image') {
-            const img = document.createElement('img');
-            img.className = 'files-preview-media';
-            img.src = url;
-            img.alt = name;
-            stage.appendChild(img);
-        } else if (kind === 'pdf') {
-            const frame = document.createElement('iframe');
-            frame.className = 'files-preview-frame';
-            frame.src = url;
-            frame.title = name || 'PDF preview';
-            stage.appendChild(frame);
-        } else if (kind === 'video') {
-            const video = document.createElement('video');
-            video.className = 'files-preview-media';
-            video.controls = true;
-            video.preload = 'metadata';
-            video.src = url;
-            stage.appendChild(video);
-        } else if (kind === 'audio') {
-            const wrap = document.createElement('div');
-            wrap.className = 'files-preview-audio';
-            const audio = document.createElement('audio');
-            audio.controls = true;
-            audio.preload = 'metadata';
-            audio.src = url;
-            wrap.appendChild(audio);
-            stage.appendChild(wrap);
-        } else if (kind === 'text') {
-            const pre = document.createElement('pre');
-            pre.className = 'files-preview-text mono mb-0';
-            pre.textContent = 'Loading…';
-            stage.appendChild(pre);
-            fetch(url, { credentials: 'same-origin' }).then(function (res) {
-                if (!res.ok) throw new Error('Preview failed');
-                return res.text();
-            }).then(function (text) {
-                pre.textContent = text;
-            }).catch(function () {
-                pre.textContent = 'Could not load text preview.';
-            });
-        } else {
-            stage.innerHTML = '<p class="text-secondary small mb-0 p-3">Preview not available for this file type.</p>';
-        }
-
-        previewModal.show();
-    }
-
-    if (previewModalEl) {
-        previewModalEl.addEventListener('hidden.bs.modal', clearPreviewStage);
-    }
-
     document.addEventListener('click', function (e) {
         const copyBtn = e.target.closest('[data-copy-share]');
         if (copyBtn) {
@@ -289,16 +204,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     setTimeout(function () { copyBtn.textContent = prev; }, 1200);
                 });
             }
-            return;
-        }
-
-        const previewBtn = e.target.closest('[data-action-preview]');
-        if (previewBtn) {
-            showPreview({
-                id: previewBtn.getAttribute('data-file-id') || '',
-                name: previewBtn.getAttribute('data-file-name') || '',
-                kind: previewBtn.getAttribute('data-preview-kind') || ''
-            });
             return;
         }
 
@@ -361,3 +266,4 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 </script>
+<?php include __DIR__ . '/preview_js.php'; ?>
