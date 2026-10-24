@@ -1,12 +1,5 @@
 <script>
 (function () {
-    if (typeof tabler === 'undefined') return;
-
-    const previewModalEl = document.getElementById('filesPreviewModal');
-    if (!previewModalEl) return;
-
-    const previewModal = tabler.Modal.getOrCreateInstance(previewModalEl);
-
     /** @type {Record<string, string>} */
     const PREVIEW_EXT = {
         jpg: 'image', jpeg: 'image', png: 'image', gif: 'image', webp: 'image',
@@ -51,8 +44,29 @@
         return escapePreviewHtml(str).replace(/'/g, '&#39;');
     }
 
+    function previewModalEl() {
+        return document.getElementById('filesPreviewModal');
+    }
+
+    function previewModalApi() {
+        if (typeof tabler !== 'undefined' && tabler.Modal) {
+            return tabler.Modal;
+        }
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            return bootstrap.Modal;
+        }
+        return null;
+    }
+
+    function getPreviewModal() {
+        const el = previewModalEl();
+        const api = previewModalApi();
+        if (!el || !api) return null;
+        return { el: el, instance: api.getOrCreateInstance(el) };
+    }
+
     function clearPreviewStage() {
-        const stage = previewModalEl.querySelector('[data-preview-stage]');
+        const stage = previewModalEl() && previewModalEl().querySelector('[data-preview-stage]');
         if (!stage) return;
         stage.querySelectorAll('video, audio').forEach(function (el) {
             try { el.pause(); } catch (err) { /* ignore */ }
@@ -63,17 +77,20 @@
     }
 
     function showPreview(opts) {
+        const modal = getPreviewModal();
+        if (!modal) return;
+
         const id = opts.id || '';
         const name = opts.name || '';
         const kind = opts.kind || '';
         const url = '/preview.php?id=' + encodeURIComponent(id);
         const titleEl = document.getElementById('filesPreviewModalLabel');
-        const downloadEl = previewModalEl.querySelector('[data-preview-download]');
-        const stage = previewModalEl.querySelector('[data-preview-stage]');
+        const downloadEl = modal.el.querySelector('[data-preview-download]');
+        const stage = modal.el.querySelector('[data-preview-stage]');
         if (titleEl) titleEl.textContent = name || 'Preview';
         if (downloadEl) downloadEl.href = '/download.php?id=' + encodeURIComponent(id);
         if (!stage) {
-            previewModal.show();
+            modal.instance.show();
             return;
         }
 
@@ -125,19 +142,31 @@
             stage.innerHTML = '<p class="text-secondary small mb-0 p-3">Preview not available for this file type.</p>';
         }
 
-        previewModal.show();
+        modal.instance.show();
     }
-
-    previewModalEl.addEventListener('hidden.bs.modal', clearPreviewStage);
 
     document.addEventListener('click', function (e) {
         const previewBtn = e.target.closest('[data-action-preview]');
         if (!previewBtn) return;
+        e.preventDefault();
         showPreview({
             id: previewBtn.getAttribute('data-file-id') || '',
             name: previewBtn.getAttribute('data-file-name') || '',
             kind: previewBtn.getAttribute('data-preview-kind') || ''
         });
     });
+
+    function bindHideCleanup() {
+        const el = previewModalEl();
+        if (!el || el.dataset.previewBound === '1') return;
+        el.dataset.previewBound = '1';
+        el.addEventListener('hidden.bs.modal', clearPreviewStage);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bindHideCleanup);
+    } else {
+        bindHideCleanup();
+    }
 })();
 </script>
