@@ -14,7 +14,7 @@ RUN npm ci || npm install
 COPY scripts/copy-assets.js ./scripts/copy-assets.js
 RUN npm run build:assets
 
-FROM php:8.3-apache-bookworm
+FROM php:8.5-apache-bookworm
 
 # Deno is yt-dlp's default JS runtime for YouTube EJS challenges.
 # See https://github.com/yt-dlp/yt-dlp/wiki/EJS
