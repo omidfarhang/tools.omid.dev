@@ -21,7 +21,7 @@ Pull remote files onto the server via pluggable download sources, keep them per 
 Success looks like:
 
 - A logged-in user pastes a URL, checks one or more destinations (local and/or connected clouds), and gets one job per destination
-- Files are listed, downloadable, and shareable under that user’s ownership
+- Files are listed, previewable when the type allows, downloadable, and shareable under that user’s ownership
 - New accounts stay inactive until an admin approves them
 - CLI downloads authenticate with `APP_CLI_TOKEN` and use the mapped user’s cloud OAuth — never a shared cloud secret
 

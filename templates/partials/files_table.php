@@ -136,6 +136,9 @@ $sortMark = static function (string $col) use ($sort, $dir): string {
             $shareDownloadCount = (int) ($file['share_download_count'] ?? 0);
             $shareRemaining = $shareMaxDownloads !== null ? max(0, $shareMaxDownloads - $shareDownloadCount) : null;
             $owner = $isAdmin ? (string) ($file['owner_username'] ?? '') : '';
+            $previewKind = \App\MimeType::previewKindFromName($name);
+            $canPreview = $previewKind !== null
+                && ($previewKind !== 'text' || (int) $file['size_bytes'] <= \App\MimeType::TEXT_PREVIEW_MAX_BYTES);
             ?>
             <tr data-file-row>
                 <td class="files-col-check">
@@ -143,7 +146,16 @@ $sortMark = static function (string $col) use ($sort, $dir): string {
                            data-file-check aria-label="Select <?= e($name) ?>">
                 </td>
                 <td class="files-col-name">
-                    <a class="filename" href="/download.php?id=<?= $fileId ?>" title="<?= e($name) ?>"><?= e($name) ?></a>
+                    <?php if ($canPreview): ?>
+                        <button type="button" class="filename btn btn-link p-0 align-baseline"
+                                title="<?= e($name) ?>"
+                                data-action-preview
+                                data-file-id="<?= $fileId ?>"
+                                data-file-name="<?= e($name) ?>"
+                                data-preview-kind="<?= e($previewKind) ?>"><?= e($name) ?></button>
+                    <?php else: ?>
+                        <a class="filename" href="/download.php?id=<?= $fileId ?>" title="<?= e($name) ?>"><?= e($name) ?></a>
+                    <?php endif; ?>
                 </td>
                 <?php if ($isAdmin): ?>
                     <td class="files-col-owner"><?= e($owner) ?></td>
@@ -175,6 +187,14 @@ $sortMark = static function (string $col) use ($sort, $dir): string {
                             ···
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end">
+                            <?php if ($canPreview): ?>
+                                <li>
+                                    <button type="button" class="dropdown-item" data-action-preview
+                                            data-file-id="<?= $fileId ?>"
+                                            data-file-name="<?= e($name) ?>"
+                                            data-preview-kind="<?= e($previewKind) ?>">Preview</button>
+                                </li>
+                            <?php endif; ?>
                             <li>
                                 <a class="dropdown-item" href="/download.php?id=<?= $fileId ?>">Download</a>
                             </li>
