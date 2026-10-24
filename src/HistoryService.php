@@ -44,6 +44,57 @@ final class HistoryService
     }
 
     /**
+     * 1-based page that contains a download job in the user timeline, or null if missing / hidden / filtered out.
+     */
+    public function pageForDownloadJobForUser(
+        int $jobId,
+        int $userId,
+        string $q = '',
+        int $perPage = Pager::DEFAULT_PER_PAGE
+    ): ?int {
+        return $this->pageForDownloadJob($jobId, $userId, false, false, $q, $perPage);
+    }
+
+    /**
+     * 1-based page that contains a download job in the admin timeline, or null if missing / filtered out.
+     */
+    public function pageForDownloadJobForAdmin(
+        int $jobId,
+        ?int $userId = null,
+        string $q = '',
+        int $perPage = Pager::DEFAULT_PER_PAGE
+    ): ?int {
+        return $this->pageForDownloadJob($jobId, $userId, true, true, $q, $perPage);
+    }
+
+    private function pageForDownloadJob(
+        int $jobId,
+        ?int $userId,
+        bool $includeHidden,
+        bool $withOwner,
+        string $q,
+        int $perPage
+    ): ?int {
+        $built = $this->buildTimelineUnion($userId, $includeHidden, $withOwner, $q);
+        $norm = Pager::normalize(1, $perPage);
+        $params = $built['params'];
+        $params[':jid'] = $jobId;
+
+        $stmt = $this->db->prepare(
+            "SELECT ranked.page FROM (
+                SELECT kind, row_id,
+                       ((ROW_NUMBER() OVER (ORDER BY sort_at DESC, row_id DESC) - 1) / {$norm['per_page']}) + 1 AS page
+                FROM ({$built['union']}) timeline
+             ) ranked
+             WHERE ranked.kind = 'download' AND ranked.row_id = :jid"
+        );
+        $stmt->execute($params);
+        $page = $stmt->fetchColumn();
+
+        return $page === false ? null : (int) $page;
+    }
+
+    /**
      * @return array{items:list<array{kind:string, sort:string, job:array<string, mixed>}>, total:int, page:int, per_page:int, total_pages:int}
      */
     private function timeline(
@@ -55,6 +106,75 @@ final class HistoryService
         int $perPage
     ): array {
         $norm = Pager::normalize($page, $perPage);
+        $built = $this->buildTimelineUnion($userId, $includeHidden, $withOwner, $q);
+        $union = $built['union'];
+        $params = $built['params'];
+
+        $countStmt = $this->db->prepare("SELECT COUNT(*) FROM ({$union}) timeline");
+        $countStmt->execute($params);
+        $total = (int) $countStmt->fetchColumn();
+
+        if ($norm['page'] > 1 && $total > 0) {
+            $maxPage = (int) ceil($total / $norm['per_page']);
+            if ($norm['page'] > $maxPage) {
+                $norm = Pager::normalize($maxPage, $norm['per_page']);
+            }
+        }
+
+        $pageStmt = $this->db->prepare(
+            "SELECT kind, row_id, sort_at FROM ({$union}) timeline
+             ORDER BY sort_at DESC, row_id DESC
+             LIMIT {$norm['per_page']} OFFSET {$norm['offset']}"
+        );
+        $pageStmt->execute($params);
+        $rows = $pageStmt->fetchAll();
+
+        $downloadIds = [];
+        $cloudIds = [];
+        foreach ($rows as $row) {
+            if ($row['kind'] === 'download') {
+                $downloadIds[] = (int) $row['row_id'];
+            } else {
+                $cloudIds[] = (int) $row['row_id'];
+            }
+        }
+
+        $downloadsById = $this->downloads->findHistoryByIds($downloadIds, $withOwner);
+        $cloudById = $this->cloudJobs->findUnlinkedByIds($cloudIds, $withOwner);
+
+        $items = [];
+        foreach ($rows as $row) {
+            $id = (int) $row['row_id'];
+            if ($row['kind'] === 'download') {
+                if (!isset($downloadsById[$id])) {
+                    continue;
+                }
+                $items[] = [
+                    'kind' => 'download',
+                    'sort' => (string) $row['sort_at'],
+                    'job' => $downloadsById[$id],
+                ];
+            } elseif (isset($cloudById[$id])) {
+                $items[] = [
+                    'kind' => 'cloud',
+                    'sort' => (string) $row['sort_at'],
+                    'job' => $cloudById[$id],
+                ];
+            }
+        }
+
+        return Pager::result($items, $total, $norm['page'], $norm['per_page']);
+    }
+
+    /**
+     * @return array{union:string, params:array<string, mixed>}
+     */
+    private function buildTimelineUnion(
+        ?int $userId,
+        bool $includeHidden,
+        bool $withOwner,
+        string $q
+    ): array {
         $q = Pager::searchQuery($q);
         $params = [];
 
@@ -111,59 +231,6 @@ final class HistoryService
                   {$cloudJoin}
                   WHERE {$cloudSql}";
 
-        $countStmt = $this->db->prepare("SELECT COUNT(*) FROM ({$union}) timeline");
-        $countStmt->execute($params);
-        $total = (int) $countStmt->fetchColumn();
-
-        if ($norm['page'] > 1 && $total > 0) {
-            $maxPage = (int) ceil($total / $norm['per_page']);
-            if ($norm['page'] > $maxPage) {
-                $norm = Pager::normalize($maxPage, $norm['per_page']);
-            }
-        }
-
-        $pageStmt = $this->db->prepare(
-            "SELECT kind, row_id, sort_at FROM ({$union}) timeline
-             ORDER BY sort_at DESC, row_id DESC
-             LIMIT {$norm['per_page']} OFFSET {$norm['offset']}"
-        );
-        $pageStmt->execute($params);
-        $rows = $pageStmt->fetchAll();
-
-        $downloadIds = [];
-        $cloudIds = [];
-        foreach ($rows as $row) {
-            if ($row['kind'] === 'download') {
-                $downloadIds[] = (int) $row['row_id'];
-            } else {
-                $cloudIds[] = (int) $row['row_id'];
-            }
-        }
-
-        $downloadsById = $this->downloads->findHistoryByIds($downloadIds, $withOwner);
-        $cloudById = $this->cloudJobs->findUnlinkedByIds($cloudIds, $withOwner);
-
-        $items = [];
-        foreach ($rows as $row) {
-            $id = (int) $row['row_id'];
-            if ($row['kind'] === 'download') {
-                if (!isset($downloadsById[$id])) {
-                    continue;
-                }
-                $items[] = [
-                    'kind' => 'download',
-                    'sort' => (string) $row['sort_at'],
-                    'job' => $downloadsById[$id],
-                ];
-            } elseif (isset($cloudById[$id])) {
-                $items[] = [
-                    'kind' => 'cloud',
-                    'sort' => (string) $row['sort_at'],
-                    'job' => $cloudById[$id],
-                ];
-            }
-        }
-
-        return Pager::result($items, $total, $norm['page'], $norm['per_page']);
+        return ['union' => $union, 'params' => $params];
     }
 }

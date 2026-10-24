@@ -80,14 +80,24 @@ final class FileRepository
         return $column . ' ' . $dir . ', f.id ' . $dir;
     }
 
+    /** Latest download job that produced this file (if any). */
+    private static function downloadJobIdSelectSql(): string
+    {
+        return '(SELECT d.id FROM download_jobs d
+                 WHERE d.file_id = f.id
+                 ORDER BY d.id DESC LIMIT 1) AS download_job_id';
+    }
+
     /** @return list<array<string, mixed>> */
     public function forUser(int $userId, string $sort = 'date', string $dir = 'DESC'): array
     {
         $order = $this->orderClause($sort, $dir);
         $shareSelect = ShareService::fileListShareSelectSql();
+        $jobSelect = self::downloadJobIdSelectSql();
         $stmt = $this->db->prepare(
             "SELECT f.*,
-                {$shareSelect}
+                {$shareSelect},
+                {$jobSelect}
              FROM files f
              WHERE f.user_id = :uid
              ORDER BY {$order}"
@@ -102,9 +112,11 @@ final class FileRepository
     {
         $order = $this->orderClause($sort, $dir);
         $shareSelect = ShareService::fileListShareSelectSql();
+        $jobSelect = self::downloadJobIdSelectSql();
         $stmt = $this->db->prepare(
             "SELECT f.*, u.username AS owner_username,
-                {$shareSelect}
+                {$shareSelect},
+                {$jobSelect}
              FROM files f
              JOIN users u ON u.id = f.user_id
              WHERE f.user_id = :uid
@@ -119,12 +131,13 @@ final class FileRepository
     public function allWithOwner(string $sort = 'date', string $dir = 'DESC'): array
     {
         $order = $this->orderClause($sort, $dir);
-
         $shareSelect = ShareService::fileListShareSelectSql();
+        $jobSelect = self::downloadJobIdSelectSql();
 
         return $this->db->query(
             "SELECT f.*, u.username AS owner_username,
-                {$shareSelect}
+                {$shareSelect},
+                {$jobSelect}
              FROM files f
              JOIN users u ON u.id = f.user_id
              ORDER BY {$order}"
@@ -146,6 +159,7 @@ final class FileRepository
         $norm = Pager::normalize($page, $perPage);
         $order = $this->orderClause($sort, $dir);
         $shareSelect = ShareService::fileListShareSelectSql();
+        $jobSelect = self::downloadJobIdSelectSql();
         $ownerSelect = $withOwner ? ', u.username AS owner_username' : '';
         $ownerJoin = $withOwner ? 'JOIN users u ON u.id = f.user_id' : '';
 
@@ -172,7 +186,8 @@ final class FileRepository
 
         $stmt = $this->db->prepare(
             "SELECT f.*{$ownerSelect},
-                {$shareSelect}
+                {$shareSelect},
+                {$jobSelect}
              FROM files f
              {$ownerJoin}
              WHERE {$where}
@@ -197,6 +212,7 @@ final class FileRepository
         $norm = Pager::normalize($page, $perPage);
         $order = $this->orderClause($sort, $dir);
         $shareSelect = ShareService::fileListShareSelectSql();
+        $jobSelect = self::downloadJobIdSelectSql();
 
         $where = '1=1';
         $params = [];
@@ -221,7 +237,8 @@ final class FileRepository
 
         $stmt = $this->db->prepare(
             "SELECT f.*, u.username AS owner_username,
-                {$shareSelect}
+                {$shareSelect},
+                {$jobSelect}
              FROM files f
              JOIN users u ON u.id = f.user_id
              WHERE {$where}
@@ -231,6 +248,63 @@ final class FileRepository
         $stmt->execute($params);
 
         return Pager::result($stmt->fetchAll(), $total, $norm['page'], $norm['per_page']);
+    }
+
+    /**
+     * 1-based page that contains $fileId under the same filters/sort as the list,
+     * or null if the file is missing / out of scope / filtered out by search.
+     */
+    public function pageForFile(
+        int $fileId,
+        ?int $userId = null,
+        string $sort = 'date',
+        string $dir = 'DESC',
+        string $q = '',
+        int $perPage = Pager::DEFAULT_PER_PAGE,
+        bool $withOwner = false
+    ): ?int {
+        $file = $this->findById($fileId);
+        if ($file === null) {
+            return null;
+        }
+        if ($userId !== null && (int) $file['user_id'] !== $userId) {
+            return null;
+        }
+
+        $norm = Pager::normalize(1, $perPage);
+        $order = $this->orderClause($sort, $dir);
+        // Owner sort needs the users join; admin all-files lists always join for consistency with list queries.
+        $needsOwnerJoin = $withOwner || $userId === null || $sort === 'owner';
+        $ownerJoin = $needsOwnerJoin ? 'JOIN users u ON u.id = f.user_id' : '';
+
+        $whereParts = [];
+        $params = [];
+        if ($userId !== null) {
+            $whereParts[] = 'f.user_id = :uid';
+            $params[':uid'] = $userId;
+        }
+        $q = Pager::searchQuery($q);
+        if ($q !== '') {
+            $whereParts[] = '(f.original_name LIKE :q ESCAPE \'\\\' OR IFNULL(f.source_url, \'\') LIKE :q ESCAPE \'\\\')';
+            $params[':q'] = Pager::likeContains($q);
+        }
+        $where = $whereParts === [] ? '1=1' : implode(' AND ', $whereParts);
+
+        $params[':fid'] = $fileId;
+        $stmt = $this->db->prepare(
+            "SELECT ranked.page FROM (
+                SELECT f.id,
+                       ((ROW_NUMBER() OVER (ORDER BY {$order}) - 1) / {$norm['per_page']}) + 1 AS page
+                FROM files f
+                {$ownerJoin}
+                WHERE {$where}
+             ) ranked
+             WHERE ranked.id = :fid"
+        );
+        $stmt->execute($params);
+        $page = $stmt->fetchColumn();
+
+        return $page === false ? null : (int) $page;
     }
 
     public function delete(int $id): void

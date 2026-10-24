@@ -30,6 +30,43 @@ $q = $req['q'];
 
 $fileRepo = new FileRepository();
 $pagerPath = '/admin/files.php';
+$scopeUserId = $filterUser !== null ? $filterUserId : null;
+
+$highlightFileId = isset($_GET['file']) ? (int) $_GET['file'] : 0;
+if ($highlightFileId > 0) {
+    $targetPage = $fileRepo->pageForFile(
+        $highlightFileId,
+        $scopeUserId,
+        $sort,
+        $dir,
+        $q,
+        Pager::DEFAULT_PER_PAGE,
+        true
+    );
+    if ($targetPage === null) {
+        flash('error', 'File not found.');
+        redirect(Pager::url($pagerPath, [
+            'user_id' => $scopeUserId,
+            'sort' => $sort,
+            'dir' => strtolower($dir),
+            'q' => $q !== '' ? $q : null,
+            'page' => $req['page'] > 1 ? $req['page'] : null,
+        ]));
+    }
+    if ($targetPage !== $req['page']) {
+        redirect(Pager::url($pagerPath, [
+            'user_id' => $scopeUserId,
+            'sort' => $sort,
+            'dir' => strtolower($dir),
+            'q' => $q !== '' ? $q : null,
+            'page' => $targetPage > 1 ? $targetPage : null,
+            'file' => $highlightFileId,
+        ]));
+    }
+} else {
+    $highlightFileId = 0;
+}
+
 if ($filterUser !== null) {
     $result = $fileRepo->forUserPaginated($filterUserId, $sort, $dir, $q, $req['page'], Pager::DEFAULT_PER_PAGE, true);
     $pagerQuery = [
@@ -37,6 +74,7 @@ if ($filterUser !== null) {
         'sort' => $sort,
         'dir' => strtolower($dir),
         'q' => $q !== '' ? $q : null,
+        'file' => $highlightFileId > 0 ? $highlightFileId : null,
     ];
     $panelTitle = 'Files · ' . (string) $filterUser['username'];
     $pageTitle = 'User files';
@@ -46,6 +84,7 @@ if ($filterUser !== null) {
         'sort' => $sort,
         'dir' => strtolower($dir),
         'q' => $q !== '' ? $q : null,
+        'file' => $highlightFileId > 0 ? $highlightFileId : null,
     ];
     $panelTitle = 'All files';
     $pageTitle = 'Files';

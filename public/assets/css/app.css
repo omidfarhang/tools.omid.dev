@@ -149,6 +149,26 @@ code.mono {
     vertical-align: bottom;
 }
 
+.files-table .files-source {
+    max-width: 28rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-top: 0.15rem;
+}
+
+@keyframes row-highlight-fade {
+    from { background-color: color-mix(in srgb, var(--accent, var(--tblr-primary)) 28%, transparent); }
+    to { background-color: color-mix(in srgb, var(--accent, var(--tblr-primary)) 14%, transparent); }
+}
+
+.files-row-highlight > td,
+.history-row-highlight > td {
+    background-color: color-mix(in srgb, var(--accent, var(--tblr-primary)) 14%, transparent);
+    box-shadow: inset 3px 0 0 var(--accent, var(--tblr-primary));
+    animation: row-highlight-fade 1.2s ease-out;
+}
+
 button.filename.btn-link {
     font-family: inherit;
     font-size: inherit;

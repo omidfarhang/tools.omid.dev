@@ -27,10 +27,20 @@ $prefs = $prefs ?? ['folder' => '', 'conflict' => 'rename'];
 $sort = $sort ?? 'date';
 $dir = $dir ?? 'DESC';
 $q = $q ?? '';
+$highlightFileId = isset($highlightFileId) ? (int) $highlightFileId : 0;
+$historyBasePath = $isAdmin ? '/admin/history.php' : '/history.php';
+$historyUserId = $isAdmin && isset($filterUserId) && (int) $filterUserId > 0 ? (int) $filterUserId : null;
 $pagerTotal = (int) ($pagerTotal ?? count($files));
 $pagerPage = (int) ($pagerPage ?? 1);
 $pagerTotalPages = (int) ($pagerTotalPages ?? 1);
 $pagerPerPage = (int) ($pagerPerPage ?? \App\Pager::DEFAULT_PER_PAGE);
+$truncateUrl = static function (string $url, int $max = 48): string {
+    if (strlen($url) <= $max) {
+        return $url;
+    }
+
+    return substr($url, 0, $max - 1) . '…';
+};
 $parts = parse_url($redirect);
 $pagerPath = $pagerPath ?? (is_array($parts) && isset($parts['path']) ? (string) $parts['path'] : $redirect);
 $pagerQuery = $pagerQuery ?? [];
@@ -139,8 +149,21 @@ $sortMark = static function (string $col) use ($sort, $dir): string {
             $previewKind = \App\MimeType::previewKindFromName($name);
             $canPreview = $previewKind !== null
                 && ($previewKind !== 'text' || (int) $file['size_bytes'] <= \App\MimeType::TEXT_PREVIEW_MAX_BYTES);
+            $sourceUrl = trim((string) ($file['source_url'] ?? ''));
+            $downloadJobId = isset($file['download_job_id']) && $file['download_job_id'] !== null && $file['download_job_id'] !== ''
+                ? (int) $file['download_job_id']
+                : null;
+            $isHighlight = $highlightFileId > 0 && $highlightFileId === $fileId;
+            $historyHref = null;
+            if ($downloadJobId !== null) {
+                $historyQuery = ['download_job' => $downloadJobId];
+                if ($historyUserId !== null) {
+                    $historyQuery['user_id'] = $historyUserId;
+                }
+                $historyHref = \App\Pager::url($historyBasePath, $historyQuery);
+            }
             ?>
-            <tr data-file-row>
+            <tr id="file-<?= $fileId ?>" data-file-row<?= $isHighlight ? ' class="files-row-highlight"' : '' ?>>
                 <td class="files-col-check">
                     <input type="checkbox" class="form-check-input" name="ids[]" value="<?= $fileId ?>"
                            data-file-check aria-label="Select <?= e($name) ?>">
@@ -155,6 +178,9 @@ $sortMark = static function (string $col) use ($sort, $dir): string {
                                 data-preview-kind="<?= e($previewKind) ?>"><?= e($name) ?></button>
                     <?php else: ?>
                         <a class="filename" href="/download.php?id=<?= $fileId ?>" title="<?= e($name) ?>"><?= e($name) ?></a>
+                    <?php endif; ?>
+                    <?php if ($sourceUrl !== ''): ?>
+                        <div class="files-source mono text-secondary small" title="<?= e($sourceUrl) ?>"><?= e($truncateUrl($sourceUrl)) ?></div>
                     <?php endif; ?>
                 </td>
                 <?php if ($isAdmin): ?>
@@ -198,6 +224,11 @@ $sortMark = static function (string $col) use ($sort, $dir): string {
                             <li>
                                 <a class="dropdown-item" href="/download.php?id=<?= $fileId ?>">Download</a>
                             </li>
+                            <?php if ($historyHref !== null): ?>
+                                <li>
+                                    <a class="dropdown-item" href="<?= e($historyHref) ?>">View in history</a>
+                                </li>
+                            <?php endif; ?>
                             <li>
                                 <?php if ($shareUrl): ?>
                                     <button type="button" class="dropdown-item" data-copy-share

@@ -20,9 +20,36 @@ $sortInfo = FileRepository::normalizeSort($req['sort'], $req['dir']);
 $sort = $sortInfo['sort'];
 $dir = $sortInfo['dir'];
 $q = $req['q'];
+$userId = (int) $user['id'];
+$fileRepo = new FileRepository();
 
-$result = (new FileRepository())->forUserPaginated(
-    (int) $user['id'],
+$highlightFileId = isset($_GET['file']) ? (int) $_GET['file'] : 0;
+if ($highlightFileId > 0) {
+    $targetPage = $fileRepo->pageForFile($highlightFileId, $userId, $sort, $dir, $q, Pager::DEFAULT_PER_PAGE);
+    if ($targetPage === null) {
+        flash('error', 'File not found.');
+        redirect(Pager::url('/files.php', [
+            'sort' => $sort,
+            'dir' => strtolower($dir),
+            'q' => $q !== '' ? $q : null,
+            'page' => $req['page'] > 1 ? $req['page'] : null,
+        ]));
+    }
+    if ($targetPage !== $req['page']) {
+        redirect(Pager::url('/files.php', [
+            'sort' => $sort,
+            'dir' => strtolower($dir),
+            'q' => $q !== '' ? $q : null,
+            'page' => $targetPage > 1 ? $targetPage : null,
+            'file' => $highlightFileId,
+        ]));
+    }
+} else {
+    $highlightFileId = 0;
+}
+
+$result = $fileRepo->forUserPaginated(
+    $userId,
     $sort,
     $dir,
     $q,
@@ -35,6 +62,7 @@ $pagerQuery = [
     'sort' => $sort,
     'dir' => strtolower($dir),
     'q' => $q !== '' ? $q : null,
+    'file' => $highlightFileId > 0 ? $highlightFileId : null,
 ];
 $redirect = Pager::url($pagerPath, $pagerQuery, ['page' => $result['page'] > 1 ? $result['page'] : null]);
 

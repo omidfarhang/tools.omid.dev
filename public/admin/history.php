@@ -5,6 +5,7 @@ declare(strict_types=1);
 require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
 use App\Auth;
+use App\DownloadJobRepository;
 use App\HistoryService;
 use App\Pager;
 use App\UserRepository;
@@ -25,12 +26,48 @@ if ($filterUserId > 0) {
 
 $scopeUserId = $filterUser !== null ? $filterUserId : null;
 $q = $req['q'];
-$result = (new HistoryService())->forAdmin($scopeUserId, $q, $req['page']);
-$entries = $result['items'];
+$history = new HistoryService();
+$jobRepo = new DownloadJobRepository();
 $pagerPath = '/admin/history.php';
+
+$highlightJobId = isset($_GET['download_job']) ? (int) $_GET['download_job'] : 0;
+if ($highlightJobId > 0) {
+    $job = $jobRepo->findById($highlightJobId);
+    if ($job === null || ($scopeUserId !== null && (int) ($job['user_id'] ?? 0) !== $scopeUserId)) {
+        flash('error', 'History item not found.');
+        redirect(Pager::url($pagerPath, [
+            'user_id' => $scopeUserId,
+            'q' => $q !== '' ? $q : null,
+            'page' => $req['page'] > 1 ? $req['page'] : null,
+        ]));
+    }
+    $targetPage = $history->pageForDownloadJobForAdmin($highlightJobId, $scopeUserId, $q);
+    if ($targetPage === null) {
+        flash('error', 'History item not found.');
+        redirect(Pager::url($pagerPath, [
+            'user_id' => $scopeUserId,
+            'q' => $q !== '' ? $q : null,
+            'page' => $req['page'] > 1 ? $req['page'] : null,
+        ]));
+    }
+    if ($targetPage !== $req['page']) {
+        redirect(Pager::url($pagerPath, [
+            'user_id' => $scopeUserId,
+            'q' => $q !== '' ? $q : null,
+            'page' => $targetPage > 1 ? $targetPage : null,
+            'download_job' => $highlightJobId,
+        ]));
+    }
+} else {
+    $highlightJobId = 0;
+}
+
+$result = $history->forAdmin($scopeUserId, $q, $req['page']);
+$entries = $result['items'];
 $pagerQuery = [
     'user_id' => $filterUser !== null ? $filterUserId : null,
     'q' => $q !== '' ? $q : null,
+    'download_job' => $highlightJobId > 0 ? $highlightJobId : null,
 ];
 $pagerTotal = $result['total'];
 $pagerPage = $result['page'];
@@ -179,28 +216,39 @@ ob_start();
                         $name = (string) ($job['result_filename'] ?? $job['requested_filename'] ?? '');
                         $sourceUrl = (string) ($job['source_url'] ?? '');
                         $fileId = isset($job['file_id']) && $job['file_id'] !== null ? (int) $job['file_id'] : null;
+                        $jobId = (int) $job['id'];
+                        $jobUserId = (int) ($job['user_id'] ?? 0);
                         $hasCloud = !empty($job['cloud_job_id']);
                         $cloudPath = (string) ($job['cloud_result_path'] ?? $job['cloud_remote_path'] ?? '');
                         $cloudStatus = (string) ($job['cloud_status'] ?? '');
                         $cloudProvider = (string) ($job['cloud_provider'] ?? 'dropbox');
-                        $rowId = 'admin-dl-' . (int) $job['id'];
+                        $rowId = 'dl-' . $jobId;
                         $error = (string) ($job['error'] ?? '');
+                        $isHighlight = $highlightJobId > 0 && $highlightJobId === $jobId;
+                        $rowClass = trim(($isHidden ? 'table-secondary' : '') . ($isHighlight ? ' history-row-highlight' : ''));
+                        $filesHref = $fileId !== null
+                            ? Pager::url('/admin/files.php', [
+                                'file' => $fileId,
+                                'user_id' => $jobUserId > 0 ? $jobUserId : null,
+                            ])
+                            : null;
                         ?>
-                        <tr class="<?= $isHidden ? 'table-secondary' : '' ?>">
+                        <tr id="<?= e($rowId) ?>"<?= $rowClass !== '' ? ' class="' . e($rowClass) . '"' : '' ?>>
                             <td class="small text-muted text-nowrap"><?= e((string) ($job['updated_at'] ?? $job['created_at'])) ?></td>
                             <?php if ($filterUser === null): ?>
                                 <td class="small"><?= e($owner !== '' ? $owner : '—') ?></td>
                             <?php endif; ?>
                             <td class="mono">
-                                <?php if ($fileId !== null): ?>
-                                    <a class="filename" href="/download.php?id=<?= $fileId ?>"><?= e($name !== '' ? $name : 'file') ?></a>
+                                <?php if ($filesHref !== null): ?>
+                                    <a class="filename" href="<?= e($filesHref) ?>"><?= e($name !== '' ? $name : 'file') ?></a>
+                                    <a class="small ms-1" href="/download.php?id=<?= $fileId ?>">Download</a>
                                 <?php else: ?>
                                     <?= e($name !== '' ? $name : '—') ?>
                                 <?php endif; ?>
                             </td>
                             <td class="mono small" title="<?= e($sourceUrl) ?>"><?= e($truncateUrl($sourceUrl)) ?></td>
                             <td<?= $hasCloud
-                                ? ' class="history-row-toggle" data-bs-toggle="collapse" data-bs-target="#' . e($rowId) . '" role="button" aria-expanded="false" style="cursor:pointer"'
+                                ? ' class="history-row-toggle" data-bs-toggle="collapse" data-bs-target="#' . e($rowId) . '-cloud" role="button" aria-expanded="false" style="cursor:pointer"'
                                 : '' ?>>
                                 <?= e($destinationLabel((string) ($job['behavior'] ?? ''), $hasCloud ? $cloudProvider : null)) ?>
                                 <?php if ($hasCloud): ?>
@@ -214,10 +262,10 @@ ob_start();
                                 <?php endif; ?>
                                 <?= $failReasonButton($error, $status) ?>
                             </td>
-                            <td class="text-end small text-muted">#<?= (int) $job['id'] ?></td>
+                            <td class="text-end small text-muted">#<?= $jobId ?></td>
                         </tr>
                         <?php if ($hasCloud): ?>
-                            <tr class="collapse" id="<?= e($rowId) ?>">
+                            <tr class="collapse" id="<?= e($rowId) ?>-cloud">
                                 <td colspan="<?= $colSpan ?>" class="bg-white">
                                     <div class="p-3 small">
                                         <div class="fw-semibold mb-2"><?= e($providerLabel($cloudProvider)) ?> job</div>
@@ -298,6 +346,7 @@ ob_start();
     });
 })();
 </script>
+<?php include dirname(__DIR__, 2) . '/templates/partials/row_highlight_js.php'; ?>
 <?php
 $breadcrumbs = $filterUser !== null
     ? [

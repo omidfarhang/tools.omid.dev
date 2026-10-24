@@ -266,4 +266,5 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 </script>
+<?php include __DIR__ . '/row_highlight_js.php'; ?>
 <?php include __DIR__ . '/preview_js.php'; ?>
