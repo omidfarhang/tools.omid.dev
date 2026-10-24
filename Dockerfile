@@ -14,7 +14,7 @@ RUN npm ci || npm install
 COPY scripts/copy-assets.js ./scripts/copy-assets.js
 RUN npm run build:assets
 
-FROM php:8.5-apache-bookworm
+FROM php:8.5-fpm-bookworm
 
 # Deno is yt-dlp's default JS runtime for YouTube EJS challenges.
 # See https://github.com/yt-dlp/yt-dlp/wiki/EJS
@@ -25,11 +25,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         curl \
         ffmpeg \
         libsqlite3-dev \
+        nginx \
         python3 \
         python3-pip \
         unzip \
     && docker-php-ext-install pdo pdo_sqlite iconv \
-
     && arch="$(dpkg --print-architecture)" \
     && case "$arch" in \
          amd64) deno_arch=x86_64 ;; \
@@ -41,8 +41,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && chmod +x /usr/local/bin/deno \
     && rm /tmp/deno.zip \
     && pip3 install --no-cache-dir --break-system-packages "yt-dlp[default]" \
-    && a2enmod rewrite headers \
-    && a2dissite 000-default \
+    && rm -f /etc/nginx/sites-enabled/default \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /var/www/html
@@ -54,18 +53,16 @@ COPY templates ./templates
 COPY config ./config
 COPY public ./public
 COPY --from=assets /app/public/assets ./public/assets
-COPY docker/apache-vhost.conf /etc/apache2/sites-available/tools.conf
+COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY docker/entrypoint.sh /entrypoint.sh
 COPY scripts ./scripts
 
-RUN a2ensite tools \
-    && sed -i 's/^Listen 80$/Listen 8080/' /etc/apache2/ports.conf \
-    && mkdir -p storage/temp \
+RUN mkdir -p storage/temp /var/log/nginx \
     && chown -R www-data:www-data storage \
-    && chmod +x scripts/ytdl.sh scripts/process_download_job.php /entrypoint.sh
+    && chmod +x scripts/ytdl.sh scripts/process_download_job.php /entrypoint.sh \
+    && nginx -t
 
-ENV APACHE_DOCUMENT_ROOT=/var/www/html/public \
-    DB_PATH=/var/www/html/storage/app.db \
+ENV DB_PATH=/var/www/html/storage/app.db \
     TEMP_DIR=/var/www/html/storage/temp \
     YTDLP_COOKIES_PATH=/var/www/html/storage/ytdlp-cookies.txt
 

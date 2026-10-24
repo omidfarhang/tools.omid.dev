@@ -188,8 +188,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     flash('success', $count === 1 ? 'Download queued.' : $count . ' downloads queued.');
     session_write_close();
 
-    // Send the redirect first, then process in this request so Apache does not
-    // kill a background CLI child before the job runs.
+    // Send the redirect first, then process in this request so the web server
+    // does not kill a background CLI child before the job runs.
     $dest = rtrim((string) Config::get('app_base_url'), '/') . '/';
     header('Location: ' . $dest);
     header('Connection: close');

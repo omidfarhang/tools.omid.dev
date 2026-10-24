@@ -17,7 +17,7 @@ final class DownloadJobDispatcher
         self::$queued[$jobId] = true;
 
         // Process after the HTTP response is sent. Spawning a background CLI via exec()
-        // is unreliable under Apache (child often dies with the request).
+        // is unreliable under php-fpm/Apache (child often dies with the request).
         register_shutdown_function(static function () use ($jobId): void {
             ignore_user_abort(true);
             @set_time_limit(0);

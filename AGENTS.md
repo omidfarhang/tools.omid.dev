@@ -6,7 +6,7 @@ Before UI or product-facing copy changes, read [PRODUCT.md](PRODUCT.md) and [DES
 
 ## Project overview
 
-PHP app: multi-user download-to-host toolkit. Users pull remote URLs via pluggable download sources (HTTP + curated yt-dlp sites + optional generic yt-dlp), manage files, optional public share links (`/s/{token}`), and per-user cloud OAuth (Dropbox and Google Drive). Docker + Apache; SQLite; Tabler (`@tabler/core`) with thin `app.css` theming.
+PHP app: multi-user download-to-host toolkit. Users pull remote URLs via pluggable download sources (HTTP + curated yt-dlp sites + optional generic yt-dlp), manage files, optional public share links (`/s/{token}`), and per-user cloud OAuth (Dropbox and Google Drive). Docker + nginx/php-fpm; SQLite; Tabler (`@tabler/core`) with thin `app.css` theming.
 
 ## Layout
 
@@ -18,7 +18,8 @@ PHP app: multi-user download-to-host toolkit. Users pull remote URLs via pluggab
 | `storage/` | SQLite DB + temp downloads + materialized yt-dlp cookies (volume) |
 | `assets/` + `scripts/copy-assets.js` | Vendor CSS/JS source → `public/assets` |
 | `config/` | Example PHP config |
-| `docs/` | Operator docs (cloud providers, nginx) |
+| `docker/` | Container nginx + entrypoint (php-fpm) |
+| `docs/` | Operator docs (cloud providers, host nginx) |
 
 There is no front-end framework or SPA. Pages are server-rendered PHP that call `View::render()`.
 
