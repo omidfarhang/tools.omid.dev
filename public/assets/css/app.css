@@ -157,16 +157,15 @@ code.mono {
     margin-top: 0.15rem;
 }
 
-@keyframes row-highlight-fade {
-    from { background-color: color-mix(in srgb, var(--accent, var(--tblr-primary)) 28%, transparent); }
-    to { background-color: color-mix(in srgb, var(--accent, var(--tblr-primary)) 14%, transparent); }
+@keyframes row-highlight-pulse {
+    0%, 100% { background-color: color-mix(in srgb, var(--accent, var(--tblr-primary)) 12%, transparent); }
+    35% { background-color: color-mix(in srgb, var(--accent, var(--tblr-primary)) 34%, transparent); }
 }
 
 .files-row-highlight > td,
 .history-row-highlight > td {
-    background-color: color-mix(in srgb, var(--accent, var(--tblr-primary)) 14%, transparent);
-    box-shadow: inset 3px 0 0 var(--accent, var(--tblr-primary));
-    animation: row-highlight-fade 1.2s ease-out;
+    background-color: color-mix(in srgb, var(--accent, var(--tblr-primary)) 12%, transparent);
+    animation: row-highlight-pulse 0.85s ease-in-out 3;
 }
 
 button.filename.btn-link {
