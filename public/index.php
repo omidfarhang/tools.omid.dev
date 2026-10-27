@@ -267,15 +267,8 @@ $truncateUrl = static function (string $url, int $max = 56): string {
     return substr($url, 0, $max - 1) . '…';
 };
 
-$failReasonButton = static function (string $error, string $status): string {
-    if ($error === '' || !in_array($status, ['failed', 'skipped'], true)) {
-        return '';
-    }
-
-    return '<button type="button" class="btn btn-link btn-sm text-danger p-0 align-baseline ms-1"'
-        . ' data-bs-toggle="modal" data-bs-target="#jobs-fail-modal"'
-        . ' data-fail-reason="' . e($error) . '">'
-        . 'Reason</button>';
+$hasFailReason = static function (string $error, string $status): bool {
+    return $error !== '' && in_array($status, ['failed', 'skipped'], true);
 };
 
 ob_start();
@@ -519,7 +512,7 @@ ob_start();
             <p class="empty-subtitle text-secondary">Queue a URL above. Recent and in-progress jobs show up here.</p>
         </div>
         <div class="table-responsive d-none" id="active-jobs-table-wrap">
-            <table class="table card-table table-striped align-middle mb-0" id="active-jobs-table">
+            <table class="table card-table table-striped align-middle mb-0 history-table" id="active-jobs-table">
                 <thead>
                 <tr>
                     <th>Source</th>
@@ -538,7 +531,7 @@ ob_start();
             <p class="empty-subtitle text-secondary">Queue a URL above. Recent and in-progress jobs show up here.</p>
         </div>
         <div class="table-responsive" id="active-jobs-table-wrap">
-            <table class="table card-table table-striped align-middle mb-0" id="active-jobs-table">
+            <table class="table card-table table-striped align-middle mb-0 history-table" id="active-jobs-table">
                 <thead>
                 <tr>
                     <th>Source</th>
@@ -553,6 +546,7 @@ ob_start();
                     <?php
                     $name = (string) ($job['result_filename'] ?? $job['requested_filename'] ?? '');
                     $status = (string) ($job['status'] ?? 'pending');
+                    $sourceUrl = (string) ($job['source_url'] ?? '');
                     $hasCloud = !empty($job['cloud_job_id']);
                     $cloudPath = (string) ($job['cloud_result_path'] ?? $job['cloud_remote_path'] ?? '');
                     $cloudStatus = (string) ($job['cloud_status'] ?? '');
@@ -563,15 +557,24 @@ ob_start();
                     $canRetry = DownloadJobRepository::canRetry($job);
                     $canHide = DownloadJobRepository::canHide($job);
                     $error = (string) ($job['error'] ?? '');
-                    $rowId = 'job-cloud-' . (int) $job['id'];
+                    $cloudError = (string) ($job['cloud_error'] ?? '');
+                    $showFailReason = $hasFailReason($error, $status);
+                    $showCloudFailReason = $hasCloud && $hasFailReason($cloudError, $cloudStatus !== '' ? $cloudStatus : 'pending');
+                    $displayName = $name !== '' ? $name : ($fileId !== null ? 'file' : '—');
+                    $jobId = (int) $job['id'];
+                    $rowId = 'job-cloud-' . $jobId;
                     $rowClass = $isActive ? '' : 'text-muted';
+                    $hasFileActions = $fileId !== null && $status === 'complete';
+                    $hasMenuItems = $hasFileActions || $sourceUrl !== '' || $showFailReason || $showCloudFailReason
+                        || $canCancel || $canRetry || $canHide;
                     ?>
-                    <tr data-job-id="<?= (int) $job['id'] ?>"<?= $rowClass !== '' ? ' class="' . e($rowClass) . '"' : '' ?>>
-                        <td class="mono small" title="<?= e((string) $job['source_url']) ?>"><?= e($truncateUrl((string) $job['source_url'])) ?></td>
-                        <td class="mono">
-                            <?php if ($fileId !== null && $status === 'complete'): ?>
+                    <tr data-job-id="<?= $jobId ?>"<?= $rowClass !== '' ? ' class="' . e($rowClass) . '"' : '' ?>>
+                        <td class="mono small history-col-source" title="<?= e($sourceUrl) ?>">
+                            <span class="history-cell-clip"><?= e($truncateUrl($sourceUrl)) ?></span>
+                        </td>
+                        <td class="mono history-col-name" title="<?= e($displayName !== '—' ? $displayName : '') ?>">
+                            <?php if ($hasFileActions): ?>
                                 <?php
-                                $displayName = $name !== '' ? $name : 'file';
                                 $previewKind = MimeType::previewKindFromName($displayName);
                                 $canPreview = $previewKind !== null;
                                 ?>
@@ -585,7 +588,7 @@ ob_start();
                                     <a class="filename" href="/download.php?id=<?= $fileId ?>"><?= e($displayName) ?></a>
                                 <?php endif; ?>
                             <?php else: ?>
-                                <?= e($name !== '' ? $name : '—') ?>
+                                <span class="history-cell-clip"><?= e($name !== '' ? $name : '—') ?></span>
                             <?php endif; ?>
                         </td>
                         <td<?= $hasCloud
@@ -600,37 +603,82 @@ ob_start();
                             <span class="badge text-bg-<?= e($statusBadge($status)) ?> job-status-badge">
                                 <?= e($status) ?>
                             </span>
-                            <?= $failReasonButton($error, $status) ?>
                         </td>
-                        <td class="text-end text-nowrap">
-                            <div class="d-inline-flex align-items-center gap-2">
-                                <?php if ($canCancel): ?>
-                                    <form method="post" action="/job_action.php" class="d-inline">
-                                        <?= Csrf::field() ?>
-                                        <input type="hidden" name="action" value="cancel">
-                                        <input type="hidden" name="id" value="<?= (int) $job['id'] ?>">
-                                        <input type="hidden" name="return" value="/">
-                                        <button type="submit" class="btn btn-link btn-sm text-muted p-0">Cancel</button>
-                                    </form>
-                                <?php elseif ($canRetry): ?>
-                                    <form method="post" action="/job_action.php" class="d-inline">
-                                        <?= Csrf::field() ?>
-                                        <input type="hidden" name="action" value="retry">
-                                        <input type="hidden" name="id" value="<?= (int) $job['id'] ?>">
-                                        <input type="hidden" name="return" value="/">
-                                        <button type="submit" class="btn btn-link btn-sm p-0">Retry</button>
-                                    </form>
-                                <?php endif; ?>
-                                <?php if ($canHide): ?>
-                                    <form method="post" action="/history_hide.php" class="d-inline">
-                                        <?= Csrf::field() ?>
-                                        <input type="hidden" name="kind" value="download">
-                                        <input type="hidden" name="id" value="<?= (int) $job['id'] ?>">
-                                        <input type="hidden" name="return" value="/">
-                                        <button type="submit" class="btn btn-link btn-sm text-muted p-0">Remove</button>
-                                    </form>
-                                <?php endif; ?>
-                            </div>
+                        <td class="text-end">
+                            <?php if ($hasMenuItems): ?>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary" type="button"
+                                            data-bs-toggle="dropdown"
+                                            aria-expanded="false" aria-label="Actions for <?= e($displayName) ?>">
+                                        ···
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <?php if ($hasFileActions): ?>
+                                            <li>
+                                                <a class="dropdown-item" href="/download.php?id=<?= $fileId ?>">Download</a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item" href="/files.php?file=<?= $fileId ?>">View in files</a>
+                                            </li>
+                                        <?php endif; ?>
+                                        <?php if ($sourceUrl !== ''): ?>
+                                            <li>
+                                                <button type="button" class="dropdown-item" data-copy-source
+                                                        data-source-url="<?= e($sourceUrl) ?>">Copy source URL</button>
+                                            </li>
+                                        <?php endif; ?>
+                                        <?php if ($showFailReason): ?>
+                                            <li>
+                                                <button type="button" class="dropdown-item text-danger"
+                                                        data-bs-toggle="modal" data-bs-target="#jobs-fail-modal"
+                                                        data-fail-reason="<?= e($error) ?>">View fail reason</button>
+                                            </li>
+                                        <?php endif; ?>
+                                        <?php if ($showCloudFailReason): ?>
+                                            <li>
+                                                <button type="button" class="dropdown-item text-danger"
+                                                        data-bs-toggle="modal" data-bs-target="#jobs-fail-modal"
+                                                        data-fail-reason="<?= e($cloudError) ?>">View cloud fail reason</button>
+                                            </li>
+                                        <?php endif; ?>
+                                        <?php if ($canCancel): ?>
+                                            <li>
+                                                <form method="post" action="/job_action.php">
+                                                    <?= Csrf::field() ?>
+                                                    <input type="hidden" name="action" value="cancel">
+                                                    <input type="hidden" name="id" value="<?= $jobId ?>">
+                                                    <input type="hidden" name="return" value="/">
+                                                    <button type="submit" class="dropdown-item">Cancel</button>
+                                                </form>
+                                            </li>
+                                        <?php elseif ($canRetry): ?>
+                                            <li>
+                                                <form method="post" action="/job_action.php">
+                                                    <?= Csrf::field() ?>
+                                                    <input type="hidden" name="action" value="retry">
+                                                    <input type="hidden" name="id" value="<?= $jobId ?>">
+                                                    <input type="hidden" name="return" value="/">
+                                                    <button type="submit" class="dropdown-item">Retry</button>
+                                                </form>
+                                            </li>
+                                        <?php endif; ?>
+                                        <?php if ($canHide): ?>
+                                            <?php if ($hasFileActions || $sourceUrl !== '' || $showFailReason || $showCloudFailReason || $canCancel || $canRetry): ?>
+                                                <li><hr class="dropdown-divider"></li>
+                                            <?php endif; ?>
+                                            <li>
+                                                <form method="post" action="/history_hide.php">
+                                                    <?= Csrf::field() ?>
+                                                    <input type="hidden" name="kind" value="download">
+                                                    <input type="hidden" name="id" value="<?= $jobId ?>">
+                                                    <input type="hidden" name="return" value="/">
+                                                    <button type="submit" class="dropdown-item text-danger">Remove from history</button>
+                                                </form>
+                                            </li>
+                                        <?php endif; ?>
+                                    </ul>
+                                </div>
+                            <?php endif; ?>
                         </td>
                     </tr>
                     <?php if ($hasCloud): ?>
@@ -644,7 +692,6 @@ ob_start();
                                             <span class="badge text-bg-<?= e($statusBadge($cloudStatus !== '' ? $cloudStatus : 'pending')) ?>">
                                                 <?= e($cloudStatus !== '' ? $cloudStatus : '—') ?>
                                             </span>
-                                            <?= $failReasonButton((string) ($job['cloud_error'] ?? ''), $cloudStatus !== '' ? $cloudStatus : 'pending') ?>
                                         </dd>
                                         <dt class="col-sm-2 text-muted">Path</dt>
                                         <dd class="col-sm-10 mono"><?= e($cloudPath !== '' ? $cloudPath : '—') ?></dd>
@@ -912,47 +959,84 @@ ob_start();
         return url.substring(0, max - 1) + '…';
     }
 
-    function failReasonButton(error, status) {
-        if (!error || (status !== 'failed' && status !== 'skipped')) {
-            return '';
-        }
-        return '<button type="button" class="btn btn-link btn-sm text-danger p-0 align-baseline ms-1"'
-            + ' data-bs-toggle="modal" data-bs-target="#jobs-fail-modal"'
-            + ' data-fail-reason="' + escapeAttr(error) + '">Reason</button>';
+    function hasFailReason(error, status) {
+        return !!(error && (status === 'failed' || status === 'skipped'));
     }
 
     function jobActionHtml(job) {
-        const parts = [];
-        if (job.can_cancel) {
-            parts.push('<form method="post" action="/job_action.php" class="d-inline">'
+        const sourceUrl = job.source_url || '';
+        const status = job.status || 'pending';
+        const error = job.error || '';
+        const cloudError = job.cloud_error || '';
+        const cloudStatus = job.cloud_status || '';
+        const hasCloud = !!job.cloud_job_id;
+        const hasFileActions = !!(job.file_id && status === 'complete');
+        const showFailReason = hasFailReason(error, status);
+        const showCloudFailReason = hasCloud && hasFailReason(cloudError, cloudStatus || 'pending');
+        const canCancel = !!job.can_cancel;
+        const canRetry = !!job.can_retry;
+        const canHide = !!job.can_hide;
+        if (!(hasFileActions || sourceUrl || showFailReason || showCloudFailReason
+            || canCancel || canRetry || canHide)) {
+            return '';
+        }
+
+        const rawName = job.result_filename || job.requested_filename || '';
+        const displayName = rawName || (job.file_id ? 'file' : 'job');
+        const items = [];
+
+        if (hasFileActions) {
+            items.push('<li><a class="dropdown-item" href="/download.php?id=' + job.file_id + '">Download</a></li>');
+            items.push('<li><a class="dropdown-item" href="/files.php?file=' + job.file_id + '">View in files</a></li>');
+        }
+        if (sourceUrl) {
+            items.push('<li><button type="button" class="dropdown-item" data-copy-source'
+                + ' data-source-url="' + escapeAttr(sourceUrl) + '">Copy source URL</button></li>');
+        }
+        if (showFailReason) {
+            items.push('<li><button type="button" class="dropdown-item text-danger"'
+                + ' data-bs-toggle="modal" data-bs-target="#jobs-fail-modal"'
+                + ' data-fail-reason="' + escapeAttr(error) + '">View fail reason</button></li>');
+        }
+        if (showCloudFailReason) {
+            items.push('<li><button type="button" class="dropdown-item text-danger"'
+                + ' data-bs-toggle="modal" data-bs-target="#jobs-fail-modal"'
+                + ' data-fail-reason="' + escapeAttr(cloudError) + '">View cloud fail reason</button></li>');
+        }
+        if (canCancel) {
+            items.push('<li><form method="post" action="/job_action.php">'
                 + '<input type="hidden" name="_csrf" value="' + escapeAttr(csrf) + '">'
                 + '<input type="hidden" name="action" value="cancel">'
                 + '<input type="hidden" name="id" value="' + job.id + '">'
                 + '<input type="hidden" name="return" value="/">'
-                + '<button type="submit" class="btn btn-link btn-sm text-muted p-0">Cancel</button>'
-                + '</form>');
-        } else if (job.can_retry) {
-            parts.push('<form method="post" action="/job_action.php" class="d-inline">'
+                + '<button type="submit" class="dropdown-item">Cancel</button>'
+                + '</form></li>');
+        } else if (canRetry) {
+            items.push('<li><form method="post" action="/job_action.php">'
                 + '<input type="hidden" name="_csrf" value="' + escapeAttr(csrf) + '">'
                 + '<input type="hidden" name="action" value="retry">'
                 + '<input type="hidden" name="id" value="' + job.id + '">'
                 + '<input type="hidden" name="return" value="/">'
-                + '<button type="submit" class="btn btn-link btn-sm p-0">Retry</button>'
-                + '</form>');
+                + '<button type="submit" class="dropdown-item">Retry</button>'
+                + '</form></li>');
         }
-        if (job.can_hide) {
-            parts.push('<form method="post" action="/history_hide.php" class="d-inline">'
+        if (canHide) {
+            if (hasFileActions || sourceUrl || showFailReason || showCloudFailReason || canCancel || canRetry) {
+                items.push('<li><hr class="dropdown-divider"></li>');
+            }
+            items.push('<li><form method="post" action="/history_hide.php">'
                 + '<input type="hidden" name="_csrf" value="' + escapeAttr(csrf) + '">'
                 + '<input type="hidden" name="kind" value="download">'
                 + '<input type="hidden" name="id" value="' + job.id + '">'
                 + '<input type="hidden" name="return" value="/">'
-                + '<button type="submit" class="btn btn-link btn-sm text-muted p-0">Remove</button>'
-                + '</form>');
+                + '<button type="submit" class="dropdown-item text-danger">Remove from history</button>'
+                + '</form></li>');
         }
-        if (!parts.length) {
-            return '';
-        }
-        return '<div class="d-inline-flex align-items-center gap-2">' + parts.join('') + '</div>';
+
+        return '<div class="dropdown">'
+            + '<button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown"'
+            + ' aria-expanded="false" aria-label="Actions for ' + escapeAttr(displayName) + '">···</button>'
+            + '<ul class="dropdown-menu dropdown-menu-end">' + items.join('') + '</ul></div>';
     }
 
     function cloudDetailsHtml(job) {
@@ -966,9 +1050,7 @@ ob_start();
             + '<dl class="row mb-0">'
             + '<dt class="col-sm-2 text-muted">Status</dt>'
             + '<dd class="col-sm-10"><span class="' + statusBadgeClass(badgeStatus) + '">'
-            + escapeHtml(cloudStatus || '—') + '</span>'
-            + failReasonButton(job.cloud_error, cloudStatus || 'pending')
-            + '</dd>'
+            + escapeHtml(cloudStatus || '—') + '</span></dd>'
             + '<dt class="col-sm-2 text-muted">Path</dt>'
             + '<dd class="col-sm-10 mono">' + escapeHtml(cloudPath || '—') + '</dd>';
         if (job.cloud_updated_at) {
@@ -977,6 +1059,18 @@ ob_start();
         }
         html += '</dl></div></td></tr>';
         return html;
+    }
+
+    function initJobsTableUi() {
+        const table = document.getElementById('active-jobs-table');
+        if (!table || typeof tabler === 'undefined') return;
+        table.querySelectorAll('[data-bs-toggle="dropdown"]').forEach(function (el) {
+            tabler.Dropdown.getOrCreateInstance(el, {
+                popperConfig: function (defaultConfig) {
+                    return Object.assign({}, defaultConfig, { strategy: 'fixed' });
+                }
+            });
+        });
     }
 
     function renderJobs(jobs, activeCount) {
@@ -997,9 +1091,12 @@ ob_start();
         const countLabel = activeCount > 0 ? (activeCount + ' active') : (jobs.length + ' recent');
         countEl.innerHTML = countLabel + ' · <a href="/history.php">History</a>';
         body.innerHTML = jobs.map(function (job) {
-            const name = job.result_filename || job.requested_filename || '—';
+            const rawName = job.result_filename || job.requested_filename || '';
+            const name = rawName || '—';
             const status = job.status || 'pending';
+            const sourceUrl = job.source_url || '';
             const hasCloud = !!job.cloud_job_id;
+            const hasFileActions = !!(job.file_id && status === 'complete');
             const rowId = 'job-cloud-' + job.id;
             const rowClass = job.active ? '' : ' class="text-muted"';
             const destToggle = hasCloud
@@ -1007,24 +1104,26 @@ ob_start();
                     + '" role="button" aria-expanded="' + (expanded[rowId] ? 'true' : 'false')
                     + '" style="cursor:pointer"'
                 : '';
-            let nameHtml = escapeHtml(name);
-            if (job.file_id && job.status === 'complete') {
-                const label = name === '—' ? 'file' : name;
-                nameHtml = typeof window.filePreviewLinkHtml === 'function'
-                    ? window.filePreviewLinkHtml(job.file_id, label)
+            const displayName = rawName || (job.file_id ? 'file' : '—');
+            let nameInner;
+            if (hasFileActions) {
+                nameInner = typeof window.filePreviewLinkHtml === 'function'
+                    ? window.filePreviewLinkHtml(job.file_id, displayName)
                     : ('<a class="filename" href="/download.php?id=' + job.file_id + '">'
-                        + escapeHtml(label) + '</a>');
+                        + escapeHtml(displayName) + '</a>');
+            } else {
+                nameInner = '<span class="history-cell-clip">' + escapeHtml(name) + '</span>';
             }
             const destHtml = escapeHtml(destinationLabel(job.behavior, hasCloud ? (job.cloud_provider || 'dropbox') : null))
                 + (hasCloud ? '<div class="text-muted small">Cloud details ↓</div>' : '');
             let html = '<tr data-job-id="' + job.id + '"' + rowClass + '>'
-                + '<td class="mono small" title="' + escapeAttr(job.source_url) + '">' + escapeHtml(truncateUrl(job.source_url)) + '</td>'
-                + '<td class="mono">' + nameHtml + '</td>'
+                + '<td class="mono small history-col-source" title="' + escapeAttr(sourceUrl) + '">'
+                + '<span class="history-cell-clip">' + escapeHtml(truncateUrl(sourceUrl)) + '</span></td>'
+                + '<td class="mono history-col-name" title="' + escapeAttr(displayName !== '—' ? displayName : '') + '">'
+                + nameInner + '</td>'
                 + '<td' + destToggle + '>' + destHtml + '</td>'
-                + '<td><span class="' + statusBadgeClass(status) + '">' + escapeHtml(status) + '</span>'
-                + failReasonButton(job.error, status)
-                + '</td>'
-                + '<td class="text-end text-nowrap">' + jobActionHtml(job) + '</td></tr>';
+                + '<td><span class="' + statusBadgeClass(status) + '">' + escapeHtml(status) + '</span></td>'
+                + '<td class="text-end">' + jobActionHtml(job) + '</td></tr>';
             if (hasCloud) {
                 html += cloudDetailsHtml(job);
                 if (expanded[rowId]) {
@@ -1033,6 +1132,7 @@ ob_start();
             }
             return html;
         }).join('');
+        initJobsTableUi();
     }
 
     function escapeHtml(str) {
@@ -1077,6 +1177,23 @@ ob_start();
     } else {
         // Refresh once so a job that finished during redirect appears without reload.
         setTimeout(pollActiveJobs, 1200);
+    }
+
+    initJobsTableUi();
+
+    var jobsTable = document.getElementById('active-jobs-table');
+    if (jobsTable) {
+        jobsTable.addEventListener('click', function (e) {
+            var copyBtn = e.target.closest('[data-copy-source]');
+            if (!copyBtn) return;
+            var url = copyBtn.getAttribute('data-source-url') || '';
+            if (!url || !navigator.clipboard) return;
+            navigator.clipboard.writeText(url).then(function () {
+                var prev = copyBtn.textContent;
+                copyBtn.textContent = 'Copied';
+                setTimeout(function () { copyBtn.textContent = prev; }, 1200);
+            });
+        });
     }
 
     var failModal = document.getElementById('jobs-fail-modal');
