@@ -5,6 +5,7 @@ declare(strict_types=1);
 require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
 use App\Auth;
+use App\Csrf;
 use App\DownloadJobRepository;
 use App\HistoryService;
 use App\Pager;
@@ -73,6 +74,9 @@ $pagerTotal = $result['total'];
 $pagerPage = $result['page'];
 $pagerTotalPages = $result['total_pages'];
 $pagerPerPage = $result['per_page'];
+$historyReturn = Pager::url($pagerPath, $pagerQuery, [
+    'page' => $pagerPage > 1 ? $pagerPage : null,
+]);
 
 $providerLabel = static function (string $provider): string {
     return match ($provider) {
@@ -114,16 +118,8 @@ $truncateUrl = static function (string $url, int $max = 56): string {
     return substr($url, 0, $max - 1) . '…';
 };
 
-$failReasonButton = static function (string $error, string $status): string {
-    if ($error === '' || !in_array($status, ['failed', 'skipped'], true)) {
-        return '';
-    }
-
-    return '<button type="button" class="btn btn-link btn-sm text-danger p-0 align-baseline ms-1"'
-        . ' data-bs-toggle="modal" data-bs-target="#history-fail-modal"'
-        . ' data-fail-reason="' . e($error) . '"'
-        . ' onclick="event.stopPropagation()">'
-        . 'Reason</button>';
+$hasFailReason = static function (string $error, string $status): bool {
+    return $error !== '' && in_array($status, ['failed', 'skipped'], true);
 };
 
 $hiddenCount = 0;
@@ -188,7 +184,7 @@ ob_start();
         </div>
     <?php else: ?>
         <div class="table-responsive">
-            <table class="table card-table table-striped align-middle mb-0">
+            <table class="table card-table table-striped align-middle mb-0" id="history-table">
                 <thead>
                 <tr>
                     <th>When</th>
@@ -226,6 +222,11 @@ ob_start();
                         $error = (string) ($job['error'] ?? '');
                         $isHighlight = $highlightJobId > 0 && $highlightJobId === $jobId;
                         $rowClass = trim(($isHidden ? 'table-secondary' : '') . ($isHighlight ? ' history-row-highlight' : ''));
+                        $displayName = $name !== '' ? $name : 'file';
+                        $canRetry = DownloadJobRepository::canRetry($job);
+                        $showFailReason = $hasFailReason($error, $status);
+                        $cloudError = (string) ($job['cloud_error'] ?? '');
+                        $showCloudFailReason = $hasCloud && $hasFailReason($cloudError, $cloudStatus !== '' ? $cloudStatus : 'pending');
                         $filesHref = $fileId !== null
                             ? Pager::url('/admin/files.php', [
                                 'file' => $fileId,
@@ -240,8 +241,7 @@ ob_start();
                             <?php endif; ?>
                             <td class="mono">
                                 <?php if ($filesHref !== null): ?>
-                                    <a class="filename" href="<?= e($filesHref) ?>"><?= e($name !== '' ? $name : 'file') ?></a>
-                                    <a class="small ms-1" href="/download.php?id=<?= $fileId ?>">Download</a>
+                                    <a class="filename" href="<?= e($filesHref) ?>"><?= e($displayName) ?></a>
                                 <?php else: ?>
                                     <?= e($name !== '' ? $name : '—') ?>
                                 <?php endif; ?>
@@ -260,9 +260,61 @@ ob_start();
                                 <?php if ($isHidden): ?>
                                     <span class="badge text-bg-secondary ms-1" title="Hidden at <?= e((string) $job['hidden_at']) ?>">Hidden</span>
                                 <?php endif; ?>
-                                <?= $failReasonButton($error, $status) ?>
                             </td>
-                            <td class="text-end small text-muted">#<?= $jobId ?></td>
+                            <td class="text-end">
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary" type="button"
+                                            data-bs-toggle="dropdown"
+                                            aria-expanded="false" aria-label="Actions for <?= e($displayName) ?>">
+                                        ···
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><span class="dropdown-item-text text-muted small">Job #<?= $jobId ?></span></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <?php if ($fileId !== null): ?>
+                                            <li>
+                                                <a class="dropdown-item" href="/download.php?id=<?= $fileId ?>">Download</a>
+                                            </li>
+                                            <?php if ($filesHref !== null): ?>
+                                                <li>
+                                                    <a class="dropdown-item" href="<?= e($filesHref) ?>">View in files</a>
+                                                </li>
+                                            <?php endif; ?>
+                                        <?php endif; ?>
+                                        <?php if ($sourceUrl !== ''): ?>
+                                            <li>
+                                                <button type="button" class="dropdown-item" data-copy-source
+                                                        data-source-url="<?= e($sourceUrl) ?>">Copy source URL</button>
+                                            </li>
+                                        <?php endif; ?>
+                                        <?php if ($showFailReason): ?>
+                                            <li>
+                                                <button type="button" class="dropdown-item text-danger"
+                                                        data-bs-toggle="modal" data-bs-target="#history-fail-modal"
+                                                        data-fail-reason="<?= e($error) ?>">View fail reason</button>
+                                            </li>
+                                        <?php endif; ?>
+                                        <?php if ($showCloudFailReason): ?>
+                                            <li>
+                                                <button type="button" class="dropdown-item text-danger"
+                                                        data-bs-toggle="modal" data-bs-target="#history-fail-modal"
+                                                        data-fail-reason="<?= e($cloudError) ?>">View cloud fail reason</button>
+                                            </li>
+                                        <?php endif; ?>
+                                        <?php if ($canRetry): ?>
+                                            <li>
+                                                <form method="post" action="/job_action.php">
+                                                    <?= Csrf::field() ?>
+                                                    <input type="hidden" name="action" value="retry">
+                                                    <input type="hidden" name="id" value="<?= $jobId ?>">
+                                                    <input type="hidden" name="return" value="<?= e($historyReturn) ?>">
+                                                    <button type="submit" class="dropdown-item">Retry</button>
+                                                </form>
+                                            </li>
+                                        <?php endif; ?>
+                                    </ul>
+                                </div>
+                            </td>
                         </tr>
                         <?php if ($hasCloud): ?>
                             <tr class="collapse" id="<?= e($rowId) ?>-cloud">
@@ -275,7 +327,6 @@ ob_start();
                                                 <span class="badge text-bg-<?= e($statusBadge($cloudStatus !== '' ? $cloudStatus : 'pending')) ?>">
                                                     <?= e($cloudStatus !== '' ? $cloudStatus : '—') ?>
                                                 </span>
-                                                <?= $failReasonButton((string) ($job['cloud_error'] ?? ''), $cloudStatus !== '' ? $cloudStatus : 'pending') ?>
                                             </dd>
                                             <dt class="col-sm-2 text-muted">Path</dt>
                                             <dd class="col-sm-10 mono"><?= e($cloudPath !== '' ? $cloudPath : '—') ?></dd>
@@ -291,6 +342,9 @@ ob_start();
                         $path = (string) ($job['result_path'] ?? $job['remote_path'] ?? '');
                         $provider = (string) ($job['provider'] ?? 'dropbox');
                         $error = (string) ($job['error'] ?? '');
+                        $cloudJobId = (int) $job['id'];
+                        $showFailReason = $hasFailReason($error, $status);
+                        $displayName = $name !== '' ? $name : $providerLabel($provider);
                         ?>
                         <tr class="<?= $isHidden ? 'table-secondary' : '' ?>">
                             <td class="small text-muted text-nowrap"><?= e((string) ($job['updated_at'] ?? $job['created_at'])) ?></td>
@@ -305,9 +359,27 @@ ob_start();
                                 <?php if ($isHidden): ?>
                                     <span class="badge text-bg-secondary ms-1" title="Hidden at <?= e((string) $job['hidden_at']) ?>">Hidden</span>
                                 <?php endif; ?>
-                                <?= $failReasonButton($error, $status) ?>
                             </td>
-                            <td class="text-end small text-muted">#<?= (int) $job['id'] ?></td>
+                            <td class="text-end">
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary" type="button"
+                                            data-bs-toggle="dropdown"
+                                            aria-expanded="false" aria-label="Actions for <?= e($displayName) ?>">
+                                        ···
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><span class="dropdown-item-text text-muted small">Cloud job #<?= $cloudJobId ?></span></li>
+                                        <?php if ($showFailReason): ?>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <button type="button" class="dropdown-item text-danger"
+                                                        data-bs-toggle="modal" data-bs-target="#history-fail-modal"
+                                                        data-fail-reason="<?= e($error) ?>">View fail reason</button>
+                                            </li>
+                                        <?php endif; ?>
+                                    </ul>
+                                </div>
+                            </td>
                         </tr>
                     <?php endif; ?>
                 <?php endforeach; ?>
@@ -336,6 +408,28 @@ ob_start();
 </div>
 <script>
 (function () {
+    var table = document.getElementById('history-table');
+    if (table && typeof tabler !== 'undefined') {
+        table.querySelectorAll('[data-bs-toggle="dropdown"]').forEach(function (el) {
+            tabler.Dropdown.getOrCreateInstance(el, {
+                popperConfig: function (defaultConfig) {
+                    return Object.assign({}, defaultConfig, { strategy: 'fixed' });
+                }
+            });
+        });
+        table.addEventListener('click', function (e) {
+            var copyBtn = e.target.closest('[data-copy-source]');
+            if (!copyBtn) return;
+            var url = copyBtn.getAttribute('data-source-url') || '';
+            if (!url || !navigator.clipboard) return;
+            navigator.clipboard.writeText(url).then(function () {
+                var prev = copyBtn.textContent;
+                copyBtn.textContent = 'Copied';
+                setTimeout(function () { copyBtn.textContent = prev; }, 1200);
+            });
+        });
+    }
+
     var modal = document.getElementById('history-fail-modal');
     if (!modal) return;
     modal.addEventListener('show.bs.modal', function (event) {

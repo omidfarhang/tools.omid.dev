@@ -62,6 +62,9 @@ $pagerTotal = $result['total'];
 $pagerPage = $result['page'];
 $pagerTotalPages = $result['total_pages'];
 $pagerPerPage = $result['per_page'];
+$historyReturn = Pager::url($pagerPath, $pagerQuery, [
+    'page' => $pagerPage > 1 ? $pagerPage : null,
+]);
 
 $providerLabel = static function (string $provider): string {
     return match ($provider) {
@@ -103,15 +106,8 @@ $truncateUrl = static function (string $url, int $max = 64): string {
     return substr($url, 0, $max - 1) . '…';
 };
 
-$failReasonButton = static function (string $error, string $status): string {
-    if ($error === '' || !in_array($status, ['failed', 'skipped'], true)) {
-        return '';
-    }
-
-    return '<button type="button" class="btn btn-link btn-sm text-danger p-0 align-baseline ms-1"'
-        . ' data-bs-toggle="modal" data-bs-target="#history-fail-modal"'
-        . ' data-fail-reason="' . e($error) . '">'
-        . 'Reason</button>';
+$hasFailReason = static function (string $error, string $status): bool {
+    return $error !== '' && in_array($status, ['failed', 'skipped'], true);
 };
 
 ob_start();
@@ -170,13 +166,18 @@ ob_start();
                         $rowId = 'dl-' . $jobId;
                         $error = (string) ($job['error'] ?? '');
                         $isHighlight = $highlightJobId > 0 && $highlightJobId === $jobId;
+                        $canRetry = DownloadJobRepository::canRetry($job);
+                        $canHide = DownloadJobRepository::canHide($job);
+                        $displayName = $name !== '' ? $name : 'file';
+                        $showFailReason = $hasFailReason($error, $status);
+                        $cloudError = (string) ($job['cloud_error'] ?? '');
+                        $showCloudFailReason = $hasCloud && $hasFailReason($cloudError, $cloudStatus !== '' ? $cloudStatus : 'pending');
                         ?>
                         <tr id="<?= e($rowId) ?>"<?= $isHighlight ? ' class="history-row-highlight"' : '' ?>>
                             <td class="small text-muted text-nowrap"><?= e((string) ($job['updated_at'] ?? $job['created_at'])) ?></td>
                             <td class="mono">
                                 <?php if ($fileId !== null): ?>
-                                    <a class="filename" href="/files.php?file=<?= $fileId ?>"><?= e($name !== '' ? $name : 'file') ?></a>
-                                    <a class="small ms-1" href="/download.php?id=<?= $fileId ?>">Download</a>
+                                    <a class="filename" href="/files.php?file=<?= $fileId ?>"><?= e($displayName) ?></a>
                                 <?php else: ?>
                                     <?= e($name !== '' ? $name : '—') ?>
                                 <?php endif; ?>
@@ -192,25 +193,69 @@ ob_start();
                             </td>
                             <td>
                                 <span class="badge text-bg-<?= e($statusBadge($status)) ?>"><?= e($status) ?></span>
-                                <?= $failReasonButton($error, $status) ?>
                             </td>
-                            <td class="text-end small">
-                                <div class="d-inline-flex align-items-center gap-2">
-                                    <?php if (DownloadJobRepository::canRetry($job)): ?>
-                                        <form method="post" action="/job_action.php" class="d-inline">
-                                            <?= Csrf::field() ?>
-                                            <input type="hidden" name="action" value="retry">
-                                            <input type="hidden" name="id" value="<?= $jobId ?>">
-                                            <input type="hidden" name="return" value="/">
-                                            <button type="submit" class="btn btn-link btn-sm p-0 align-baseline">Retry</button>
-                                        </form>
-                                    <?php endif; ?>
-                                    <form method="post" action="/history_hide.php" class="d-inline">
-                                        <?= Csrf::field() ?>
-                                        <input type="hidden" name="kind" value="download">
-                                        <input type="hidden" name="id" value="<?= $jobId ?>">
-                                        <button type="submit" class="btn btn-link btn-sm text-muted p-0 align-baseline">Remove</button>
-                                    </form>
+                            <td class="text-end">
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary" type="button"
+                                            data-bs-toggle="dropdown"
+                                            aria-expanded="false" aria-label="Actions for <?= e($displayName) ?>">
+                                        ···
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <?php if ($fileId !== null): ?>
+                                            <li>
+                                                <a class="dropdown-item" href="/download.php?id=<?= $fileId ?>">Download</a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item" href="/files.php?file=<?= $fileId ?>">View in files</a>
+                                            </li>
+                                        <?php endif; ?>
+                                        <?php if ($sourceUrl !== ''): ?>
+                                            <li>
+                                                <button type="button" class="dropdown-item" data-copy-source
+                                                        data-source-url="<?= e($sourceUrl) ?>">Copy source URL</button>
+                                            </li>
+                                        <?php endif; ?>
+                                        <?php if ($showFailReason): ?>
+                                            <li>
+                                                <button type="button" class="dropdown-item text-danger"
+                                                        data-bs-toggle="modal" data-bs-target="#history-fail-modal"
+                                                        data-fail-reason="<?= e($error) ?>">View fail reason</button>
+                                            </li>
+                                        <?php endif; ?>
+                                        <?php if ($showCloudFailReason): ?>
+                                            <li>
+                                                <button type="button" class="dropdown-item text-danger"
+                                                        data-bs-toggle="modal" data-bs-target="#history-fail-modal"
+                                                        data-fail-reason="<?= e($cloudError) ?>">View cloud fail reason</button>
+                                            </li>
+                                        <?php endif; ?>
+                                        <?php if ($canRetry): ?>
+                                            <li>
+                                                <form method="post" action="/job_action.php">
+                                                    <?= Csrf::field() ?>
+                                                    <input type="hidden" name="action" value="retry">
+                                                    <input type="hidden" name="id" value="<?= $jobId ?>">
+                                                    <input type="hidden" name="return" value="<?= e($historyReturn) ?>">
+                                                    <button type="submit" class="dropdown-item">Retry</button>
+                                                </form>
+                                            </li>
+                                        <?php endif; ?>
+                                        <?php if ($canHide): ?>
+                                            <?php if ($fileId !== null || $sourceUrl !== '' || $showFailReason || $showCloudFailReason || $canRetry): ?>
+                                                <li><hr class="dropdown-divider"></li>
+                                            <?php endif; ?>
+                                            <li>
+                                                <form method="post" action="/history_hide.php">
+                                                    <?= Csrf::field() ?>
+                                                    <input type="hidden" name="kind" value="download">
+                                                    <input type="hidden" name="id" value="<?= $jobId ?>">
+                                                    <input type="hidden" name="return" value="<?= e($historyReturn) ?>">
+                                                    <button type="submit" class="dropdown-item text-danger">Remove from history</button>
+                                                </form>
+                                            </li>
+                                        <?php endif; ?>
+                                    </ul>
                                 </div>
                             </td>
                         </tr>
@@ -225,7 +270,6 @@ ob_start();
                                                 <span class="badge text-bg-<?= e($statusBadge($cloudStatus !== '' ? $cloudStatus : 'pending')) ?>">
                                                     <?= e($cloudStatus !== '' ? $cloudStatus : '—') ?>
                                                 </span>
-                                                <?= $failReasonButton((string) ($job['cloud_error'] ?? ''), $cloudStatus !== '' ? $cloudStatus : 'pending') ?>
                                             </dd>
                                             <dt class="col-sm-2 text-muted">Path</dt>
                                             <dd class="col-sm-10 mono"><?= e($cloudPath !== '' ? $cloudPath : '—') ?></dd>
@@ -246,6 +290,10 @@ ob_start();
                         $path = (string) ($job['result_path'] ?? $job['remote_path'] ?? '');
                         $provider = (string) ($job['provider'] ?? 'dropbox');
                         $error = (string) ($job['error'] ?? '');
+                        $canHideCloud = in_array($status, ['complete', 'failed', 'skipped', 'cancelled'], true);
+                        $showFailReason = $hasFailReason($error, $status);
+                        $displayName = $name !== '' ? $name : $providerLabel($provider);
+                        $showCloudMenu = $canHideCloud || $showFailReason;
                         ?>
                         <tr>
                             <td class="small text-muted text-nowrap"><?= e((string) ($job['updated_at'] ?? $job['created_at'])) ?></td>
@@ -254,16 +302,39 @@ ob_start();
                             <td class="mono small" title="<?= e($path) ?>"><?= e($path !== '' ? $truncateUrl($path, 40) : $providerLabel($provider)) ?></td>
                             <td>
                                 <span class="badge text-bg-<?= e($statusBadge($status)) ?>"><?= e($status) ?></span>
-                                <?= $failReasonButton($error, $status) ?>
                             </td>
-                            <td class="text-end small">
-                                <?php if (in_array($status, ['complete', 'failed', 'skipped'], true)): ?>
-                                    <form method="post" action="/history_hide.php" class="d-inline">
-                                        <?= Csrf::field() ?>
-                                        <input type="hidden" name="kind" value="cloud">
-                                        <input type="hidden" name="id" value="<?= (int) $job['id'] ?>">
-                                        <button type="submit" class="btn btn-link btn-sm text-muted p-0 align-baseline">Remove</button>
-                                    </form>
+                            <td class="text-end">
+                                <?php if ($showCloudMenu): ?>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-secondary" type="button"
+                                                data-bs-toggle="dropdown"
+                                                aria-expanded="false" aria-label="Actions for <?= e($displayName) ?>">
+                                            ···
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <?php if ($showFailReason): ?>
+                                                <li>
+                                                    <button type="button" class="dropdown-item text-danger"
+                                                            data-bs-toggle="modal" data-bs-target="#history-fail-modal"
+                                                            data-fail-reason="<?= e($error) ?>">View fail reason</button>
+                                                </li>
+                                            <?php endif; ?>
+                                            <?php if ($canHideCloud): ?>
+                                                <?php if ($showFailReason): ?>
+                                                    <li><hr class="dropdown-divider"></li>
+                                                <?php endif; ?>
+                                                <li>
+                                                    <form method="post" action="/history_hide.php">
+                                                        <?= Csrf::field() ?>
+                                                        <input type="hidden" name="kind" value="cloud">
+                                                        <input type="hidden" name="id" value="<?= (int) $job['id'] ?>">
+                                                        <input type="hidden" name="return" value="<?= e($historyReturn) ?>">
+                                                        <button type="submit" class="dropdown-item text-danger">Remove from history</button>
+                                                    </form>
+                                                </li>
+                                            <?php endif; ?>
+                                        </ul>
+                                    </div>
                                 <?php endif; ?>
                             </td>
                         </tr>
@@ -294,6 +365,28 @@ ob_start();
 </div>
 <script>
 (function () {
+    var table = document.getElementById('history-table');
+    if (table && typeof tabler !== 'undefined') {
+        table.querySelectorAll('[data-bs-toggle="dropdown"]').forEach(function (el) {
+            tabler.Dropdown.getOrCreateInstance(el, {
+                popperConfig: function (defaultConfig) {
+                    return Object.assign({}, defaultConfig, { strategy: 'fixed' });
+                }
+            });
+        });
+        table.addEventListener('click', function (e) {
+            var copyBtn = e.target.closest('[data-copy-source]');
+            if (!copyBtn) return;
+            var url = copyBtn.getAttribute('data-source-url') || '';
+            if (!url || !navigator.clipboard) return;
+            navigator.clipboard.writeText(url).then(function () {
+                var prev = copyBtn.textContent;
+                copyBtn.textContent = 'Copied';
+                setTimeout(function () { copyBtn.textContent = prev; }, 1200);
+            });
+        });
+    }
+
     var modal = document.getElementById('history-fail-modal');
     if (!modal) return;
     modal.addEventListener('show.bs.modal', function (event) {
