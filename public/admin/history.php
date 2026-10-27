@@ -184,7 +184,7 @@ ob_start();
         </div>
     <?php else: ?>
         <div class="table-responsive">
-            <table class="table card-table table-striped align-middle mb-0" id="history-table">
+            <table class="table card-table table-striped align-middle mb-0 history-table" id="history-table">
                 <thead>
                 <tr>
                     <th>When</th>
@@ -239,14 +239,16 @@ ob_start();
                             <?php if ($filterUser === null): ?>
                                 <td class="small"><?= e($owner !== '' ? $owner : '—') ?></td>
                             <?php endif; ?>
-                            <td class="mono">
+                            <td class="mono history-col-name" title="<?= e($displayName) ?>">
                                 <?php if ($filesHref !== null): ?>
                                     <a class="filename" href="<?= e($filesHref) ?>"><?= e($displayName) ?></a>
                                 <?php else: ?>
-                                    <?= e($name !== '' ? $name : '—') ?>
+                                    <span class="history-cell-clip"><?= e($name !== '' ? $name : '—') ?></span>
                                 <?php endif; ?>
                             </td>
-                            <td class="mono small" title="<?= e($sourceUrl) ?>"><?= e($truncateUrl($sourceUrl)) ?></td>
+                            <td class="mono small history-col-source" title="<?= e($sourceUrl) ?>">
+                                <span class="history-cell-clip"><?= e($truncateUrl($sourceUrl)) ?></span>
+                            </td>
                             <td<?= $hasCloud
                                 ? ' class="history-row-toggle" data-bs-toggle="collapse" data-bs-target="#' . e($rowId) . '-cloud" role="button" aria-expanded="false" style="cursor:pointer"'
                                 : '' ?>>
@@ -351,9 +353,13 @@ ob_start();
                             <?php if ($filterUser === null): ?>
                                 <td class="small"><?= e($owner !== '' ? $owner : '—') ?></td>
                             <?php endif; ?>
-                            <td class="mono"><?= e($name !== '' ? $name : '—') ?></td>
+                            <td class="mono history-col-name" title="<?= e($name !== '' ? $name : '') ?>">
+                                <span class="history-cell-clip"><?= e($name !== '' ? $name : '—') ?></span>
+                            </td>
                             <td class="small"><?= e($providerLabel($provider)) ?> send</td>
-                            <td class="mono small" title="<?= e($path) ?>"><?= e($path !== '' ? $truncateUrl($path, 40) : $providerLabel($provider)) ?></td>
+                            <td class="mono small history-col-source" title="<?= e($path) ?>">
+                                <span class="history-cell-clip"><?= e($path !== '' ? $truncateUrl($path, 40) : $providerLabel($provider)) ?></span>
+                            </td>
                             <td>
                                 <span class="badge text-bg-<?= e($statusBadge($status)) ?>"><?= e($status) ?></span>
                                 <?php if ($isHidden): ?>

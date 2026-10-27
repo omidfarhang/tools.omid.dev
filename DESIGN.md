@@ -64,7 +64,7 @@ Canonical theme tokens live in `public/assets/css/app.css`. Keep this file in sy
 | Hierarchy | Tabler `.breadcrumb` in `.page-header` via `View::render(..., $breadcrumbs)` — not ad-hoc “← Back” links |
 | Signed-in user | Sidebar `.navbar-footer` dropup (Account, Logout) — not header chips |
 
-App-specific leftovers in `app.css` (keep minimal): theme switcher, `.page-header .breadcrumb` margin (Tabler zeros breadcrumb margin), files table toolbar/selection bar, files preview modal (`.files-preview-*`), download destination `.choice-tile` grid, deep-linked file/history row highlight (`.files-row-highlight` / `.history-row-highlight`: accent pulse then persistent soft tint on `td`, no inset bar or shadow).
+App-specific leftovers in `app.css` (keep minimal): theme switcher, `.page-header .breadcrumb` margin (Tabler zeros breadcrumb margin), files table toolbar/selection bar, files preview modal (`.files-preview-*`), download destination `.choice-tile` grid, history name/source ellipsis (`.history-col-name` / `.history-col-source`), deep-linked file/history row highlight (`.files-row-highlight` / `.history-row-highlight`: accent pulse then persistent soft tint on `td`, no inset bar or shadow).
 
 **Files preview:** allowlisted types (images, PDF, common video/audio, small text) open in a Tabler modal via `/preview.php` (`Content-Disposition: inline`). Non-previewable names still link to download. Public share URLs stay attachment-only.
 

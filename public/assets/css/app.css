@@ -157,6 +157,25 @@ code.mono {
     margin-top: 0.15rem;
 }
 
+.history-table .history-col-name .filename,
+.history-table .history-col-name .history-cell-clip {
+    display: inline-block;
+    max-width: 16rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+}
+
+.history-table .history-col-source .history-cell-clip {
+    display: inline-block;
+    max-width: 14rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+}
+
 @keyframes row-highlight-pulse {
     0%, 100% { background-color: color-mix(in srgb, var(--accent, var(--tblr-primary)) 12%, transparent); }
     35% { background-color: color-mix(in srgb, var(--accent, var(--tblr-primary)) 34%, transparent); }
