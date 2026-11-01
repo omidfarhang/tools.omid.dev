@@ -1,7 +1,7 @@
 services:
   app:
-    build: .
-    image: tools-omid-dev:local
+    image: ghcr.io/omidfarhang/tools.omid.dev:${IMAGE_TAG:-latest}
+    pull_policy: always
     ports:
       # Host port → container 8080. Override with APP_PORT=9080 in .env if 8080 is taken.
       - "${APP_PORT:-8080}:8080"
@@ -12,10 +12,5 @@ services:
       TEMP_DIR: /var/www/html/storage/temp
       YTDLP_COOKIES_PATH: /var/www/html/storage/ytdlp-cookies.txt
     volumes:
-      # Mount app code so local edits apply without rebuilding the image.
-      - ./public:/var/www/html/public
-      - ./src:/var/www/html/src
-      - ./templates:/var/www/html/templates
-      - ./scripts:/var/www/html/scripts
       - ./storage:/var/www/html/storage
     restart: unless-stopped

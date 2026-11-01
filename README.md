@@ -17,18 +17,31 @@ Personal **Download to Host** toolkit: pull remote URLs to the server (HTTP + cu
 - `yt-dlp` (with EJS), `ffmpeg`, and Deno (bundled in the Docker image; YouTube needs the JS runtime)
 - Optional but usually required for YouTube: Netscape cookies via **Admin → yt-dlp cookies**
 
-## Quick start (Docker)
+## Quick start (Docker — server)
+
+Pulls the pre-built image from GHCR (built by GitHub Actions on `main` / `v*` tags).
 
 ```bash
+# once: auth if the GHCR package is private
+echo "$GHCR_TOKEN" | docker login ghcr.io -u USERNAME --password-stdin
+
 cp .env.example .env
 # edit APP_BASE_URL, ADMIN_*, APP_CLI_TOKEN
 
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 ```
 
-App is published on **http://127.0.0.1:8080** by default (`APP_PORT` → container `:8080`). If 8080 is already in use, set e.g. `APP_PORT=9080` in `.env` and point nginx at that host port — see [docs/nginx-reverse-proxy.conf.example](docs/nginx-reverse-proxy.conf.example) (includes `limit_req` for login/register). For host fail2ban against `storage/logs/auth.log`, see [docs/fail2ban.md](docs/fail2ban.md).
+Pin a release with `IMAGE_TAG=v1.2.3` (default `latest`). App is published on **http://127.0.0.1:8080** by default (`APP_PORT` → container `:8080`). If 8080 is already in use, set e.g. `APP_PORT=9080` in `.env` and point nginx at that host port — see [docs/nginx-reverse-proxy.conf.example](docs/nginx-reverse-proxy.conf.example) (includes `limit_req` for login/register). For host fail2ban against `storage/logs/auth.log`, see [docs/fail2ban.md](docs/fail2ban.md).
 
 First boot creates an admin from `ADMIN_USERNAME` / `ADMIN_PASSWORD`. Then use **Admin → Settings** for Dropbox app credentials and yt-dlp cookies/options.
+
+## Local Docker (build + bind mounts)
+
+```bash
+cp .env.example .env
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+```
 
 ## Local (non-Docker)
 
@@ -45,6 +58,7 @@ cp .env.example .env
 |----------|---------|
 | `APP_BASE_URL` | Public site URL (OAuth redirect + share links) |
 | `APP_PORT` | Host port for Docker publish (default `8080`) |
+| `IMAGE_TAG` | GHCR image tag (default `latest`; e.g. `v1.2.3`) |
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` | Seed admin when DB is empty |
 | `APP_CLI_TOKEN` / `APP_CLI_USERNAME` | CLI auth → that user’s cloud account |
 | `DB_PATH` / `TEMP_DIR` | SQLite + download storage |
@@ -72,4 +86,6 @@ See [docs/dropbox.md](docs/dropbox.md) and [docs/google-drive.md](docs/google-dr
 
 On push to `main` / tags `v*`, GitHub Actions builds and pushes:
 
-`ghcr.io/<owner>/<repo>:<tag>`
+`ghcr.io/omidfarhang/tools.omid.dev:<tag>`
+
+Server deploy uses that image via `docker compose pull && docker compose up -d` (only `./storage` is mounted).

@@ -26,11 +26,16 @@ There is no front-end framework or SPA. Pages are server-rendered PHP that call 
 ## Setup commands
 
 ```bash
-# Docker (preferred)
+# Docker — server (pull GHCR image)
 cp .env.example .env   # set APP_BASE_URL, ADMIN_*, APP_CLI_TOKEN
-docker compose up -d --build
+# docker login ghcr.io if the package is private
+docker compose pull && docker compose up -d
+# Optional: IMAGE_TAG=v1.2.3 docker compose up -d
 # App: http://127.0.0.1:${APP_PORT:-8080}
 # Then Admin → Settings for cloud app credentials and yt-dlp cookies
+
+# Docker — local (build + bind mounts)
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 
 # Local (non-Docker)
 composer install
@@ -79,6 +84,7 @@ Asset pipeline: `@tabler/core` via npm, then `npm run build:assets` (copies Tabl
 
 ## Deployment notes
 
-- Image builds via `.github/workflows/docker.yml` → `ghcr.io/<owner>/<repo>`
+- Image builds via `.github/workflows/docker.yml` → `ghcr.io/omidfarhang/tools.omid.dev` (`latest` on `main`, semver on `v*` tags)
+- Server: `docker compose pull && docker compose up -d` (image only; `./storage` volume). Local: merge `docker-compose.dev.yml` for build + source mounts
 - TLS terminates at the operator’s nginx reverse proxy (example in `docs/`)
 - First boot seeds admin from `ADMIN_USERNAME` / `ADMIN_PASSWORD` when the DB is empty
