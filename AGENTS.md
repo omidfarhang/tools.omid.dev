@@ -84,7 +84,7 @@ Asset pipeline: `@tabler/core` via npm, then `npm run build:assets` (copies Tabl
 
 ## Deployment notes
 
-- Image builds via `.github/workflows/docker.yml` → `ghcr.io/omidfarhang/tools.omid.dev` (`latest` on `main`, semver on `v*` tags)
+- Image builds via `.github/workflows/docker.yml` → `ghcr.io/omidfarhang/tools.omid.dev` (`latest` on `master`, semver on `v*` tags)
 - Server: `docker compose pull && docker compose up -d` (image only; `./storage` volume). Local: merge `docker-compose.dev.yml` for build + source mounts
 - TLS terminates at the operator’s nginx reverse proxy (example in `docs/`)
 - First boot seeds admin from `ADMIN_USERNAME` / `ADMIN_PASSWORD` when the DB is empty

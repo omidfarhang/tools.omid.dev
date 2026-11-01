@@ -19,7 +19,7 @@ Personal **Download to Host** toolkit: pull remote URLs to the server (HTTP + cu
 
 ## Quick start (Docker — server)
 
-Pulls the pre-built image from GHCR (built by GitHub Actions on `main` / `v*` tags).
+Pulls the pre-built image from GHCR (built by GitHub Actions on `master` / `v*` tags).
 
 ```bash
 # once: auth if the GHCR package is private
@@ -84,7 +84,7 @@ See [docs/dropbox.md](docs/dropbox.md) and [docs/google-drive.md](docs/google-dr
 
 ## GHCR
 
-On push to `main` / tags `v*`, GitHub Actions builds and pushes:
+On push to `master` / tags `v*`, GitHub Actions builds and pushes:
 
 `ghcr.io/omidfarhang/tools.omid.dev:<tag>`
 
